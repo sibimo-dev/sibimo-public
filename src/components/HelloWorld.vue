@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import viteLogo from '../assets/vite.svg'
 import heroImg from '../assets/hero.png'
 import vueLogo from '../assets/vue.svg'
+import Button from 'primevue/button';
 
 const count = ref(0)
 </script>
@@ -22,6 +23,8 @@ const count = ref(0)
       Count is {{ count }}
     </button>
   </section>
+
+  <Button severity="danger">Test</Button>
 
   <div class="ticks"></div>
 
