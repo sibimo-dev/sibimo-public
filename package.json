@@ -10,13 +10,17 @@
   },
   "dependencies": {
     "@primeuix/themes": "^3.0.0",
-    "@tailwindcss/vite": "^4.3.3",
-    "primevue": "^5.0.0",
-    "tailwindcss": "^4.3.3",
-    "vue": "^3.5.39"
+    "axios": "^1.19.0",
+    "pinia": "^4.0.3",
+    "primeicons": "^8.0.0",
+    "primevue": "^5.0.1",
+    "vue": "^3.5.39",
+    "vue-router": "^5.2.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-vue": "^6.0.7",
+    "tailwindcss": "^4.3.3",
     "vite": "^8.1.1"
   }
 }
