@@ -13,25 +13,52 @@ import {
 } from "@/components/shared/navMenu.js";
 import AppFooter from "@/components/shared/AppFooter.vue";
 
-// TODO: ganti dengan logo resmi kalurahan. Taruh file gambarnya di
-// src/assets/ (mis. logo-kalurahan.png) lalu ganti import di bawah ini.
-// File placeholder ini cuma penanda tempat sampai logo aslinya tersedia.
 import villageLogo from "@/assets/logo-kalurahan-placeholder.svg";
 
 const route = useRoute();
 
-// Bottom sheet "Lainnya" di mobile
 const moreSheetOpen = ref(false);
 function handleBottomNavClick(item) {
   if (item.action === "more") moreSheetOpen.value = true;
 }
 
-// Item bottom-nav aktif ditandai berdasarkan route name saat ini, biar
-// warna/kontrasnya jelas menunjukkan posisi user (bukan cuma warna
-// abu-abu redup semua seperti sebelumnya).
+
 function isActive(item) {
   return !!item.route && route.name === item.route.name;
 }
+
+
+const menubarPt = {
+  root: { class: "!border-0 !bg-transparent !px-0 !py-3" },
+  button: {
+    class: "!text-white hover:!bg-white/10 hover:!text-white !w-10 !h-10 !rounded-lg transition-colors lg:!hidden",
+  },
+  rootList: {
+    class:
+      "!bg-white lg:!bg-transparent !border !border-border-default lg:!border-0 !shadow-lg lg:!shadow-none !rounded-xl lg:!rounded-none !p-2 lg:!p-0",
+  },
+  item: { class: "!w-full lg:!w-auto" },
+
+  itemContent: (options) => ({
+    class: [
+      "!rounded-lg transition-colors",
+      "hover:!bg-primary-50 lg:hover:!bg-white/10",
+      options.context.active || options.context.focused ? "!bg-primary-50 lg:!bg-white/10" : "",
+    ],
+  }),
+  itemLink: { class: "!px-3 !py-2.5 !gap-1.5" },
+  submenu: {
+    class:
+      "lg:!bg-gradient-to-b lg:!from-primary-900 lg:!to-primary-800 lg:!border lg:!border-white/10 lg:!shadow-lg lg:!rounded-lg lg:!mt-1 lg:!py-1",
+  },
+};
+
+// Passthrough Button "Unduh Dokumen": putih solid, teks & ikon biru tua.
+const navCtaPt = {
+  root: {
+    class: "!bg-white !border-white hover:!bg-primary-50 hover:!border-primary-50 !rounded-lg transition-colors",
+  },
+};
 </script>
 
 <template>
@@ -41,7 +68,7 @@ function isActive(item) {
       class="sticky top-0 z-40 bg-gradient-to-r from-primary-900 to-primary-800 border-b border-white/10 shadow-sm"
     >
       <div class="max-w-[1240px] mx-auto px-4 md:px-8">
-        <Menubar :model="navMenuItems" class="app-menubar app-menubar-dark !border-0 !bg-transparent !px-0 !py-3">
+        <Menubar :model="navMenuItems" :pt="menubarPt">
           <template #start>
             <RouterLink :to="{ name: 'home' }" class="flex items-center gap-2.5 shrink-0 mr-4">
               <Avatar :image="villageLogo" shape="square" size="large" class="!w-10 !h-10 shrink-0" />
@@ -57,25 +84,25 @@ function isActive(item) {
           <template #item="{ item, props, hasSubmenu }">
             <RouterLink v-if="item.route && !hasSubmenu" v-slot="{ href, navigate }" :to="item.route" custom>
               <a :href="href" v-bind="props.action" @click="navigate">
-                <span class="text-white">{{ item.label }}</span>
+                <span v-bind="props.label" class="text-text-h lg:text-white font-bold text-sm">{{ item.label }}</span>
               </a>
             </RouterLink>
             <a v-else v-bind="props.action">
-              <span class="text-white">{{ item.label }}</span>
-              <i v-if="hasSubmenu" class="pi pi-angle-down ml-1 text-xs text-white/70" />
+              <span v-bind="props.label" class="text-text-h lg:text-white font-bold text-sm">{{ item.label }}</span>
+              <i
+                v-if="hasSubmenu"
+                v-bind="props.submenuicon"
+                class="pi pi-angle-down ml-1 text-xs text-text-muted lg:text-white/70"
+              />
             </a>
           </template>
 
           <template #end>
-            <Button
-            as="router-link"
-            :to="navCta.route"
-            class="!bg-white !border-white !text-primary-800 hover:!bg-primary-50 shrink-0 !px-3.5 sm:!px-4 !rounded-lg transition-colors"
-            >
-            <i :class="navCta.icon" class="pi text-[15px] !text-primary-800" />
-            <span class="hidden sm:inline ml-1.5 font-bold text-[13.5px] !text-primary-800">{{ navCta.label }}</span>
-          </Button>
-        </template>
+            <Button as="router-link" :to="navCta.route" :pt="navCtaPt" class="shrink-0 !px-3.5 sm:!px-4">
+              <i :class="navCta.icon" class="pi text-[15px] text-primary-800" />
+              <span class="hidden sm:inline ml-1.5 font-bold text-[13.5px] text-primary-800">{{ navCta.label }}</span>
+            </Button>
+          </template>
         </Menubar>
       </div>
     </header>
@@ -142,140 +169,3 @@ function isActive(item) {
     </Drawer>
   </div>
 </template>
-
-<style scoped>
-/*
- * Navbar atas (PrimeVue Menubar) di mobile: hamburger + item dropdown
- * bawaan tema Aura warnanya abu-abu redup dan tipis. Dipertegas di sini
- * biar kebaca jelas di layar kecil, tanpa mengubah tampilan desktop.
- */
-.app-menubar :deep(.p-menubar-button) {
-  color: var(--color-primary-900);
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.625rem;
-}
-
-.app-menubar :deep(.p-menubar-button:hover) {
-  background: var(--color-primary-50);
-  color: var(--color-primary-900);
-}
-
-.app-menubar :deep(.p-menubar-button svg) {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.app-menubar :deep(.p-menubar-mobile .p-menubar-root-list) {
-  border: 1px solid var(--color-border);
-  box-shadow: 0 10px 24px rgba(20, 31, 51, 0.12);
-}
-
-.app-menubar :deep(.p-menubar-item-link) {
-  padding: 0.85rem 1rem;
-}
-
-.app-menubar :deep(.p-menubar-item-label) {
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--color-text-h);
-}
-
-.app-menubar :deep(.p-menubar-item-icon),
-.app-menubar :deep(.p-menubar-submenu-icon) {
-  color: var(--color-text-muted);
-}
-
-.app-menubar :deep(.p-menubar-item-active > .p-menubar-item-content .p-menubar-item-label) {
-  color: var(--color-primary-800);
-}
-
-/*
- * Varian gelap untuk navbar (bg gradasi primary-900→800, disamakan dengan
- * footer). Item top-level: teks putih, hover pakai overlay putih
- * transparan tipis — !important dipakai karena style hover bawaan Aura
- * punya spesifisitas lebih tinggi dan sebelumnya menang, bikin teks jadi
- * invisible di atas kotak putih solid.
- */
-.app-menubar-dark :deep(.p-menubar-item-label) {
-  color: #fff !important;
-  font-weight: 700;
-}
-
-.app-menubar-dark :deep(.p-menubar-item-icon),
-.app-menubar-dark :deep(.p-menubar-submenu-icon) {
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-
-.app-menubar-dark :deep(.p-menubar-item-content) {
-  background: transparent !important;
-}
-
-.app-menubar-dark :deep(.p-menubar-item-content:hover) {
-  background: rgba(255, 255, 255, 0.12) !important;
-}
-
-.app-menubar-dark :deep(.p-menubar-item-content:hover .p-menubar-item-label),
-.app-menubar-dark :deep(.p-menubar-item-content:hover .p-menubar-submenu-icon) {
-  color: #fff !important;
-}
-
-.app-menubar-dark :deep(.p-menubar-item-active > .p-menubar-item-content .p-menubar-item-label) {
-  color: #fff !important;
-}
-
-.app-menubar-dark :deep(.p-menubar-button) {
-  color: #fff;
-}
-
-.app-menubar-dark :deep(.p-menubar-button:hover) {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-/* Panel dropdown submenu (desktop flyout, mis. "Profil Desa" / "Informasi"):
-   biru tua senada background navbar, teks putih senada item lain, berat
-   font disamakan (700) supaya konsisten dengan item top-level. */
-.app-menubar-dark :deep(.p-menubar-submenu) {
-  background: linear-gradient(180deg, var(--color-primary-900), var(--color-primary-800));
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 10px 24px rgba(20, 31, 51, 0.35);
-}
-
-.app-menubar-dark :deep(.p-menubar-submenu .p-menubar-item-label) {
-  color: #fff !important;
-  font-weight: 700;
-}
-
-.app-menubar-dark :deep(.p-menubar-submenu .p-menubar-item-icon) {
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-
-.app-menubar-dark :deep(.p-menubar-submenu .p-menubar-item-content:hover) {
-  background: rgba(255, 255, 255, 0.1) !important;
-}
-
-.app-menubar-dark :deep(.p-menubar-submenu .p-menubar-item-content:hover .p-menubar-item-label) {
-  color: var(--color-secondary-300) !important;
-}
-
-/* Panel hamburger mobile tetap terang (lebih gampang dibaca sebagai
-   layar penuh di HP), jadi dipisah dari style submenu desktop di atas. */
-.app-menubar-dark :deep(.p-menubar-mobile .p-menubar-root-list) {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 10px 24px rgba(20, 31, 51, 0.18);
-}
-
-.app-menubar-dark :deep(.p-menubar-mobile .p-menubar-item-label) {
-  color: var(--color-text-h) !important;
-}
-
-.app-menubar-dark :deep(.p-menubar-mobile .p-menubar-item-icon) {
-  color: var(--color-text-muted) !important;
-}
-
-.app-menubar-dark :deep(.p-menubar-mobile .p-menubar-item-content:hover .p-menubar-item-label) {
-  color: var(--color-primary-800) !important;
-}
-</style>
