@@ -172,12 +172,48 @@ const filteredServices = computed(() => {
   });
 });
 
-function badgeIconClass(badgeName) {
-  return BADGE_STYLES[badgeName]?.icon ?? BADGE_STYLES.Umum.icon;
-}
-
 function badgeTagSeverity(badgeName) {
   return BADGE_STYLES[badgeName]?.tag ?? BADGE_STYLES.Umum.tag;
+}
+
+/* Palet warna pastel (versi lebih jelas/bold) untuk kartu layanan,
+   dikelompokkan berdasarkan nama badge (Sosial, Ekonomi, Umum).
+   Tambahkan key baru di sini kalau ada badge lain yang dipakai
+   di data/letterServices.js */
+const CARD_PASTEL_STYLES = {
+  Sosial: {
+    card: "bg-gradient-to-br from-sky-100 to-blue-50 border-sky-200 hover:border-sky-400 hover:shadow-sky-200/70",
+    icon: "bg-sky-500 text-white",
+    accent: "bg-sky-400",
+  },
+  Ekonomi: {
+    card: "bg-gradient-to-br from-amber-100 to-orange-50 border-amber-200 hover:border-amber-400 hover:shadow-amber-200/70",
+    icon: "bg-amber-500 text-white",
+    accent: "bg-amber-400",
+  },
+  Umum: {
+    card: "bg-gradient-to-br from-violet-100 to-purple-50 border-violet-200 hover:border-violet-400 hover:shadow-violet-200/70",
+    icon: "bg-violet-500 text-white",
+    accent: "bg-violet-400",
+  },
+};
+
+const DEFAULT_PASTEL_STYLE = {
+  card: "bg-gradient-to-br from-slate-100 to-slate-50 border-slate-200 hover:border-slate-400 hover:shadow-slate-200/70",
+  icon: "bg-slate-500 text-white",
+  accent: "bg-slate-400",
+};
+
+function cardPastelClass(badgeName) {
+  return (CARD_PASTEL_STYLES[badgeName] ?? DEFAULT_PASTEL_STYLE).card;
+}
+
+function iconPastelClass(badgeName) {
+  return (CARD_PASTEL_STYLES[badgeName] ?? DEFAULT_PASTEL_STYLE).icon;
+}
+
+function accentPastelClass(badgeName) {
+  return (CARD_PASTEL_STYLES[badgeName] ?? DEFAULT_PASTEL_STYLE).accent;
 }
 
 function openApplication(service) {
@@ -197,30 +233,34 @@ function changeNik() {
   <div class="p-6 max-w-6xl mx-auto">
     <!-- ================= STEP: Verifikasi NIK ================= -->
     <div v-if="step === 'verify'" class="max-w-md mx-auto py-10">
-      <div class="rounded-2xl border border-surface-200 bg-white p-6 sm:p-8 text-center">
-        <span class="flex h-12 w-12 mx-auto items-center justify-center rounded-full bg-surface-100 text-[var(--color-primary)] text-xl">
+      <div class="relative overflow-hidden rounded-2xl border-2 border-[#1e3a5f]/15 bg-gradient-to-br from-[#1e3a5f]/5 via-white to-sky-50 p-6 sm:p-8 text-center shadow-lg">
+        <span class="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[#1e3a5f]/10" />
+        <span class="pointer-events-none absolute -left-8 -bottom-8 h-28 w-28 rounded-full bg-sky-200/30" />
+
+        <span class="relative flex h-14 w-14 mx-auto items-center justify-center rounded-full bg-[#1e3a5f] text-white text-2xl shadow-md">
           <i class="pi pi-shield" />
         </span>
-        <h1 class="text-xl font-semibold text-[var(--color-text-h)] mt-4">Verifikasi Data Warga</h1>
-        <p class="text-sm mt-1 text-[var(--color-text-muted)]">
+        <h1 class="relative text-xl font-semibold text-[var(--color-text-h)] mt-4">Verifikasi Data Warga</h1>
+        <p class="relative text-sm mt-1 text-[var(--color-text-muted)]">
           Masukkan Nomor Induk Kependudukan (NIK) Anda untuk memastikan Anda
           sudah terdaftar sebagai warga kelurahan ini sebelum mengajukan surat.
         </p>
 
-        <div class="mt-6 text-left flex flex-col gap-1">
-          <label for="verify-nik" class="text-sm text-[var(--color-text-h)]">NIK</label>
+        <div class="relative mt-6 text-left flex flex-col gap-1">
+          <label for="verify-nik" class="text-sm font-semibold text-[var(--color-text-h)]">NIK</label>
           <InputText
             id="verify-nik"
             v-model="nikInput"
             maxlength="16"
             placeholder="16 Digit NIK"
             :invalid="!!nikError"
+            class="!border-2 !border-[#1e3a5f]/20 focus:!border-[#1e3a5f] !rounded-xl !py-3"
             @keyup.enter="checkNik"
           />
           <small v-if="nikError" class="text-red-500">{{ nikError }}</small>
         </div>
 
-        <Message v-if="residentNotFound" severity="warn" :closable="false" class="mt-4 text-left">
+        <Message v-if="residentNotFound" severity="warn" :closable="false" class="relative mt-4 text-left">
           <span class="font-medium">NIK tidak ditemukan.</span>
           Anda belum terdaftar sebagai warga di kelurahan ini. Silakan lengkapi
           pendaftaran warga baru terlebih dahulu.
@@ -232,7 +272,7 @@ function changeNik() {
         <Button
           label="Cek Data"
           icon="pi pi-search"
-          class="w-full mt-4"
+          class="relative w-full mt-4 !bg-[#1e3a5f] !border-[#1e3a5f] hover:!bg-[#2d5580] !py-3 !shadow-md"
           :loading="isChecking"
           @click="checkNik"
         />
@@ -386,31 +426,37 @@ function changeNik() {
       </div>
 
       <!-- Hero -->
-      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-semibold text-[var(--color-text-h)]">Layanan Surat</h1>
-          <p class="text-sm mt-1 max-w-xl text-[var(--color-text-muted)]">
-            Akses cepat dan mudah untuk pengajuan berbagai dokumen kependudukan dan
-            surat keterangan resmi.
-          </p>
-        </div>
+      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e3a5f] via-[#1e3a5f] to-[#2d5580] p-6 sm:p-8">
+        <span class="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
+        <span class="pointer-events-none absolute -right-2 bottom-0 h-24 w-24 rounded-full bg-white/10" />
 
-        <div class="flex items-center gap-3 rounded-xl border border-surface-200 bg-white px-4 py-3 shrink-0">
-          <span class="flex h-9 w-9 items-center justify-center rounded-full bg-surface-100 text-[var(--color-text-muted)]">
-            <i class="pi pi-file" />
-          </span>
-          <div class="leading-tight">
-            <p class="text-[10px] tracking-wide uppercase text-[var(--color-text-muted)]">Total Permohonan</p>
-            <p class="text-lg font-semibold text-[var(--color-text-h)]">
-              {{ TOTAL_APPLICATIONS.toLocaleString("id-ID") }}
+        <div class="relative flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-semibold !text-white">Layanan Surat</h1>
+            <p class="text-sm mt-1 max-w-xl !text-white/85">
+              Akses cepat dan mudah untuk pengajuan berbagai dokumen kependudukan dan
+              surat keterangan resmi.
             </p>
+          </div>
+
+          <div class="flex items-center gap-3 rounded-xl bg-white/95 backdrop-blur px-4 py-3 shrink-0 shadow-lg">
+            <span class="flex h-9 w-9 items-center justify-center rounded-full bg-[#1e3a5f]/10 text-[#1e3a5f]">
+              <i class="pi pi-file" />
+            </span>
+            <div class="leading-tight">
+              <p class="text-[10px] tracking-wide uppercase text-[var(--color-text-muted)]">Total Permohonan</p>
+              <p class="text-lg font-semibold text-[var(--color-text-h)]">
+                {{ TOTAL_APPLICATIONS.toLocaleString("id-ID") }}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Search box -->
-      <div class="mt-6 rounded-2xl border border-surface-200 bg-surface-50 p-6">
-        <label class="text-sm font-medium text-[var(--color-text-h)]" for="service-search">
+      <div class="mt-6 rounded-2xl border-2 border-[#1e3a5f]/15 bg-gradient-to-br from-[#1e3a5f]/5 to-white p-6 shadow-sm">
+        <label class="text-sm font-semibold text-[var(--color-text-h)] flex items-center gap-2" for="service-search">
+          <i class="pi pi-search text-[#1e3a5f]" />
           Cari Layanan Surat
         </label>
         <IconField class="mt-2 block">
@@ -418,7 +464,7 @@ function changeNik() {
           <InputText
             id="service-search"
             v-model="searchQuery"
-            class="w-full"
+            class="w-full !border-2 !border-[#1e3a5f]/20 focus:!border-[#1e3a5f] !rounded-xl !py-3"
             placeholder="Ketik jenis surat (Cth: SKTM, SKU)..."
           />
         </IconField>
@@ -432,13 +478,14 @@ function changeNik() {
           :label="category.label"
           rounded
           size="small"
+          :class="activeCategory === category.value ? '!bg-[#1e3a5f] !border-[#1e3a5f] !shadow-md' : '!bg-white'"
           :severity="activeCategory === category.value ? 'contrast' : 'secondary'"
           :outlined="activeCategory !== category.value"
           @click="selectCategory(category.value)"
         />
       </div>
 
-      <!-- Grid card layanan -->
+      <!-- Grid card layanan (warna pastel per kategori) -->
       <div
         v-if="filteredServices.length"
         class="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
@@ -447,22 +494,37 @@ function changeNik() {
           v-for="service in filteredServices"
           :key="service.slug"
           type="button"
-          class="text-left rounded-2xl border border-surface-200 bg-white p-5 flex flex-col gap-3 transition-shadow hover:shadow-md hover:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+          class="group relative overflow-hidden text-left rounded-2xl border-2 p-5 flex flex-col gap-3 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+          :class="cardPastelClass(service.badge)"
           @click="openApplication(service)"
         >
-          <div class="flex items-start justify-between">
+          <!-- Aksen strip warna di sisi kiri kartu -->
+          <span class="absolute inset-y-0 left-0 w-1.5" :class="accentPastelClass(service.badge)" />
+
+          <!-- Lingkaran dekoratif transparan di pojok kanan atas -->
+          <span
+            class="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full opacity-20 transition-transform duration-300 group-hover:scale-125"
+            :class="accentPastelClass(service.badge)"
+          />
+
+          <div class="relative flex items-start justify-between">
             <span
-              class="flex h-10 w-10 items-center justify-center rounded-full text-lg"
-              :class="badgeIconClass(service.badge)"
+              class="flex h-12 w-12 items-center justify-center rounded-xl text-xl shadow-md transition-transform duration-200 group-hover:scale-110"
+              :class="iconPastelClass(service.badge)"
             >
               <i :class="service.icon" />
             </span>
-            <Tag :value="service.badge" :severity="badgeTagSeverity(service.badge)" rounded />
+            <Tag :value="service.badge" :severity="badgeTagSeverity(service.badge)" rounded class="font-semibold" />
           </div>
 
-          <div>
+          <div class="relative">
             <h3 class="font-semibold text-[var(--color-text-h)]">{{ service.title }}</h3>
             <p class="text-sm mt-1 text-[var(--color-text-muted)]">{{ service.description }}</p>
+          </div>
+
+          <div class="relative flex items-center gap-1 text-xs font-medium text-[var(--color-text-h)] mt-1 opacity-0 -translate-x-1 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0">
+            <span>Ajukan sekarang</span>
+            <i class="pi pi-arrow-right text-[10px]" />
           </div>
         </button>
       </div>
