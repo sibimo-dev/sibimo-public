@@ -189,7 +189,7 @@ function backToServices() {
       </div>
 
       <Message severity="secondary" :closable="false" class="mt-3">
-        <span class="font-medium">Penting:</span>
+        <span class="font-bold text-red-600">Penting:</span>
         setelah mengonfirmasi pengajuan ini, notifikasi akan dikirim ke nomor WhatsApp
         yang sudah Anda cantumkan. Mohon pantau setiap notifikasi yang dikirimkan
         terkait status pengajuan.
