@@ -22,7 +22,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 })
 
-/* ---------------- Hero: background photo + parallax + title animation ---------------- */
+/* Hero: background photo + parallax + title animation */
 const heroImageUrl = '/images/kalurahan-bimo.jpeg'
 const heroImageLoaded = ref(false)
 
@@ -33,16 +33,12 @@ let rafId = null
 function onHeroScroll() {
   if (rafId) return
   rafId = requestAnimationFrame(() => {
-    // Subtle parallax: background moves slower than the page scroll
     heroOffset.value = Math.min(window.scrollY * 0.12, 40)
     rafId = null
   })
 }
 
-/* ---------------- Anchor nav (scroll-spy tabs) ---------------- */
-/* IDs match the hash links defined in navMenu.js's "Profil Desa" dropdown
-   (#history, #vision-mission, #org-structure) so clicking those items
-   scrolls to the right section via the router's scrollBehavior. */
+/* Anchor nav (scroll-spy tabs) */
 const sections = [
   { id: 'history', label: 'Sejarah' },
   { id: 'vision-mission', label: 'Visi & Misi' },
@@ -63,7 +59,13 @@ function onTabChange(id) {
   scrollTo(id)
 }
 
-/* ---------------- Content data ---------------- */
+/* Color accents */
+const accentPalette = ['blue', 'purple', 'teal', 'amber', 'rose', 'indigo']
+function accentClass(i) {
+  return `accent-${accentPalette[i % accentPalette.length]}`
+}
+
+/* Content data */
 const missions = [
   'Meningkatkan kualitas pelayanan publik berbasis teknologi informasi.',
   'Mengembangkan potensi ekonomi lokal melalui pemberdayaan UMKM dan BUMDes.',
@@ -91,10 +93,6 @@ const orgChartLeaves = [
   'Kasi Pelayanan',
 ]
 
-// Tree structure consumed by PrimeVue's <OrganizationChart>.
-// Assumes PrimeVue v3.x's `value` API (an array of root TreeNodes).
-// If your project uses PrimeVue v4 / unstyled mode, check the
-// OrganizationChart docs for the current node shape and CSS class names.
 const orgChartData = ref([
   {
     key: '0',
@@ -112,7 +110,7 @@ const orgChartData = ref([
   },
 ])
 
-/* ---------------- Stats with count-up animation ---------------- */
+/* Stats with count-up animation */
 const stats = reactive([
   { icon: '👥', label: 'Total Penduduk', target: 4521, value: 0, suffix: '' },
   { icon: '🏠', label: 'Kepala Keluarga', target: 1120, value: 0, suffix: '' },
@@ -122,7 +120,7 @@ const stats = reactive([
 
 let statsAnimated = false
 function animateStats() {
-  if (statsAnimated) return // avoid re-triggering every time the block re-enters the viewport
+  if (statsAnimated) return 
   statsAnimated = true
   stats.forEach((s) => {
     const duration = 1200
@@ -138,7 +136,7 @@ function animateStats() {
   })
 }
 
-/* ---------------- Scroll reveal ---------------- */
+/* Scroll reveal */
 let observer
 
 onMounted(() => {
@@ -154,9 +152,6 @@ onMounted(() => {
     },
     { threshold: 0.2, rootMargin: '-80px 0px -40% 0px' }
   )
-  // FIX: the previous selector ('.reveal, [data-section]') did not match
-  // elements carrying only [data-trigger], so the stats block was never
-  // observed and animateStats() never ran (numbers stuck at 0).
   document
     .querySelectorAll('.reveal, [data-section], [data-trigger]')
     .forEach((el) => observer.observe(el))
@@ -173,12 +168,11 @@ onBeforeUnmount(() => {
   if (rafId) cancelAnimationFrame(rafId)
 })
 
-/* ---------------- Interactive map (Leaflet + OSM boundary) ---------------- */
+/* Interactive map (Leaflet + OSM boundary) */
 const mapEl = ref(null)
-const mapStatus = ref('loading') // 'loading' | 'ok' | 'no-boundary' | 'error'
+const mapStatus = ref('loading')
 let leafletMap = null
 
-// Approximate center point of Kalurahan Bimomartani, Kapanewon Ngemplak, Kabupaten Sleman, DIY.
 // Used as a fallback / initial point before the boundary polygon finishes loading.
 const VILLAGE_CENTER = [-7.7132, 110.4551]
 const VILLAGE_QUERY = 'Bimomartani, Ngemplak, Sleman, Daerah Istimewa Yogyakarta, Indonesia'
@@ -187,7 +181,7 @@ async function initMap() {
   if (!mapEl.value) return
 
   leafletMap = L.map(mapEl.value, {
-    scrollWheelZoom: false, // so page scroll doesn't get "trapped" inside the map
+    scrollWheelZoom: false,
     zoomControl: true,
   }).setView(VILLAGE_CENTER, 14)
 
@@ -217,10 +211,10 @@ async function initMap() {
     if (data && data[0] && data[0].geojson) {
       const boundary = L.geoJSON(data[0].geojson, {
         style: {
-          color: '#dc2626', // red boundary line
+          color: '#059669',
           weight: 3,
-          fillColor: '#dc2626',
-          fillOpacity: 0.06,
+          fillColor: '#059669',
+          fillOpacity: 0.08,
         },
       }).addTo(leafletMap)
 
@@ -240,13 +234,8 @@ async function initMap() {
 <template>
   <div class="bg-white text-slate-800">
     <!-- ===== HERO ===== -->
-    <!-- The background photo sits inside a rounded "card" with margin on
-         the left/right/top (instead of a full-bleed section). Content is
-         left-aligned inside the card. -->
     <section class="relative px-4 py-6 md:px-6 md:py-8">
       <div class="hero-card relative isolate mx-auto max-w-6xl overflow-hidden rounded-3xl shadow-2xl">
-        <!-- Background photo layer: outer wrapper handles scroll parallax (JS),
-             inner layer handles the Ken Burns effect (CSS). -->
         <div
           class="hero-photo absolute inset-0 -z-20 overflow-hidden bg-slate-900"
           :style="{ transform: `translateY(${heroOffset}px)` }"
@@ -285,16 +274,16 @@ async function initMap() {
         <!-- Subtle dot texture -->
         <div class="hero-dots pointer-events-none absolute inset-0 -z-10 opacity-20" />
 
-        <!-- Blue accent blobs -->
+        <!-- Accent blobs (warmer, two-tone: blue + amber echoes the sections below) -->
         <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl animate-pulse-slow" />
-        <div class="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-white/5 blur-3xl animate-float-slow" />
+        <div class="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-amber-400/10 blur-3xl animate-float-slow" />
 
         <!-- Content: left-aligned, fixed card height (not a huge vertical padding) -->
         <div class="relative flex min-h-[440px] items-center px-6 py-14 md:min-h-[520px] md:px-14 md:py-20">
           <div class="max-w-xl">
             <div class="hero-pop inline-flex items-center gap-3">
-              <span class="hero-kicker-dot h-2.5 w-2.5 flex-none rotate-45 bg-blue-500" />
-              <span class="text-xs font-semibold uppercase tracking-[0.3em] text-blue-300">Tentang Kami</span>
+              <span class="hero-kicker-dot h-2.5 w-2.5 flex-none rotate-45 bg-gradient-to-br from-sky-400 to-violet-500" />
+              <span class="hero-kicker-label text-xs font-semibold uppercase tracking-[0.3em]">Tentang Kami</span>
             </div>
 
             <h1 class="mt-5 text-3xl font-bold leading-tight tracking-tight [perspective:800px] md:text-5xl">
@@ -311,7 +300,7 @@ async function initMap() {
             </h1>
 
             <!-- Accent underline that "grows" once the last word has appeared -->
-            <span class="hero-underline mt-4 block h-[3px] w-16 rounded-full bg-gradient-to-r from-blue-600 to-blue-300/40" />
+            <span class="hero-underline mt-4 block h-[3px] w-16 rounded-full bg-gradient-to-r from-sky-400 via-indigo-500 to-violet-500" />
 
             <p class="hero-in mt-5 text-sm leading-relaxed !text-slate-200 md:text-base" style="animation-delay: 0.95s">
               Mengenal lebih dekat sejarah, visi misi, dan potensi wilayah desa kami
@@ -338,60 +327,71 @@ async function initMap() {
       </div>
     </nav>
 
-    <!-- ===== HISTORY ===== -->
-    <section id="history" data-section="history" class="mx-auto max-w-4xl px-6 py-20">
-      <div class="reveal flex items-center gap-3">
-        <span class="h-px w-8 bg-blue-500" />
-        <h2 class="text-2xl font-semibold text-slate-900">Sejarah Desa Bimomartani</h2>
-      </div>
+    <!-- ===== HISTORY (amber / heritage tone) ===== -->
+    <section id="history" data-section="history" class="section-tint section-tint--amber relative overflow-hidden px-6 py-20">
+      <div class="section-dots section-dots--amber pointer-events-none absolute inset-0" />
+      <span class="section-year pointer-events-none absolute -right-4 top-6 select-none">1946</span>
 
-      <div class="reveal mt-6 space-y-4 text-slate-600 leading-relaxed">
-        <p>
-          Nama Kalurahan Bimomartani terbentuk pada tanggal 29 April 1946 yang merupakan
-          gabungan dari tiga kelurahan yaitu kelurahan Jatisari, Cokrosari dan Opaksari.
-        </p>
-        <p>
-          Awal terbentuknya Kalurahan Bimomartani, kalurahan ini baru dipimpin oleh empat
-          orang lurah. Sedangkan struktur organisasi dan tata kerja pemerintah kalurahan
-          (SOTK) terbaru saat ini sesuai dengan Peraturan Bupati Sleman Nomor 46 Tahun 2016
-          tentang Pedoman SOTK dan Peraturan Kalurahan Bimomartani Nomor 1 Tahun 2020
-          tentang Susunan Organisasi dan Tata Kerja Tahun 2020.
-        </p>
-        <p>
-          Pemerintah Kalurahan Bimomartani terdiri dari Lurah dan Perangkat Kalurahan.
-          Perangkat Kalurahan terdiri dari Sekretaris Kalurahan, Pelaksana Teknis, dan
-          Pelaksana Kewilayahan. Sekretaris Kalurahan dipimpin oleh Carik yang berada di
-          bawah dan bertanggungjawab kepada Lurah. Sekretaris Kalurahan terdiri dari Urusan
-          Tata Usaha Umum, Urusan Keuangan, dan Urusan Perencanaan. Urusan dalam hal ini
-          dipimpin oleh Kepala Urusan yang berada dibawah dan bertanggungjawab kepada Lurah
-          melalui Carik. Pelaksana Kewilayahan Kalurahan Bimomartani terdiri dari 12 Padukuhan.
-        </p>
-      </div>
+      <div class="relative mx-auto max-w-4xl">
+        <div class="reveal flex items-center gap-3">
+          <span class="section-eyebrow-dash section-eyebrow-dash--amber" />
+          <span class="section-eyebrow section-eyebrow--amber">Sejak 1946</span>
+        </div>
+        <h2 class="reveal mt-2 text-2xl font-semibold text-slate-900">Sejarah Desa Bimomartani</h2>
 
-      <div class="reveal mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Card class="photo-placeholder-card">
-          <template #content>
-            <div class="flex h-40 items-center justify-center text-blue-400/70 text-sm">
-              Foto Balai Desa
-            </div>
-          </template>
-        </Card>
-        <Card class="photo-placeholder-card">
-          <template #content>
-            <div class="flex h-40 items-center justify-center text-blue-400/70 text-sm">
-              Foto Kegiatan Warga
-            </div>
-          </template>
-        </Card>
+        <div class="reveal mt-6 space-y-5 border-l-2 border-amber-200 pl-6 text-slate-600 leading-relaxed">
+          <p class="history-milestone">
+            <span class="history-dot history-dot--amber" />
+            Nama Kalurahan Bimomartani terbentuk pada tanggal 29 April 1946 yang merupakan
+            gabungan dari tiga kelurahan yaitu kelurahan Jatisari, Cokrosari dan Opaksari.
+          </p>
+          <p class="history-milestone">
+            <span class="history-dot history-dot--amber" />
+            Awal terbentuknya Kalurahan Bimomartani, kalurahan ini baru dipimpin oleh empat
+            orang lurah. Sedangkan struktur organisasi dan tata kerja pemerintah kalurahan
+            (SOTK) terbaru saat ini sesuai dengan Peraturan Bupati Sleman Nomor 46 Tahun 2016
+            tentang Pedoman SOTK dan Peraturan Kalurahan Bimomartani Nomor 1 Tahun 2020
+            tentang Susunan Organisasi dan Tata Kerja Tahun 2020.
+          </p>
+          <p class="history-milestone">
+            <span class="history-dot history-dot--amber" />
+            Pemerintah Kalurahan Bimomartani terdiri dari Lurah dan Perangkat Kalurahan.
+            Perangkat Kalurahan terdiri dari Sekretaris Kalurahan, Pelaksana Teknis, dan
+            Pelaksana Kewilayahan. Sekretaris Kalurahan dipimpin oleh Carik yang berada di
+            bawah dan bertanggungjawab kepada Lurah. Sekretaris Kalurahan terdiri dari Urusan
+            Tata Usaha Umum, Urusan Keuangan, dan Urusan Perencanaan. Urusan dalam hal ini
+            dipimpin oleh Kepala Urusan yang berada dibawah dan bertanggungjawab kepada Lurah
+            melalui Carik. Pelaksana Kewilayahan Kalurahan Bimomartani terdiri dari 12 Padukuhan.
+          </p>
+        </div>
+
+        <div class="reveal mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Card class="photo-placeholder-card">
+            <template #content>
+              <div class="flex h-40 items-center justify-center text-amber-600/70 text-sm">
+                📷 Foto Balai Desa
+              </div>
+            </template>
+          </Card>
+          <Card class="photo-placeholder-card">
+            <template #content>
+              <div class="flex h-40 items-center justify-center text-amber-600/70 text-sm">
+                📷 Foto Kegiatan Warga
+              </div>
+            </template>
+          </Card>
+        </div>
       </div>
     </section>
 
-    <!-- ===== VISION & MISSION ===== -->
-    <section id="vision-mission" data-section="vision-mission" class="bg-blue-50/50 px-6 py-20">
-      <div class="mx-auto max-w-4xl text-center">
+    <!-- ===== VISION & MISSION (indigo / violet tone) ===== -->
+    <section id="vision-mission" data-section="vision-mission" class="section-tint section-tint--violet relative overflow-hidden px-6 py-20">
+      <div class="section-dots section-dots--violet pointer-events-none absolute inset-0" />
+
+      <div class="relative mx-auto max-w-4xl text-center">
         <Card class="reveal vision-card mx-auto max-w-2xl">
           <template #content>
-            <span class="text-5xl font-serif leading-none text-blue-300">&ldquo;</span>
+            <span class="vision-quote">&ldquo;</span>
             <h2 class="mt-1 text-2xl font-semibold text-slate-900">Visi</h2>
             <p class="mx-auto mt-3 text-slate-600">
               "Mewujudkan Desa Bimomartani yang Mandiri, Sejahtera, dan Berbudaya melalui
@@ -400,13 +400,18 @@ async function initMap() {
           </template>
         </Card>
 
-        <h2 class="reveal mt-14 text-2xl font-semibold text-slate-900">Misi</h2>
+        <div class="reveal mt-14 flex items-center justify-center gap-3">
+          <span class="section-eyebrow-dash section-eyebrow-dash--violet" />
+          <span class="section-eyebrow section-eyebrow--violet">Arah Kami</span>
+        </div>
+        <h2 class="reveal mt-2 text-2xl font-semibold text-slate-900">Misi</h2>
 
         <div class="mt-6 space-y-3 text-left">
           <Card
             v-for="(item, i) in missions"
             :key="i"
             class="reveal mission-card"
+            :class="accentClass(i)"
             :style="{ transitionDelay: `${i * 60}ms` }"
           >
             <template #content>
@@ -420,109 +425,124 @@ async function initMap() {
       </div>
     </section>
 
-    <!-- ===== ORGANIZATION STRUCTURE ===== -->
-    <section id="org-structure" data-section="org-structure" class="mx-auto max-w-4xl px-6 py-20">
-      <div class="reveal flex items-center gap-3">
-        <span class="h-px w-8 bg-blue-500" />
-        <h2 class="text-2xl font-semibold text-slate-900">Struktur Organisasi Pemerintah Desa</h2>
-      </div>
+    <!-- ===== ORGANIZATION STRUCTURE (teal tone) ===== -->
+    <section id="org-structure" data-section="org-structure" class="section-tint section-tint--teal relative overflow-hidden px-6 py-20">
+      <div class="section-dots section-dots--teal pointer-events-none absolute inset-0" />
 
-      <Card class="reveal mt-6">
-        <template #content>
-          <p class="mb-6 text-center text-sm font-medium uppercase tracking-wide text-slate-400">
-            Pemerintah Desa
-          </p>
+      <div class="relative mx-auto max-w-4xl">
+        <div class="reveal flex items-center gap-3">
+          <span class="section-eyebrow-dash section-eyebrow-dash--teal" />
+          <span class="section-eyebrow section-eyebrow--teal">Tata Kelola</span>
+        </div>
+        <h2 class="reveal mt-2 text-2xl font-semibold text-slate-900">Struktur Organisasi Pemerintah Desa</h2>
 
-          <!-- PrimeVue OrganizationChart replaces the hand-rolled flowchart markup. -->
-          <div class="org-chart-wrap overflow-x-auto">
-            <OrganizationChart :value="orgChartData">
-              <template #default="slotProps">
-                <span class="org-chart-node-label">{{ slotProps.node.label }}</span>
-              </template>
-            </OrganizationChart>
-          </div>
-        </template>
-      </Card>
-
-      <div class="mt-10 flex items-center gap-2">
-        <span class="text-blue-500">🗂️</span>
-        <p class="text-sm font-medium text-slate-500">Deskripsi Tugas &amp; Fungsi</p>
-      </div>
-
-      <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Card
-          v-for="role in orgRoles"
-          :key="role.no"
-          class="reveal role-card"
-          :style="{ transitionDelay: `${(role.no - 1) * 40}ms` }"
-        >
+        <Card class="reveal org-chart-card mt-6">
           <template #content>
-            <p class="font-semibold text-slate-900">
-              <span class="text-blue-600">{{ role.no }}.</span> {{ role.title }}
+            <p class="mb-6 text-center text-sm font-medium uppercase tracking-wide text-teal-600/70">
+              Pemerintah Desa
             </p>
-            <p class="mt-1.5 text-sm text-slate-500">{{ role.desc }}</p>
+
+            <!-- PrimeVue OrganizationChart replaces the hand-rolled flowchart markup. -->
+            <div class="org-chart-wrap overflow-x-auto">
+              <OrganizationChart :value="orgChartData">
+                <template #default="slotProps">
+                  <span class="org-chart-node-label">{{ slotProps.node.label }}</span>
+                </template>
+              </OrganizationChart>
+            </div>
           </template>
         </Card>
+
+        <div class="mt-10 flex items-center gap-2">
+          <span class="text-teal-600">🗂️</span>
+          <p class="text-sm font-medium text-slate-500">Deskripsi Tugas &amp; Fungsi</p>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Card
+            v-for="role in orgRoles"
+            :key="role.no"
+            class="reveal role-card"
+            :class="accentClass(role.no - 1)"
+            :style="{ transitionDelay: `${(role.no - 1) * 40}ms` }"
+          >
+            <template #content>
+              <div class="flex items-start gap-3">
+                <span class="role-badge flex-none">{{ role.no }}</span>
+                <div>
+                  <p class="font-semibold text-slate-900">{{ role.title }}</p>
+                  <p class="mt-1.5 text-sm text-slate-500">{{ role.desc }}</p>
+                </div>
+              </div>
+            </template>
+          </Card>
+        </div>
       </div>
     </section>
 
-    <!-- ===== REGION & DEMOGRAPHICS ===== -->
-    <section id="wilayah" data-section="wilayah" class="mx-auto max-w-4xl px-6 py-20">
-      <div class="reveal flex items-center gap-3">
-        <span class="h-px w-8 bg-blue-500" />
-        <h2 class="text-2xl font-semibold text-slate-900">Data Wilayah &amp; Demografi</h2>
-      </div>
+    <!-- ===== REGION & DEMOGRAPHICS (emerald / green tone) ===== -->
+    <section id="wilayah" data-section="wilayah" class="section-tint section-tint--emerald relative overflow-hidden px-6 py-20">
+      <div class="section-dots section-dots--emerald pointer-events-none absolute inset-0" />
 
-      <div class="reveal mt-6 grid grid-cols-2 gap-4 md:grid-cols-4" data-trigger="stats">
-        <Card
-          v-for="(s, i) in stats"
-          :key="s.label"
-          class="stat-card group"
-          :style="{ transitionDelay: `${i * 70}ms` }"
-        >
+      <div class="relative mx-auto max-w-4xl">
+        <div class="reveal flex items-center gap-3">
+          <span class="section-eyebrow-dash section-eyebrow-dash--emerald" />
+          <span class="section-eyebrow section-eyebrow--emerald">Fakta &amp; Angka</span>
+        </div>
+        <h2 class="reveal mt-2 text-2xl font-semibold text-slate-900">Data Wilayah &amp; Demografi</h2>
+
+        <div class="reveal mt-6 grid grid-cols-2 gap-4 md:grid-cols-4" data-trigger="stats">
+          <Card
+            v-for="(s, i) in stats"
+            :key="s.label"
+            class="stat-card"
+            :class="accentClass(i)"
+            :style="{ transitionDelay: `${i * 70}ms` }"
+          >
+            <template #content>
+              <Avatar :label="s.icon" shape="circle" class="stat-avatar transition-all duration-300" />
+              <p class="mt-4 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                {{ s.label }}
+              </p>
+              <p class="mt-1 text-2xl font-bold text-slate-900">
+                {{ s.value.toLocaleString('id-ID') }}<span class="text-base font-semibold text-slate-400">{{ s.suffix }}</span>
+              </p>
+            </template>
+          </Card>
+        </div>
+
+        <div class="reveal my-10 h-px w-full bg-emerald-100" />
+
+        <!-- ===== INTERACTIVE MAP ===== -->
+        <Card class="reveal map-card isolate overflow-hidden" :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }">
           <template #content>
-            <Avatar :label="s.icon" shape="circle" class="stat-avatar transition-all duration-300 group-hover:!bg-blue-600 group-hover:scale-110" />
-            <p class="mt-4 text-[11px] font-medium uppercase tracking-wide text-slate-400">
-              {{ s.label }}
-            </p>
-            <p class="mt-1 text-2xl font-bold text-slate-900">
-              {{ s.value.toLocaleString('id-ID') }}<span class="text-base font-semibold text-slate-400">{{ s.suffix }}</span>
-            </p>
+            <div class="relative h-80 w-full">
+              <div ref="mapEl" class="h-full w-full" />
+
+              <div
+                v-if="mapStatus === 'loading'"
+                class="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-[1px]"
+              >
+                <span class="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-medium text-slate-500 shadow">
+                  <ProgressSpinner class="h-4 w-4" stroke-width="6" />
+                  Memuat batas wilayah dari OpenStreetMap...
+                </span>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 border-t border-emerald-100 px-4 py-3">
+              <div class="flex items-center gap-2">
+                <span class="inline-block h-2.5 w-4 rounded-sm bg-emerald-600/80" />
+                <p class="text-xs text-slate-400">
+                  Garis hijau menunjukkan batas administratif Kalurahan Bimomartani (data OpenStreetMap).
+                </p>
+              </div>
+              <Tag v-if="mapStatus === 'no-boundary'" severity="warn" value="Poligon batas belum tersedia — menampilkan titik lokasi saja." class="!text-xs" />
+              <Tag v-else-if="mapStatus === 'error'" severity="danger" value="Gagal memuat data batas wilayah." class="!text-xs" />
+            </div>
           </template>
         </Card>
       </div>
-
-      <div class="reveal my-10 h-px w-full bg-slate-100" />
-
-      <!-- ===== INTERACTIVE MAP ===== -->
-      <Card class="reveal isolate overflow-hidden" :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }">
-        <template #content>
-          <div class="relative h-80 w-full">
-            <div ref="mapEl" class="h-full w-full" />
-
-            <div
-              v-if="mapStatus === 'loading'"
-              class="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-[1px]"
-            >
-              <span class="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-medium text-slate-500 shadow">
-                <ProgressSpinner class="h-4 w-4" stroke-width="6" />
-                Memuat batas wilayah dari OpenStreetMap...
-              </span>
-            </div>
-          </div>
-
-          <div class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3">
-            <div class="flex items-center gap-2">
-              <span class="inline-block h-2.5 w-4 rounded-sm bg-red-600/80" />
-              <p class="text-xs text-slate-400">
-                Garis merah menunjukkan batas administratif Kalurahan Bimomartani (data OpenStreetMap).
-              </p>
-            </div>
-            <Tag v-if="mapStatus === 'no-boundary'" severity="warn" value="Poligon batas belum tersedia — menampilkan titik lokasi saja." class="!text-xs" />
-            <Tag v-else-if="mapStatus === 'error'" severity="danger" value="Gagal memuat data batas wilayah." class="!text-xs" />
-          </div>
-        </template>
-      </Card>
     </section>
   </div>
 </template>
@@ -538,8 +558,7 @@ async function initMap() {
   transform: translateY(0);
 }
 
-/* Hero entrance: plays right on mount, not tied to scroll, so it still
-   shows up when the page is opened via a deep link (e.g. #org-structure). */
+/* Hero entrance */
 .hero-in {
   opacity: 0;
   transform: translateY(14px);
@@ -572,13 +591,22 @@ async function initMap() {
   50% { transform: rotate(45deg) scale(1.25); opacity: 0.7; }
 }
 
+/* "Tentang Kami" kicker label: soft gradient text instead of flat blue-300 */
+.hero-kicker-label {
+  background: linear-gradient(90deg, #7dd3fc, #c4b5fd);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 /* Title: each word appears one by one with a blur-in + 3D rotation */
 .hero-word {
   opacity: 0;
   filter: blur(10px);
   transform: translateY(34px) rotateX(55deg) scale(0.92);
   transform-origin: bottom;
-  color: #f8fafc;
+  color: #f1f5f9;
+  text-shadow: 0 2px 24px rgba(15, 23, 42, 0.35);
   animation: heroWordIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 @keyframes heroWordIn {
@@ -589,9 +617,13 @@ async function initMap() {
   }
 }
 
-/* Last title word ("Bimomartani"): navbar-matching blue */
+/* Last title word ("Bimomartani") */
 .hero-word--accent {
-  color: #3b82f6;
+  background: linear-gradient(90deg, #38bdf8 0%, #6366f1 55%, #a855f7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 18px rgba(99, 102, 241, 0.45));
 }
 
 /* Looping typewriter effect on the last title word */
@@ -601,7 +633,7 @@ async function initMap() {
   white-space: nowrap;
   vertical-align: bottom;
   width: 0;
-  border-right: 3px solid #3b82f6;
+  border-right: 3px solid #a855f7;
   animation:
     heroTypingLoop 5s steps(11, end) infinite,
     heroCaretBlink 0.7s step-end infinite;
@@ -667,16 +699,91 @@ async function initMap() {
   animation: float-slow 9s ease-in-out infinite;
 }
 
-/* ---------------- PrimeVue component styling overrides ---------------- */
-/* Class names below (p-tab*, p-organizationchart-*, p-card, p-avatar,
-   p-tag) target PrimeVue v5's default (non-unstyled) theme. If your
-   project runs PrimeVue in unstyled mode with a Tailwind preset instead,
-   these selectors may need to be adjusted to match your theme's class
-   names. */
+/* SECTION COLOR IDENTITIES */
+.section-tint--amber {
+  background: linear-gradient(180deg, #fffaf0 0%, #ffffff 85%);
+}
+.section-tint--violet {
+  background: linear-gradient(180deg, #f5f3ff 0%, #eef2ff 55%, #ffffff 100%);
+}
+.section-tint--teal {
+  background: linear-gradient(180deg, #f0fdfa 0%, #ffffff 85%);
+}
+.section-tint--emerald {
+  background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 85%);
+}
 
-/* Anchor nav Tabs (replaces the removed TabMenu): strip the default look,
-   restore the original underline-on-active-tab style. Since no TabPanels
-   are used, only the Tabs/TabList/Tab class names below matter. */
+.section-dots {
+  opacity: 0.5;
+  background-size: 20px 20px;
+}
+.section-dots--amber {
+  background-image: radial-gradient(#fcd34d 1px, transparent 1px);
+  opacity: 0.25;
+}
+.section-dots--violet {
+  background-image: radial-gradient(#c4b5fd 1px, transparent 1px);
+  opacity: 0.25;
+}
+.section-dots--teal {
+  background-image: radial-gradient(#5eead4 1px, transparent 1px);
+  opacity: 0.22;
+}
+.section-dots--emerald {
+  background-image: radial-gradient(#6ee7b7 1px, transparent 1px);
+  opacity: 0.22;
+}
+
+/* Big translucent watermark year behind the history heading */
+.section-year {
+  font-size: 9rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #f59e0b;
+  opacity: 0.08;
+}
+
+/* Small colored "eyebrow" label + dash, one variant per section hue */
+.section-eyebrow-dash {
+  height: 1px;
+  width: 2rem;
+}
+.section-eyebrow-dash--amber { background: #f59e0b; }
+.section-eyebrow-dash--violet { background: #7c3aed; }
+.section-eyebrow-dash--teal { background: #0d9488; }
+.section-eyebrow-dash--emerald { background: #059669; }
+
+.section-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+.section-eyebrow--amber { color: #b45309; }
+.section-eyebrow--violet { color: #6d28d9; }
+.section-eyebrow--teal { color: #0f766e; }
+.section-eyebrow--emerald { color: #047857; }
+
+/* History timeline dots marking each paragraph/milestone */
+.history-milestone {
+  position: relative;
+}
+.history-dot {
+  position: absolute;
+  left: -2.05rem;
+  top: 0.5rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px currentColor;
+}
+.history-dot--amber {
+  background: #f59e0b;
+  color: #f59e0b;
+}
+
+/* PrimeVue component styling overrides */
 .anchor-tabs :deep(.p-tabs) {
   background: transparent;
 }
@@ -708,6 +815,38 @@ async function initMap() {
   height: 2px;
 }
 
+/* Accent tokens */
+.accent-blue {
+  --accent: #2563eb;
+  --accent-soft: #eff6ff;
+  --accent-soft2: #dbeafe;
+}
+.accent-purple {
+  --accent: #7c3aed;
+  --accent-soft: #f5f3ff;
+  --accent-soft2: #ede9fe;
+}
+.accent-teal {
+  --accent: #0d9488;
+  --accent-soft: #f0fdfa;
+  --accent-soft2: #ccfbf1;
+}
+.accent-amber {
+  --accent: #d97706;
+  --accent-soft: #fffbeb;
+  --accent-soft2: #fef3c7;
+}
+.accent-rose {
+  --accent: #e11d48;
+  --accent-soft: #fff1f2;
+  --accent-soft2: #ffe4e6;
+}
+.accent-indigo {
+  --accent: #4f46e5;
+  --accent-soft: #eef2ff;
+  --accent-soft2: #e0e7ff;
+}
+
 /* Card blocks used as generic content containers */
 .photo-placeholder-card :deep(.p-card-body),
 .role-card :deep(.p-card-body),
@@ -723,20 +862,44 @@ async function initMap() {
 .photo-placeholder-card {
   border-radius: 0.75rem;
   overflow: hidden;
-  background: linear-gradient(to bottom right, #eff6ff, #dbeafe);
-  border: 1px solid #dbeafe;
+  background: linear-gradient(to bottom right, #fff7ed, #ffedd5);
+  border: 1px solid #fed7aa;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .photo-placeholder-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.12);
+  box-shadow: 0 10px 24px rgba(217, 119, 6, 0.14);
 }
 
+/* Vision card: gradient top bar + a soft violet glow to stand out from the rest of the page */
 .vision-card :deep(.p-card-content) {
   padding: 2rem;
+  position: relative;
 }
 .vision-card {
   border-radius: 1rem;
+  border: none;
+  position: relative;
+  background: linear-gradient(180deg, #ffffff 0%, #faf9ff 100%);
+  box-shadow: 0 16px 40px rgba(124, 58, 237, 0.14);
+}
+.vision-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  border-radius: 1rem 1rem 0 0;
+  background: linear-gradient(90deg, #7c3aed, #2563eb);
+}
+.vision-quote {
+  display: block;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 3rem;
+  line-height: 1;
+  background: linear-gradient(90deg, #7c3aed, #2563eb);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .mission-card :deep(.p-card-content) {
@@ -745,15 +908,16 @@ async function initMap() {
 .mission-card {
   border-radius: 0.75rem;
   border: 1px solid #f1f5f9;
+  border-left: 3px solid var(--accent, #2563eb);
+  background: linear-gradient(90deg, var(--accent-soft, #eff6ff) 0%, #ffffff 14%);
   transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
 .mission-card:hover {
-  border-color: #bfdbfe;
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
   transform: translateY(-2px);
 }
 .mission-avatar {
-  background: #2563eb !important;
+  background: var(--accent, #2563eb) !important;
   color: #fff !important;
   font-weight: 600;
   font-size: 0.875rem;
@@ -765,52 +929,82 @@ async function initMap() {
 .role-card {
   border-radius: 0.75rem;
   border: 1px solid #f1f5f9;
+  border-top: 3px solid var(--accent, #2563eb);
   transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
 .role-card:hover {
-  border-color: #bfdbfe;
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.08);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.1);
   transform: translateY(-2px);
+}
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  background: var(--accent-soft, #eff6ff);
+  color: var(--accent, #2563eb);
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .stat-card {
   border-radius: 0.75rem;
-  border: 1px solid #f1f5f9;
+  border: 1px solid var(--accent-soft2, #f1f5f9);
+  background: linear-gradient(160deg, var(--accent-soft, #ffffff) 0%, #ffffff 65%);
   transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
 }
 .stat-card:hover {
-  border-color: #bfdbfe;
-  box-shadow: 0 12px 24px rgba(59, 130, 246, 0.12);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
   transform: translateY(-4px);
 }
 .stat-avatar {
-  background: #eff6ff !important;
+  background: var(--accent-soft2, #eff6ff) !important;
+  color: var(--accent, #2563eb) !important;
   font-size: 1.125rem;
 }
+.stat-card:hover .stat-avatar {
+  background: var(--accent, #2563eb) !important;
+  color: #fff !important;
+  transform: scale(1.1);
+}
 
-/* Organization chart node styling to match the site's card look */
+/* Org chart card + node styling: teal identity for the "Struktur Organisasi" section */
+.org-chart-card {
+  border-radius: 1rem;
+  border: 1px solid #ccfbf1;
+  box-shadow: 0 10px 30px rgba(13, 148, 136, 0.08);
+}
 .org-chart-wrap :deep(.p-organizationchart-node-content) {
   border-radius: 10px;
-  border: 1px solid #dbeafe;
-  background: #fff;
+  border: 1px solid #99f6e4;
+  background: linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%);
   padding: 10px 18px;
-  box-shadow: 0 1px 2px rgba(30, 64, 175, 0.06);
+  box-shadow: 0 1px 2px rgba(13, 148, 136, 0.08);
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 .org-chart-wrap :deep(.p-organizationchart-node-content:hover) {
   transform: translateY(-2px);
-  border-color: #93c5fd;
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.12);
+  border-color: #2dd4bf;
+  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.18);
 }
 .org-chart-node-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #1e3a8a;
+  color: #0f766e;
 }
 .org-chart-wrap :deep(.p-organizationchart-line-down),
 .org-chart-wrap :deep(.p-organizationchart-line-left),
 .org-chart-wrap :deep(.p-organizationchart-line-right) {
-  border-color: #bfdbfe;
+  border-color: #5eead4;
+}
+
+/* Map card: emerald identity for the "Wilayah & Demografi" section */
+.map-card {
+  border-radius: 1rem;
+  border: 1px solid #a7f3d0;
+  box-shadow: 0 14px 32px rgba(5, 150, 105, 0.1);
 }
 
 /* Leaflet: keep the map controls (zoom, etc.) below the sticky nav's z-index */
