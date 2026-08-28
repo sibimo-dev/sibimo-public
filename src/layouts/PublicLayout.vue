@@ -22,38 +22,35 @@ function handleBottomNavClick(item) {
   if (item.action === "more") moreSheetOpen.value = true;
 }
 
-
 function isActive(item) {
   return !!item.route && route.name === item.route.name;
 }
 
-
 const menubarPt = {
-  root: { class: "!border-0 !bg-transparent !px-0 !py-3" },
+  root: { class: "!border-0 !bg-transparent !px-0 !py-4 lg:!py-5 !flex !items-center !justify-between !w-full" },
   button: {
     class: "!text-white hover:!bg-white/10 hover:!text-white !w-10 !h-10 !rounded-lg transition-colors lg:!hidden",
   },
   rootList: {
     class:
-      "!bg-white lg:!bg-transparent !border !border-border-default lg:!border-0 !shadow-lg lg:!shadow-none !rounded-xl lg:!rounded-none !p-2 lg:!p-0",
+      "!bg-white lg:!bg-transparent !border !border-border-default lg:!border-0 !shadow-lg lg:!shadow-none !rounded-xl lg:!rounded-none !p-2 lg:!p-0 lg:!flex lg:!flex-1 lg:!flex-nowrap lg:!items-center lg:!justify-center lg:!gap-1 xl:!gap-4",
   },
-  item: { class: "!w-full lg:!w-auto" },
+  item: { class: "!w-full lg:!w-auto lg:!shrink-0" },
 
   itemContent: (options) => ({
     class: [
       "!rounded-lg transition-colors",
-      "hover:!bg-primary-50 lg:hover:!bg-white/10",
-      options.context.active || options.context.focused ? "!bg-primary-50 lg:!bg-white/10" : "",
+      "hover:!bg-primary-50 lg:hover:!bg-transparent",
+      options.context.active || options.context.focused ? "!bg-primary-50 lg:!bg-transparent" : "",
     ],
   }),
-  itemLink: { class: "!px-3 !py-2.5 !gap-1.5" },
+  itemLink: { class: "!px-3 !py-3 !gap-1.5 !whitespace-nowrap" },
   submenu: {
     class:
       "lg:!bg-gradient-to-b lg:!from-primary-900 lg:!to-primary-800 lg:!border lg:!border-white/10 lg:!shadow-lg lg:!rounded-lg lg:!mt-1 lg:!py-1",
   },
 };
 
-// Passthrough Button "Unduh Dokumen": putih solid, teks & ikon biru tua.
 const navCtaPt = {
   root: {
     class: "!bg-white !border-white hover:!bg-primary-50 hover:!border-primary-50 !rounded-lg transition-colors",
@@ -67,14 +64,14 @@ const navCtaPt = {
     <header
       class="sticky top-0 z-40 bg-gradient-to-r from-primary-900 to-primary-800 border-b border-white/10 shadow-sm"
     >
-      <div class="max-w-[1240px] mx-auto px-4 md:px-8">
+      <div class="max-w-page mx-auto px-4 md:px-12 lg:px-14 xl:px-16">
         <Menubar :model="navMenuItems" :pt="menubarPt">
           <template #start>
-            <RouterLink :to="{ name: 'home' }" class="flex items-center gap-2.5 shrink-0 mr-4">
-              <Avatar :image="villageLogo" shape="square" size="large" class="!w-10 !h-10 shrink-0" />
+            <RouterLink :to="{ name: 'home' }" class="flex items-center gap-3 shrink-0 mr-6">
+              <Avatar :image="villageLogo" shape="square" size="large" class="!w-11 !h-11 shrink-0" />
               <span class="hidden sm:flex flex-col leading-tight">
-                <b class="font-brand text-[16.5px] uppercase tracking-tight text-white">Kalurahan Bimomartani</b>
-                <small class="text-[10.5px] text-white/80 font-medium">
+                <b class="font-heading font-bold tracking-tight text-lg uppercase text-white">Kalurahan Bimomartani</b>
+                <small class="text-[11.5px] text-white/80 font-medium">
                   Kapanewon Ngemplak, Kabupaten Sleman
                 </small>
               </span>
@@ -82,13 +79,29 @@ const navCtaPt = {
           </template>
 
           <template #item="{ item, props, hasSubmenu }">
-            <RouterLink v-if="item.route && !hasSubmenu" v-slot="{ href, navigate }" :to="item.route" custom>
-              <a :href="href" v-bind="props.action" @click="navigate">
-                <span v-bind="props.label" class="text-text-h lg:text-white font-bold text-sm">{{ item.label }}</span>
+            <RouterLink
+              v-if="item.route && !hasSubmenu"
+              v-slot="{ href, navigate, isActive: linkActive }"
+              :to="item.route"
+              custom
+            >
+              <a
+                :href="href"
+                v-bind="props.action"
+                class="relative pb-1 border-b-2 border-transparent transition-colors lg:hover:border-white"
+                :class="linkActive ? 'lg:border-white' : ''"
+                @click="navigate"
+              >
+                <span v-bind="props.label" class="text-text-h lg:text-white !font-semibold !text-[16px] !tracking-tight">{{ item.label }}</span>
               </a>
             </RouterLink>
-            <a v-else v-bind="props.action">
-              <span v-bind="props.label" class="text-text-h lg:text-white font-bold text-sm">{{ item.label }}</span>
+
+            <a
+              v-else
+              v-bind="props.action"
+              class="relative pb-1 border-b-2 border-transparent transition-colors lg:hover:border-white"
+            >
+              <span v-bind="props.label" class="text-text-h lg:text-white !font-semibold !text-[16px] !tracking-tight">{{ item.label }}</span>
               <i
                 v-if="hasSubmenu"
                 v-bind="props.submenuicon"
@@ -98,9 +111,9 @@ const navCtaPt = {
           </template>
 
           <template #end>
-            <Button as="router-link" :to="navCta.route" :pt="navCtaPt" class="shrink-0 !px-3.5 sm:!px-4">
+            <Button as="router-link" :to="navCta.route" :pt="navCtaPt" class="shrink-0 !px-4 sm:!px-5 !py-2.5">
               <i :class="navCta.icon" class="pi text-[15px] text-primary-800" />
-              <span class="hidden sm:inline ml-1.5 font-bold text-[13.5px] text-primary-800">{{ navCta.label }}</span>
+              <span class="hidden sm:inline ml-1.5 font-bold text-sm text-primary-800">{{ navCta.label }}</span>
             </Button>
           </template>
         </Menubar>
@@ -109,7 +122,7 @@ const navCtaPt = {
 
     <!-- ============ KONTEN HALAMAN ============ -->
     <main class="flex-1 pb-[calc(var(--bottom-nav-h)+12px)] lg:pb-0">
-      <div class="max-w-[1240px] mx-auto px-4 md:px-8">
+      <div class="max-w-page mx-auto px-4 md:px-12 lg:px-14 xl:px-16">
         <RouterView />
       </div>
     </main>
@@ -154,7 +167,7 @@ const navCtaPt = {
     <!-- ============ BOTTOM SHEET "LAINNYA", mobile only ============ -->
     <Drawer v-model:visible="moreSheetOpen" position="bottom" class="lg:hidden !h-auto !max-h-[70vh] !rounded-t-3xl">
       <template #header>
-        <h3 class="text-sm font-bold text-heading">Menu Lainnya</h3>
+        <h3 class="font-heading font-extrabold text-sm text-heading">Menu Lainnya</h3>
       </template>
       <RouterLink
         v-for="item in mobileMoreLinks"

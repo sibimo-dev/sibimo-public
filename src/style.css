@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-
 :root {
   --color-bg: #f6f8f9;
   --color-surface: #ffffff;
@@ -40,24 +39,14 @@
   --color-danger: #d42e24;
   --color-danger-bg: #fdecea;
 
-
   --font-heading: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
   --font-body: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
 
- 
   --color-nav-footer-from: var(--color-primary-900);
   --color-nav-footer-to: var(--color-primary-800);
 
   --navbar-h: 72px;
   --bottom-nav-h: 64px;
-
-  font: 16px/150% var(--font-body);
-  color: var(--color-text);
-  background: var(--color-bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 @theme {
@@ -101,71 +90,18 @@
 
   --font-heading: var(--font-heading);
   --font-body: var(--font-body);
+
+  --max-width-page: 1600px;
+
+  /* Wajib di CSS: keyframes tidak bisa dibuat lewat utility class Tailwind */
+  --animate-hero-zoom: hero-zoom 9s ease-out forwards;
 }
 
-body {
-  margin: 0;
-}
-
-
-h1,
-h2,
-h3,
-h4 {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  color: var(--color-text-h);
-  margin: 0;
-}
-
-
-.font-brand {
-  font-family: var(--font-heading);
-  font-weight: 700;
-  letter-spacing: -0.01em;
-}
-
-
-[data-reveal] {
-  opacity: 0;
-  transform: translateY(22px);
-  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
-}
-
-[data-reveal].reveal-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-reveal] {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-}
-
-
-@keyframes hero-ken-burns {
+@keyframes hero-zoom {
   0% {
     transform: scale(1) translate(0, 0);
   }
   100% {
     transform: scale(1.12) translate(-1%, -1%);
   }
-}
-
-.hero-slide-img {
-  animation: hero-ken-burns 9s ease-out forwards;
-}
-
-.hero-fade-enter-active,
-.hero-fade-leave-active {
-  transition: opacity 1.1s ease;
-}
-
-.hero-fade-enter-from,
-.hero-fade-leave-to {
-  opacity: 0;
 }

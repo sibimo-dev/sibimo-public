@@ -3,11 +3,6 @@ export const navMenuItems = [
   {
     label: "Profil Desa",
     route: { name: "profile" },
-    items: [
-      { label: "Sejarah Kalurahan", route: { name: "profile", hash: "#history" } },
-      { label: "Visi & Misi", route: { name: "profile", hash: "#vision-mission" } },
-      { label: "Struktur Organisasi", route: { name: "profile", hash: "#org-structure" } },
-    ],
   },
   {
     label: "Layanan Surat",
@@ -23,6 +18,7 @@ export const navMenuItems = [
   },
   { label: "Aduan", route: { name: "complaints" } },
   { label: "Potensi Desa", route: { name: "potential" } },
+  { label: "Data", route: { name: "data" } },
 ];
 
 
@@ -43,5 +39,6 @@ export const mobileMoreLinks = [
   { label: "Agenda Desa", icon: "pi pi-calendar", route: { name: "events" } },
   { label: "Gallery Desa", icon: "pi pi-image", route: { name: "gallery" } },
   { label: "Potensi Desa", icon: "pi pi-map", route: { name: "potential" } },
+  { label: "Data", icon: "pi pi-map-marker", route: { name: "region" } },
   { label: "Unduh Dokumen", icon: "pi pi-download", route: { name: "my-documents" } },
 ];
