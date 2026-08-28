@@ -65,7 +65,13 @@ const routes = [
     
     path: "/events",
     name: "events",
-    component: () => import("@/views/events/EventsView.vue"),
+    component: () => import("@/views/events/EventsListView.vue"),
+  },
+  {
+    path: "/events/:month",
+    name: "events-detail",
+    component: () => import("@/views/events/EventsDetail.vue"),
+    props: true,
   },
   {
     path: "/gallery",
@@ -84,15 +90,12 @@ const routes = [
     props: true,
   },
   {
-    path: "/region",
-    name: "region",
-    component: () => import("@/views/profile/RegionView.vue"),
+    path: "/data",
+    name: "data",
+    component: () => import("@/views/data/DataView.vue"),
   },
-  {
-    path: "/bumdes",
-    name: "bumdes",
-    component: () => import("@/views/potential/BumdesView.vue"),
-  },
+  
+  
   {
     path: "/:pathMatch(.*)*",
     name: "not-found",
