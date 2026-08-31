@@ -1,15 +1,14 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 import Menubar from "primevue/menubar";
 import Avatar from "primevue/avatar";
 import Button from "primevue/button";
-import Drawer from "primevue/drawer";
 import {
   navMenuItems,
+  navMenuItemsMobile,
   navCta,
   mobileBottomNav,
-  mobileMoreLinks,
 } from "@/components/shared/navMenu.js";
 import AppFooter from "@/components/shared/AppFooter.vue";
 
@@ -17,26 +16,46 @@ import villageLogo from "@/assets/logo-kalurahan-placeholder.svg";
 
 const route = useRoute();
 
-const moreSheetOpen = ref(false);
-function handleBottomNavClick(item) {
-  if (item.action === "more") moreSheetOpen.value = true;
+// Sinkron dengan breakpoint="1024px" milik Menubar di bawah.
+const isDesktop = ref(true);
+let mql;
+function syncIsDesktop() {
+  isDesktop.value = mql.matches;
 }
+onMounted(() => {
+  mql = window.matchMedia("(min-width: 1024px)");
+  syncIsDesktop();
+  mql.addEventListener("change", syncIsDesktop);
+});
+onBeforeUnmount(() => {
+  mql?.removeEventListener("change", syncIsDesktop);
+});
+
+// Desktop: navMenuItems lengkap (tampilan tidak berubah).
+// Mobile (hamburger): hanya 5 item dari navMenuItemsMobile.
+const menubarModel = computed(() =>
+  isDesktop.value ? navMenuItems : navMenuItemsMobile
+);
 
 function isActive(item) {
   return !!item.route && route.name === item.route.name;
 }
 
+const bottomNavItems = [
+  ...mobileBottomNav.filter((item) => item.action !== "more"),
+  { label: navCta.label, icon: navCta.icon, route: navCta.route },
+];
+
 const menubarPt = {
   root: { class: "!border-0 !bg-transparent !px-0 !py-4 lg:!py-5 !flex !items-center !justify-between !w-full" },
   button: {
-    class: "!text-white hover:!bg-white/10 hover:!text-white !w-10 !h-10 !rounded-lg transition-colors lg:!hidden",
+    class: "!bg-white !text-primary-900 hover:!bg-primary-50 !border-2 !border-primary-900 !w-10 !h-10 !rounded-lg transition-colors lg:!hidden !order-1 lg:!order-none !mr-3 lg:!mr-0 shrink-0",
   },
   rootList: {
     class:
-      "!bg-white lg:!bg-transparent !border !border-border-default lg:!border-0 !shadow-lg lg:!shadow-none !rounded-xl lg:!rounded-none !p-2 lg:!p-0 lg:!flex lg:!flex-1 lg:!flex-nowrap lg:!items-center lg:!justify-center lg:!gap-1 xl:!gap-4",
+      "!order-3 lg:!order-none !bg-white lg:!bg-transparent !border !border-border-default lg:!border-0 !shadow-lg lg:!shadow-none !rounded-xl lg:!rounded-none !p-2 lg:!p-0 lg:!flex lg:!flex-1 lg:!flex-nowrap lg:!items-center lg:!justify-center lg:!gap-1 xl:!gap-4",
   },
   item: { class: "!w-full lg:!w-auto lg:!shrink-0" },
-
   itemContent: (options) => ({
     class: [
       "!rounded-lg transition-colors",
@@ -64,14 +83,19 @@ const navCtaPt = {
     <header
       class="sticky top-0 z-40 bg-gradient-to-r from-primary-900 to-primary-800 border-b border-white/10 shadow-sm"
     >
-      <div class="max-w-page mx-auto px-4 md:px-12 lg:px-14 xl:px-16">
-        <Menubar :model="navMenuItems" :pt="menubarPt">
+      <div class="max-w-page mx-auto px-2 md:px-12 lg:px-14 xl:px-16">
+        <Menubar :model="menubarModel" :pt="menubarPt" breakpoint="1024px">
           <template #start>
-            <RouterLink :to="{ name: 'home' }" class="flex items-center gap-3 shrink-0 mr-6">
-              <Avatar :image="villageLogo" shape="square" size="large" class="!w-11 !h-11 shrink-0" />
-              <span class="hidden sm:flex flex-col leading-tight">
-                <b class="font-heading font-bold tracking-tight text-lg uppercase text-white">Kalurahan Bimomartani</b>
-                <small class="text-[11.5px] text-white/80 font-medium">
+            <RouterLink
+              :to="{ name: 'home' }"
+              class="flex items-center gap-2.5 sm:gap-3 shrink-0 lg:mr-6 order-2 lg:order-none min-w-0"
+            >
+              <Avatar :image="villageLogo" shape="square" size="large" class="!w-10 !h-10 sm:!w-11 sm:!h-11 shrink-0" />
+              <span class="flex flex-col leading-tight min-w-0">
+                <b class="font-heading font-bold tracking-tight text-sm sm:text-lg uppercase text-white truncate">
+                  Kalurahan Bimomartani
+                </b>
+                <small class="block text-[10px] sm:text-[11.5px] text-white/80 font-medium truncate">
                   Kapanewon Ngemplak, Kabupaten Sleman
                 </small>
               </span>
@@ -92,7 +116,7 @@ const navCtaPt = {
                 :class="linkActive ? 'lg:border-white' : ''"
                 @click="navigate"
               >
-                <span v-bind="props.label" class="text-text-h lg:text-white !font-semibold !text-[16px] !tracking-tight">{{ item.label }}</span>
+                <span v-bind="props.label" class="text-text-h lg:text-white !font-norrmal !text-[16px] !tracking-tight">{{ item.label }}</span>
               </a>
             </RouterLink>
 
@@ -101,7 +125,7 @@ const navCtaPt = {
               v-bind="props.action"
               class="relative pb-1 border-b-2 border-transparent transition-colors lg:hover:border-white"
             >
-              <span v-bind="props.label" class="text-text-h lg:text-white !font-semibold !text-[16px] !tracking-tight">{{ item.label }}</span>
+              <span v-bind="props.label" class="text-text-h lg:text-white !font-normal !text-[16px] !tracking-tight">{{ item.label }}</span>
               <i
                 v-if="hasSubmenu"
                 v-bind="props.submenuicon"
@@ -110,10 +134,16 @@ const navCtaPt = {
             </a>
           </template>
 
+          <!-- Tombol Unduh: cuma tampil di desktop (lg+), di mobile sudah ada di bottom nav -->
           <template #end>
-            <Button as="router-link" :to="navCta.route" :pt="navCtaPt" class="shrink-0 !px-4 sm:!px-5 !py-2.5">
+            <Button
+              as="router-link"
+              :to="navCta.route"
+              :pt="navCtaPt"
+              class="!hidden lg:!inline-flex shrink-0 !px-4 sm:!px-5 !py-2.5 order-4 lg:order-none"
+            >
               <i :class="navCta.icon" class="pi text-[15px] text-primary-800" />
-              <span class="hidden sm:inline ml-1.5 font-bold text-sm text-primary-800">{{ navCta.label }}</span>
+              <span class="ml-1.5 font-bold text-sm text-primary-800">{{ navCta.label }}</span>
             </Button>
           </template>
         </Menubar>
@@ -134,51 +164,23 @@ const navCtaPt = {
       class="lg:hidden fixed bottom-0 inset-x-0 z-40 h-[var(--bottom-nav-h)] bg-surface border-t border-border-default flex items-stretch"
       style="padding-bottom: env(safe-area-inset-bottom)"
     >
-      <template v-for="item in mobileBottomNav" :key="item.label">
-        <Button
-          v-if="item.action"
-          text
-          class="!flex-1 !flex-col !gap-1 !text-text !rounded-none"
-          :class="item.action === 'more' && moreSheetOpen ? '!text-primary-800' : ''"
-          @click="handleBottomNavClick(item)"
+      <Button
+        v-for="item in bottomNavItems"
+        :key="item.label"
+        as="router-link"
+        :to="item.route"
+        text
+        class="!flex-1 !flex-col !gap-1 !rounded-none"
+        :class="isActive(item) ? '!text-primary-800' : '!text-text'"
+      >
+        <span
+          class="flex items-center justify-center w-9 h-6 rounded-full transition-colors"
+          :class="isActive(item) ? 'bg-primary-50' : ''"
         >
           <i :class="item.icon" class="text-[19px]" />
-          <span class="text-[10.5px] font-bold">{{ item.label }}</span>
-        </Button>
-        <Button
-          v-else
-          as="router-link"
-          :to="item.route"
-          text
-          class="!flex-1 !flex-col !gap-1 !rounded-none"
-          :class="isActive(item) ? '!text-primary-800' : '!text-text'"
-        >
-          <span
-            class="flex items-center justify-center w-9 h-6 rounded-full transition-colors"
-            :class="isActive(item) ? 'bg-primary-50' : ''"
-          >
-            <i :class="item.icon" class="text-[19px]" />
-          </span>
-          <span class="text-[10.5px] font-bold">{{ item.label }}</span>
-        </Button>
-      </template>
+        </span>
+        <span class="text-[10.5px] font-bold">{{ item.label }}</span>
+      </Button>
     </nav>
-
-    <!-- ============ BOTTOM SHEET "LAINNYA", mobile only ============ -->
-    <Drawer v-model:visible="moreSheetOpen" position="bottom" class="lg:hidden !h-auto !max-h-[70vh] !rounded-t-3xl">
-      <template #header>
-        <h3 class="font-heading font-extrabold text-sm text-heading">Menu Lainnya</h3>
-      </template>
-      <RouterLink
-        v-for="item in mobileMoreLinks"
-        :key="item.label"
-        :to="item.route"
-        class="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-surface-hover transition-colors"
-        @click="moreSheetOpen = false"
-      >
-        <Avatar :icon="item.icon" shape="circle" class="!bg-primary-50 !text-primary-700 shrink-0" />
-        <span class="text-sm font-semibold text-default">{{ item.label }}</span>
-      </RouterLink>
-    </Drawer>
   </div>
 </template>
