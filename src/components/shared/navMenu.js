@@ -22,18 +22,25 @@ export const navMenuItems = [
 ];
 
 
-export const navCta = { label: "Unduh Dokumen", icon: "pi-download", route: { name: "my-documents" } };
+export const navMenuItemsMobile = [
+  { label: "Profil Kalurahan", route: { name: "profile" } },
+  { label: "Agenda", route: { name: "events" } },
+  { label: "Galeri", route: { name: "gallery" } },
+  { label: "Potensi Kalurahan", route: { name: "potential" } },
+  { label: "Data Kalurahan", route: { name: "data" } },
+];
 
+export const navCta = { label: "Unduh ", icon: "pi-download", route: { name: "my-documents" } };
 
 export const mobileBottomNav = [
   { label: "Beranda", icon: "pi pi-home", route: { name: "home" } },
-  { label: "Layanan", icon: "pi pi-file", route: { name: "services" } },
+  { label: "Surat", icon: "pi pi-file", route: { name: "services" } },
   { label: "Aduan", icon: "pi pi-megaphone", route: { name: "complaints" } },
   { label: "Berita", icon: "pi pi-images", route: { name: "news" } },
   { label: "Lainnya", icon: "pi pi-bars", action: "more" },
 ];
 
-// Contents of the mobile "Lainnya" bottom sheet.
+
 export const mobileMoreLinks = [
   { label: "Profil Desa", icon: "pi pi-building", route: { name: "profile" } },
   { label: "Agenda Desa", icon: "pi pi-calendar", route: { name: "events" } },
