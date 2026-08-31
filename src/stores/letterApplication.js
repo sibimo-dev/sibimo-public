@@ -10,8 +10,8 @@ function loadPersistedState() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
 
-    if (parsed.personalData?.dateOfBirth) {
-      parsed.personalData.dateOfBirth = new Date(parsed.personalData.dateOfBirth);
+    if (parsed.personalData?.birthDate) {
+      parsed.personalData.birthDate = new Date(parsed.personalData.birthDate);
     }
 
     return parsed;
@@ -106,11 +106,17 @@ async function idbClearDocuments() {
 const DEFAULT_PERSONAL_DATA = {
   fullName: "",
   nationalId: "",
-  placeOfBirth: "",
-  dateOfBirth: "",
-  whatsappNumber: "",
+  familyCardNumber: "",
+  gender: "Laki-laki",
+  birthPlace: "",
+  birthDate: "",
+  phoneNumber: "",
   occupation: "",
-  fullAddress: "",
+  education: "SMA/SMK",
+  maritalStatus: "Belum Kawin",
+  religion: "Islam",
+  address: "",
+  ktpAddress: "",
   applicationPurpose: "",
 };
 
@@ -155,11 +161,14 @@ export const useLetterApplicationStore = defineStore("letterApplication", {
       const requiredFilled = Boolean(
         data.fullName.trim() &&
           /^\d{16}$/.test(data.nationalId.trim()) &&
-          data.placeOfBirth.trim() &&
-          data.dateOfBirth &&
-          data.whatsappNumber.trim().length >= 9 &&
+          data.familyCardNumber.trim() &&
+          data.gender &&
+          data.birthPlace.trim() &&
+          data.birthDate &&
+          data.phoneNumber.trim().length >= 9 &&
           data.occupation.trim() &&
-          data.fullAddress.trim() &&
+          data.address.trim() &&
+          data.ktpAddress.trim() &&
           data.applicationPurpose.trim(),
       );
 
@@ -242,4 +251,4 @@ export const useLetterApplicationStore = defineStore("letterApplication", {
       idbClearDocuments();
     },
   },
-});
+}); 
