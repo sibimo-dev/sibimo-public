@@ -61,19 +61,37 @@ function goToRegistration() {
 
 /* STEP 2 — Pendaftaran warga baru (kalau NIK belum terdaftar)        */
 
-const genderOptions = [
-  { label: "Laki-laki", value: "male" },
-  { label: "Perempuan", value: "female" },
+const genderOptions = ["Laki-laki", "Perempuan"];
+const educationOptions = ["Belum Sekolah", "Tidak Sekolah", "SD", "SMP", "SMA/SMK", "D3", "D4", "S1", "S2", "S3"];
+const maritalStatusOptions = ["Belum Kawin", "Kawin", "Kawin Tercatat", "Kawin Belum Tercatat", "Cerai Hidup", "Cerai Mati"];
+const religionOptions = ["Islam", "Kristen", "Katolik", "Hindu", "Buddha", "Khonghucu"];
+const occupationOptions = [
+  "Belum/Tidak Bekerja",
+  "Pelajar/Mahasiswa",
+  "Ibu Rumah Tangga",
+  "Petani",
+  "Nelayan",
+  "Buruh",
+  "Wiraswasta",
+  "Karyawan Swasta",
+  "PNS/ASN",
+  "TNI/Polri",
+  "Pensiunan",
 ];
 
 const registerForm = reactive({
   fullName: "",
+  familyCardNumber: "",
   gender: null,
-  placeOfBirth: "",
-  dateOfBirth: null,
-  fullAddress: "",
-  whatsappNumber: "",
+  birthPlace: "",
+  birthDate: null,
+  address: "",
+  ktpAddress: "",
+  phoneNumber: "",
   occupation: "",
+  education: "SMA/SMK",
+  maritalStatus: "Belum Kawin",
+  religion: "Islam",
 });
 const registerErrors = ref({});
 
@@ -102,11 +120,13 @@ function removeSupportingDocument() {
 function validateRegisterForm() {
   const nextErrors = {};
   if (!registerForm.fullName.trim()) nextErrors.fullName = "Nama lengkap wajib diisi.";
+  if (!registerForm.familyCardNumber.trim()) nextErrors.familyCardNumber = "Nomor KK wajib diisi.";
   if (!registerForm.gender) nextErrors.gender = "Jenis kelamin wajib dipilih.";
-  if (!registerForm.placeOfBirth.trim()) nextErrors.placeOfBirth = "Tempat lahir wajib diisi.";
-  if (!registerForm.dateOfBirth) nextErrors.dateOfBirth = "Tanggal lahir wajib diisi.";
-  if (!registerForm.fullAddress.trim()) nextErrors.fullAddress = "Alamat lengkap wajib diisi.";
-  if (registerForm.whatsappNumber.trim().length < 9) nextErrors.whatsappNumber = "Nomor WhatsApp tidak valid.";
+  if (!registerForm.birthPlace.trim()) nextErrors.birthPlace = "Tempat lahir wajib diisi.";
+  if (!registerForm.birthDate) nextErrors.birthDate = "Tanggal lahir wajib diisi.";
+  if (!registerForm.address.trim()) nextErrors.address = "Alamat saat ini wajib diisi.";
+  if (!registerForm.ktpAddress.trim()) nextErrors.ktpAddress = "Alamat sesuai KTP wajib diisi.";
+  if (registerForm.phoneNumber.trim().length < 9) nextErrors.phoneNumber = "Nomor WhatsApp tidak valid.";
   if (!registerForm.occupation.trim()) nextErrors.occupation = "Pekerjaan wajib diisi.";
   if (!supportingDocumentFile.value) nextErrors.supportingDocument = "Dokumen pendukung (KTP/KK) wajib diunggah.";
   registerErrors.value = nextErrors;
@@ -306,13 +326,17 @@ function changeNik() {
           </div>
 
           <div class="flex flex-col gap-1">
+            <label for="reg-family-card-number" class="text-sm text-[var(--color-text-h)]">Nomor KK</label>
+            <InputText id="reg-family-card-number" v-model="registerForm.familyCardNumber" maxlength="16" placeholder="16 Digit Nomor KK" :invalid="!!registerErrors.familyCardNumber" />
+            <small v-if="registerErrors.familyCardNumber" class="text-red-500">{{ registerErrors.familyCardNumber }}</small>
+          </div>
+
+          <div class="flex flex-col gap-1">
             <label for="reg-gender" class="text-sm text-[var(--color-text-h)]">Jenis Kelamin</label>
             <Select
               id="reg-gender"
               v-model="registerForm.gender"
               :options="genderOptions"
-              optionLabel="label"
-              optionValue="value"
               placeholder="Pilih jenis kelamin"
               :invalid="!!registerErrors.gender"
               class="w-full"
@@ -323,45 +347,81 @@ function changeNik() {
           <div class="flex flex-col gap-1">
             <label class="text-sm text-[var(--color-text-h)]">Tempat, Tanggal Lahir</label>
             <div class="flex gap-2">
-              <InputText v-model="registerForm.placeOfBirth" placeholder="Kota/Kabupaten" class="flex-1" :invalid="!!registerErrors.placeOfBirth" />
+              <InputText v-model="registerForm.birthPlace" placeholder="Kota/Kabupaten" class="flex-1" :invalid="!!registerErrors.birthPlace" />
               <DatePicker
-                v-model="registerForm.dateOfBirth"
+                v-model="registerForm.birthDate"
                 showIcon
                 iconDisplay="input"
                 dateFormat="dd/mm/yy"
                 placeholder="Tanggal"
                 class="w-36"
-                :invalid="!!registerErrors.dateOfBirth"
+                :invalid="!!registerErrors.birthDate"
               />
             </div>
-            <small v-if="registerErrors.placeOfBirth || registerErrors.dateOfBirth" class="text-red-500">
-              {{ registerErrors.placeOfBirth || registerErrors.dateOfBirth }}
+            <small v-if="registerErrors.birthPlace || registerErrors.birthDate" class="text-red-500">
+              {{ registerErrors.birthPlace || registerErrors.birthDate }}
             </small>
           </div>
 
           <div class="flex flex-col gap-1">
             <label for="reg-whatsapp" class="text-sm text-[var(--color-text-h)]">Nomor WhatsApp</label>
-            <InputText id="reg-whatsapp" v-model="registerForm.whatsappNumber" placeholder="+62 8xx-xxxx-xxxx" :invalid="!!registerErrors.whatsappNumber" />
-            <small v-if="registerErrors.whatsappNumber" class="text-red-500">{{ registerErrors.whatsappNumber }}</small>
+            <InputText id="reg-whatsapp" v-model="registerForm.phoneNumber" placeholder="+62 8xx-xxxx-xxxx" :invalid="!!registerErrors.phoneNumber" />
+            <small v-if="registerErrors.phoneNumber" class="text-red-500">{{ registerErrors.phoneNumber }}</small>
           </div>
 
-          <div class="flex flex-col gap-1 sm:col-span-2">
+          <div class="flex flex-col gap-1">
             <label for="reg-occupation" class="text-sm text-[var(--color-text-h)]">Pekerjaan</label>
-            <InputText id="reg-occupation" v-model="registerForm.occupation" placeholder="Contoh: Buruh" :invalid="!!registerErrors.occupation" />
+            <Select
+              id="reg-occupation"
+              v-model="registerForm.occupation"
+              :options="occupationOptions"
+              editable
+              placeholder="Pilih atau ketik pekerjaan"
+              :invalid="!!registerErrors.occupation"
+              class="w-full"
+            />
             <small v-if="registerErrors.occupation" class="text-red-500">{{ registerErrors.occupation }}</small>
           </div>
 
+          <div class="flex flex-col gap-1">
+            <label for="reg-education" class="text-sm text-[var(--color-text-h)]">Pendidikan</label>
+            <Select id="reg-education" v-model="registerForm.education" :options="educationOptions" class="w-full" />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label for="reg-marital-status" class="text-sm text-[var(--color-text-h)]">Status Pernikahan</label>
+            <Select id="reg-marital-status" v-model="registerForm.maritalStatus" :options="maritalStatusOptions" class="w-full" />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label for="reg-religion" class="text-sm text-[var(--color-text-h)]">Agama</label>
+            <Select id="reg-religion" v-model="registerForm.religion" :options="religionOptions" class="w-full" />
+          </div>
+
           <div class="flex flex-col gap-1 sm:col-span-2">
-            <label for="reg-address" class="text-sm text-[var(--color-text-h)]">Alamat Lengkap</label>
+            <label for="reg-address" class="text-sm text-[var(--color-text-h)]">Alamat Saat Ini</label>
             <Textarea
               id="reg-address"
-              v-model="registerForm.fullAddress"
+              v-model="registerForm.address"
               rows="3"
               autoResize
               placeholder="Sesuai domisili saat ini (Jalan, RT/RW, Dusun)"
-              :invalid="!!registerErrors.fullAddress"
+              :invalid="!!registerErrors.address"
             />
-            <small v-if="registerErrors.fullAddress" class="text-red-500">{{ registerErrors.fullAddress }}</small>
+            <small v-if="registerErrors.address" class="text-red-500">{{ registerErrors.address }}</small>
+          </div>
+
+          <div class="flex flex-col gap-1 sm:col-span-2">
+            <label for="reg-ktp-address" class="text-sm text-[var(--color-text-h)]">Alamat Sesuai KTP</label>
+            <Textarea
+              id="reg-ktp-address"
+              v-model="registerForm.ktpAddress"
+              rows="3"
+              autoResize
+              placeholder="Sesuai KTP (Jalan, RT/RW, Dusun)"
+              :invalid="!!registerErrors.ktpAddress"
+            />
+            <small v-if="registerErrors.ktpAddress" class="text-red-500">{{ registerErrors.ktpAddress }}</small>
           </div>
 
           <div class="flex flex-col gap-1 sm:col-span-2">

@@ -30,9 +30,9 @@ onMounted(() => {
 });
 
 const formattedBirthDate = computed(() => {
-  if (!personalData.value.dateOfBirth) return "-";
+  if (!personalData.value.birthDate) return "-";
   return new Intl.DateTimeFormat("id-ID", { dateStyle: "long" }).format(
-    new Date(personalData.value.dateOfBirth),
+    new Date(personalData.value.birthDate),
   );
 });
 
@@ -102,20 +102,44 @@ function backToServices() {
             <dd class="text-[var(--color-text-h)]">{{ personalData.nationalId }}</dd>
           </div>
           <div>
+            <dt class="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">Nomor KK</dt>
+            <dd class="text-[var(--color-text-h)]">{{ personalData.familyCardNumber }}</dd>
+          </div>
+          <div>
+            <dt class="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">Jenis Kelamin</dt>
+            <dd class="text-[var(--color-text-h)]">{{ personalData.gender }}</dd>
+          </div>
+          <div>
             <dt class="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">Tempat, Tanggal Lahir</dt>
-            <dd class="text-[var(--color-text-h)]">{{ personalData.placeOfBirth }}, {{ formattedBirthDate }}</dd>
+            <dd class="text-[var(--color-text-h)]">{{ personalData.birthPlace }}, {{ formattedBirthDate }}</dd>
           </div>
           <div>
             <dt class="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">No. WhatsApp</dt>
-            <dd class="text-[var(--color-text-h)]">{{ personalData.whatsappNumber }}</dd>
+            <dd class="text-[var(--color-text-h)]">{{ personalData.phoneNumber }}</dd>
           </div>
           <div>
             <dt class="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">Pekerjaan</dt>
             <dd class="text-[var(--color-text-h)]">{{ personalData.occupation }}</dd>
           </div>
+          <div>
+            <dt class="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">Pendidikan</dt>
+            <dd class="text-[var(--color-text-h)]">{{ personalData.education }}</dd>
+          </div>
+          <div>
+            <dt class="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">Status Pernikahan</dt>
+            <dd class="text-[var(--color-text-h)]">{{ personalData.maritalStatus }}</dd>
+          </div>
+          <div>
+            <dt class="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">Agama</dt>
+            <dd class="text-[var(--color-text-h)]">{{ personalData.religion }}</dd>
+          </div>
           <div class="sm:col-span-2">
-            <dt class="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">Alamat Lengkap</dt>
-            <dd class="text-[var(--color-text-h)]">{{ personalData.fullAddress }}</dd>
+            <dt class="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">Alamat Saat Ini</dt>
+            <dd class="text-[var(--color-text-h)]">{{ personalData.address }}</dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">Alamat Sesuai KTP</dt>
+            <dd class="text-[var(--color-text-h)]">{{ personalData.ktpAddress }}</dd>
           </div>
           <div class="sm:col-span-2">
             <dt class="text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">{{ currentService?.purposeLabel }}</dt>
