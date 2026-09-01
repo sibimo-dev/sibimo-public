@@ -1,15 +1,12 @@
 <script setup>
 
 import { ref, computed } from "vue";
-import Message from "primevue/message";
-import Select from "primevue/select";
-import SelectButton from "primevue/selectbutton";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import ColumnGroup from "primevue/columngroup";
 import Row from "primevue/row";
-import Button from "primevue/button";
 import Chart from "primevue/chart";
+import SelectButton from "primevue/selectbutton";
 
 
 const GRAND_TOTAL = 3808 + 3833; // 7.641
@@ -94,10 +91,82 @@ const categories = [
   },
 ];
 
+/* Per-kategori identitas warna — pola sama seperti categoryStyles di Gallery */
+const categoryStyles = {
+  age: {
+    sidebarActive: "bg-sky-600 text-white shadow-sky-600/25",
+    sidebarCount: "bg-white/15 text-white",
+    iconInactive: "text-sky-600",
+    dot: "bg-sky-500",
+    badge: "bg-sky-50 text-sky-700",
+    topBar: "bg-gradient-to-r from-sky-400 to-sky-600",
+  },
+  education: {
+    sidebarActive: "bg-violet-600 text-white shadow-violet-600/25",
+    sidebarCount: "bg-white/15 text-white",
+    iconInactive: "text-violet-600",
+    dot: "bg-violet-500",
+    badge: "bg-violet-50 text-violet-700",
+    topBar: "bg-gradient-to-r from-violet-400 to-violet-600",
+  },
+  occupation: {
+    sidebarActive: "bg-amber-600 text-white shadow-amber-600/25",
+    sidebarCount: "bg-white/15 text-white",
+    iconInactive: "text-amber-600",
+    dot: "bg-amber-500",
+    badge: "bg-amber-50 text-amber-700",
+    topBar: "bg-gradient-to-r from-amber-400 to-amber-600",
+  },
+  religion: {
+    sidebarActive: "bg-emerald-600 text-white shadow-emerald-600/25",
+    sidebarCount: "bg-white/15 text-white",
+    iconInactive: "text-emerald-600",
+    dot: "bg-emerald-500",
+    badge: "bg-emerald-50 text-emerald-700",
+    topBar: "bg-gradient-to-r from-emerald-400 to-emerald-600",
+  },
+  gender: {
+    sidebarActive: "bg-rose-600 text-white shadow-rose-600/25",
+    sidebarCount: "bg-white/15 text-white",
+    iconInactive: "text-rose-600",
+    dot: "bg-rose-500",
+    badge: "bg-rose-50 text-rose-700",
+    topBar: "bg-gradient-to-r from-rose-400 to-rose-600",
+  },
+  "blood-type": {
+    sidebarActive: "bg-red-600 text-white shadow-red-600/25",
+    sidebarCount: "bg-white/15 text-white",
+    iconInactive: "text-red-600",
+    dot: "bg-red-500",
+    badge: "bg-red-50 text-red-700",
+    topBar: "bg-gradient-to-r from-red-400 to-red-600",
+  },
+  region: {
+    sidebarActive: "bg-indigo-600 text-white shadow-indigo-600/25",
+    sidebarCount: "bg-white/15 text-white",
+    iconInactive: "text-indigo-600",
+    dot: "bg-indigo-500",
+    badge: "bg-indigo-50 text-indigo-700",
+    topBar: "bg-gradient-to-r from-indigo-400 to-indigo-600",
+  },
+};
+const defaultCategoryStyle = {
+  sidebarActive: "bg-gradient-to-r from-primary-600 via-violet-600 to-sky-600 text-white shadow-primary-600/25",
+  sidebarCount: "bg-white/15 text-white",
+  iconInactive: "text-primary-700",
+  dot: "bg-primary-500",
+  badge: "bg-primary-50 text-primary-700",
+  topBar: "bg-gradient-to-r from-primary-400 to-primary-600",
+};
+function styleFor(key) {
+  return categoryStyles[key] || defaultCategoryStyle;
+}
+
 const activeCategory = ref("gender");
 const activeCategoryData = computed(
   () => categories.find((c) => c.key === activeCategory.value) ?? categories[0],
 );
+const activeStyle = computed(() => styleFor(activeCategory.value));
 
 const chartTypeOptions = [
   { label: "Bar Graph", value: "bar", icon: "pi pi-chart-bar" },
@@ -148,11 +217,17 @@ const footerTotals = computed(() => {
 
 const kkCount = 2412; // dummy — rata-rata ~3,17 jiwa/KK
 const summaryCards = [
-  { label: "Total Penduduk", icon: "pi-users", value: formatNumber(GRAND_TOTAL) },
-  { label: "Kepala Keluarga", icon: "pi-home", value: formatNumber(kkCount) },
-  { label: "Laki-laki", icon: "pi-user", value: formatNumber(3808) },
-  { label: "Perempuan", icon: "pi-user", value: formatNumber(3833) },
+  { label: "Total Penduduk", icon: "pi-users", value: formatNumber(GRAND_TOTAL), color: "indigo" },
+  { label: "Kepala Keluarga", icon: "pi-home", value: formatNumber(kkCount), color: "violet" },
+  { label: "Laki-laki", icon: "pi-user", value: formatNumber(3808), color: "sky" },
+  { label: "Perempuan", icon: "pi-user", value: formatNumber(3833), color: "rose" },
 ];
+const summaryCardIconClass = {
+  indigo: "bg-indigo-50 text-indigo-700",
+  violet: "bg-violet-50 text-violet-700",
+  sky: "bg-sky-50 text-sky-700",
+  rose: "bg-rose-50 text-rose-700",
+};
 
 
 const PALETTE = [
@@ -228,67 +303,58 @@ const chartHeight = computed(() => {
   <div class="py-6 lg:py-8 flex flex-col gap-6 lg:gap-8">
     <!-- ============ HEADER ============ -->
     <div>
-      <span class="text-[11px] font-bold uppercase tracking-wider text-secondary-600">
-        Data & Statistik
-      </span>
-      <h1 class="text-xl sm:text-2xl lg:text-[28px] font-extrabold text-heading mt-1">
-        Statistik Kependudukan
+      <div class="inline-flex items-center gap-2">
+        <span class="h-2 w-2 rounded-full bg-sky-500 animate-pulse" />
+        <span class="text-xs font-bold uppercase tracking-[0.25em] text-sky-600">
+          Data & Statistik
+        </span>
+      </div>
+      <h1 class="mt-2 text-2xl md:text-3xl font-bold text-heading">
+        Statistik
+        <span class="bg-gradient-to-r from-sky-600 to-violet-600 bg-clip-text text-transparent">
+          Kependudukan
+        </span>
       </h1>
-      <p class="text-[13px] sm:text-sm text-muted mt-1.5 max-w-[640px] leading-relaxed">
+      <p class="mt-2 max-w-2xl text-sm text-muted leading-relaxed">
         Data agregat kependudukan Kalurahan Bimomartani berdasarkan kelompok umur, pendidikan,
         pekerjaan, agama, jenis kelamin, golongan darah, dan wilayah administratif.
       </p>
     </div>
-
-    
-
-    <!-- ============ KATEGORI (mobile: dropdown) ============ -->
-    <Select
-      v-model="activeCategory"
-      :options="categories"
-      optionLabel="label"
-      optionValue="key"
-      class="lg:hidden! w-full"
-    >
-      <template #value="{ value }">
-        <span class="flex items-center gap-2 text-sm font-semibold">
-          <i :class="categories.find((c) => c.key === value)?.icon" class="pi text-primary-700" />
-          {{ categories.find((c) => c.key === value)?.label }}
-        </span>
-      </template>
-      <template #option="{ option }">
-        <span class="flex items-center gap-2 text-sm">
-          <i :class="option.icon" class="pi text-primary-700" />
-          {{ option.label }}
-        </span>
-      </template>
-    </Select>
-
-    <div class="grid lg:grid-cols-[250px_minmax(0,1fr)] gap-6 lg:gap-8">
-      <!-- ============ KATEGORI (desktop: sidebar) ============ -->
-      <aside class="hidden lg:block">
-        <nav
-          class="lg:sticky lg:top-[calc(var(--navbar-h)+16px)] rounded-2xl border border-border-default bg-surface p-2 flex flex-col gap-0.5"
+    <div class="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-6 lg:gap-8">
+      <!-- ============ KATEGORI (sidebar, sama di semua breakpoint) ============ -->
+      <aside class="lg:sticky lg:top-[calc(var(--navbar-h)+16px)] lg:self-start space-y-1.5">
+        <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+          Kategori
+        </p>
+        <button
+          v-for="cat in categories"
+          :key="cat.key"
+          @click="activeCategory = cat.key"
+          class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 active:scale-[0.97]"
+          :class="
+            activeCategory === cat.key
+              ? [styleFor(cat.key).sidebarActive, 'shadow-md']
+              : 'text-default hover:bg-surface-hover hover:translate-x-0.5'
+          "
         >
-          <span class="px-3 pt-2 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">
-            Statistik Penduduk
+          <span class="flex items-center gap-2">
+            <i
+              :class="[cat.icon, activeCategory === cat.key ? 'text-white' : styleFor(cat.key).iconInactive]"
+              class="pi text-xs"
+            />
+            {{ cat.label }}
           </span>
-          <Button
-            v-for="cat in categories"
-            :key="cat.key"
-            text
-            class="!justify-start !gap-2.5 !rounded-xl !py-2.5 !px-3 !text-[13.5px] !font-semibold"
+          <span
+            class="rounded-full px-2 py-0.5 text-xs font-semibold"
             :class="
               activeCategory === cat.key
-                ? '!bg-primary-50 !text-primary-800'
-                : '!text-default hover:!bg-surface-hover'
+                ? styleFor(cat.key).sidebarCount
+                : 'bg-surface-hover text-muted'
             "
-            @click="activeCategory = cat.key"
           >
-            <i :class="cat.icon" class="pi text-[15px]" />
-            {{ cat.label }}
-          </Button>
-        </nav>
+            {{ cat.labels.length }}
+          </span>
+        </button>
       </aside>
 
       <!-- ============ KONTEN ============ -->
@@ -301,7 +367,8 @@ const chartHeight = computed(() => {
             class="rounded-2xl border border-border-default bg-surface p-4"
           >
             <div
-              class="w-9 h-9 rounded-lg bg-primary-50 text-primary-700 flex items-center justify-center mb-2.5"
+              class="w-9 h-9 rounded-lg flex items-center justify-center mb-2.5"
+              :class="summaryCardIconClass[card.color]"
             >
               <i :class="card.icon" class="pi text-[15px]" />
             </div>
@@ -311,9 +378,12 @@ const chartHeight = computed(() => {
         </section>
 
         <!-- Grafik -->
-        <section class="rounded-2xl border border-border-default bg-surface p-4 sm:p-5">
+        <section class="relative overflow-hidden rounded-2xl border border-border-default bg-surface p-4 sm:p-5">
+          <span class="absolute inset-x-0 top-0 h-1" :class="activeStyle.topBar" />
+
           <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h2 class="text-[15px] sm:text-base font-extrabold text-heading">
+            <h2 class="flex items-center gap-2 text-[15px] sm:text-base font-extrabold text-heading">
+              <span class="w-2 h-2 rounded-full" :class="activeStyle.dot" />
               Grafik {{ activeCategoryData.label }}
             </h2>
             <SelectButton
@@ -342,10 +412,22 @@ const chartHeight = computed(() => {
         </section>
 
         <!-- Tabel -->
-        <section class="rounded-2xl border border-border-default bg-surface p-4 sm:p-5">
-          <h2 class="text-[15px] sm:text-base font-extrabold text-heading mb-4">
-            Tabel {{ activeCategoryData.label }}
-          </h2>
+        <section class="relative overflow-hidden rounded-2xl border border-border-default bg-surface p-4 sm:p-5">
+          <span class="absolute inset-x-0 top-0 h-1" :class="activeStyle.topBar" />
+
+          <div class="flex items-center gap-3 mb-4">
+            <h2 class="flex items-center gap-2 text-[15px] sm:text-base font-extrabold text-heading">
+              <span class="w-2 h-2 rounded-full" :class="activeStyle.dot" />
+              Tabel {{ activeCategoryData.label }}
+            </h2>
+            <span
+              class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+              :class="activeStyle.badge"
+            >
+              <i :class="activeCategoryData.icon" class="pi text-[10px]" />
+              {{ activeRows.length }} kelompok
+            </span>
+          </div>
 
           <DataTable
             :value="activeRows"
