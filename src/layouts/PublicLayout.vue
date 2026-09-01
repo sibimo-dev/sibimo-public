@@ -11,6 +11,7 @@ import {
   mobileBottomNav,
 } from "@/components/shared/navMenu.js";
 import AppFooter from "@/components/shared/AppFooter.vue";
+import AnnouncementTicker from "@/components/shared/AnnouncementTicker.vue";
 
 import villageLogo from "@/assets/logo-kalurahan-placeholder.svg";
 
@@ -41,10 +42,28 @@ function isActive(item) {
   return !!item.route && route.name === item.route.name;
 }
 
-const bottomNavItems = [
-  ...mobileBottomNav.filter((item) => item.action !== "more"),
-  { label: navCta.label, icon: navCta.icon, route: navCta.route },
-];
+// Cek apakah item ini adalah "Beranda" (dipakai untuk styling khusus di bottom nav).
+function isHome(item) {
+  return item.route?.name === "home";
+}
+
+// Susun ulang item bottom nav supaya "Beranda" selalu berada tepat di tengah,
+// apa pun urutan aslinya di navMenu.js.
+const bottomNavItems = computed(() => {
+  const items = [
+    ...mobileBottomNav.filter((item) => item.action !== "more"),
+    { label: navCta.label, icon: navCta.icon, route: navCta.route },
+  ];
+
+  const homeIndex = items.findIndex((item) => isHome(item));
+  if (homeIndex === -1) return items;
+
+  const homeItem = items[homeIndex];
+  const rest = items.filter((_, i) => i !== homeIndex);
+  const centerPos = Math.floor(items.length / 2);
+  rest.splice(centerPos, 0, homeItem);
+  return rest;
+});
 
 const menubarPt = {
   root: { class: "!border-0 !bg-transparent !px-0 !py-4 lg:!py-5 !flex !items-center !justify-between !w-full" },
@@ -79,12 +98,16 @@ const navCtaPt = {
 
 <template>
   <div class="min-h-screen flex flex-col bg-bg">
+    <!-- ============ INFO BERJALAN, tampil di semua halaman ============ -->
+    <AnnouncementTicker />
+
     <!-- ============ NAVBAR ============ -->
     <header
       class="sticky top-0 z-40 bg-gradient-to-r from-primary-900 to-primary-800 border-b border-white/10 shadow-sm"
     >
-      <div class="max-w-page mx-auto px-2 md:px-12 lg:px-14 xl:px-16">
-        <Menubar :model="menubarModel" :pt="menubarPt" breakpoint="1024px">
+
+    <div class="max-w-[1350px] mx-auto px-4 sm:px-6 md:px-10 lg:px-12">
+      <Menubar :model="menubarModel" :pt="menubarPt" breakpoint="1024px">
           <template #start>
             <RouterLink
               :to="{ name: 'home' }"
@@ -102,7 +125,7 @@ const navCtaPt = {
             </RouterLink>
           </template>
 
-          <template #item="{ item, props, hasSubmenu }">
+           <template #item="{ item, props, hasSubmenu }">
             <RouterLink
               v-if="item.route && !hasSubmenu"
               v-slot="{ href, navigate, isActive: linkActive }"
@@ -134,6 +157,7 @@ const navCtaPt = {
             </a>
           </template>
 
+
           <!-- Tombol Unduh: cuma tampil di desktop (lg+), di mobile sudah ada di bottom nav -->
           <template #end>
             <Button
@@ -152,7 +176,7 @@ const navCtaPt = {
 
     <!-- ============ KONTEN HALAMAN ============ -->
     <main class="flex-1 pb-[calc(var(--bottom-nav-h)+12px)] lg:pb-0">
-      <div class="max-w-page mx-auto px-4 md:px-12 lg:px-14 xl:px-16">
+      <div class="max-w-[1350px] mx-auto px-4 sm:px-6 md:px-10 lg:px-12">
         <RouterView />
       </div>
     </main>
@@ -161,26 +185,27 @@ const navCtaPt = {
 
     <!-- ============ BOTTOM NAV, mobile only ============ -->
     <nav
-      class="lg:hidden fixed bottom-0 inset-x-0 z-40 h-[var(--bottom-nav-h)] bg-surface border-t border-border-default flex items-stretch"
-      style="padding-bottom: env(safe-area-inset-bottom)"
-    >
-      <Button
-        v-for="item in bottomNavItems"
-        :key="item.label"
-        as="router-link"
-        :to="item.route"
-        text
-        class="!flex-1 !flex-col !gap-1 !rounded-none"
-        :class="isActive(item) ? '!text-primary-800' : '!text-text'"
-      >
-        <span
-          class="flex items-center justify-center w-9 h-6 rounded-full transition-colors"
-          :class="isActive(item) ? 'bg-primary-50' : ''"
-        >
-          <i :class="item.icon" class="text-[19px]" />
-        </span>
-        <span class="text-[10.5px] font-bold">{{ item.label }}</span>
-      </Button>
-    </nav>
+  class="lg:hidden fixed bottom-0 inset-x-0 z-40 h-[var(--bottom-nav-h)] bg-surface border-t border-border-default flex items-stretch"
+  style="padding-bottom: env(safe-area-inset-bottom)"
+  ><Button
+  v-for="item in bottomNavItems"
+  :key="item.label"
+  as="router-link"
+  :to="item.route"
+  text
+  class="!flex-1 !flex-col !gap-1 !rounded-none"
+  :class="!isHome(item) ? (isActive(item) ? '!text-primary-800' : '!text-text') : '!text-primary-800'"
+>
+  <span
+    class="flex items-center justify-center w-9 h-6 rounded-full transition-colors"
+    :class="isHome(item) ? 'bg-primary-800' : (isActive(item) ? 'bg-primary-50' : '')"
+  >
+    <i :class="[item.icon, 'text-[19px]', isHome(item) ? 'text-white' : '']" />
+  </span>
+  <span class="text-[10.5px] font-bold" :class="isHome(item) ? 'text-primary-900' : ''">{{ item.label }}</span>
+</Button>
+</nav>
+      
+    
   </div>
 </template>

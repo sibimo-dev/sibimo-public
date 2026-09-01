@@ -1,7 +1,7 @@
 export const navMenuItems = [
   { label: "Beranda", route: { name: "home" } },
   {
-    label: "Profil Desa",
+    label: "Profil",
     route: { name: "profile" },
   },
   {
@@ -11,13 +11,13 @@ export const navMenuItems = [
   {
     label: "Informasi",
     items: [
-      { label: "Berita Desa", route: { name: "news" } },
-      { label: "Agenda Desa", route: { name: "events" } },
-      { label: "Gallery Desa", route: { name: "gallery" } },
+      { label: "Berita Kalurahan", route: { name: "news" } },
+      { label: "Agenda Kalurahan", route: { name: "events" } },
+      { label: "Galeri Kalurahan", route: { name: "gallery" } },
     ],
   },
   { label: "Aduan", route: { name: "complaints" } },
-  { label: "Potensi Desa", route: { name: "potential" } },
+  { label: "Potensi ", route: { name: "potential" } },
   { label: "Data", route: { name: "data" } },
 ];
 
@@ -42,10 +42,10 @@ export const mobileBottomNav = [
 
 
 export const mobileMoreLinks = [
-  { label: "Profil Desa", icon: "pi pi-building", route: { name: "profile" } },
-  { label: "Agenda Desa", icon: "pi pi-calendar", route: { name: "events" } },
-  { label: "Gallery Desa", icon: "pi pi-image", route: { name: "gallery" } },
-  { label: "Potensi Desa", icon: "pi pi-map", route: { name: "potential" } },
-  { label: "Data", icon: "pi pi-map-marker", route: { name: "region" } },
+  { label: "Profil Kalurahan", icon: "pi pi-building", route: { name: "profile" } },
+  { label: "Agenda Kalurahan", icon: "pi pi-calendar", route: { name: "events" } },
+  { label: "Gallery Kalurahan", icon: "pi pi-image", route: { name: "gallery" } },
+  { label: "Potensi Kalurahan", icon: "pi pi-map", route: { name: "potential" } },
+  { label: "Data Kalurahan", icon: "pi pi-map-marker", route: { name: "region" } },
   { label: "Unduh Dokumen", icon: "pi pi-download", route: { name: "my-documents" } },
 ];

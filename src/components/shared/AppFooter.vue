@@ -23,8 +23,8 @@ const mapEmbedSrc =
 
 <template>
   <footer class="mt-14 lg:mt-16 bg-gradient-to-br from-primary-900 to-primary-800 text-white pt-12 pb-8 lg:pb-10">
-    <div class="max-w-page mx-auto px-4 md:px-12 lg:px-14 xl:px-16">
-      <div class="grid gap-50 md:grid-cols-3">
+    <div class="max-w-[1350px] mx-auto px-4 sm:px-6 md:px-10 lg:px-12">
+      <div class="grid gap-10 md:grid-cols-3">
         <!-- Kolom 1: logo, deskripsi, sosmed -->
         <div>
           <div class="flex items-center gap-2.5 mb-3.5">

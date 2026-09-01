@@ -105,3 +105,48 @@
     transform: scale(1.12) translate(-1%, -1%);
   }
 }
+
+@theme {
+  --animate-marquee: marquee 32s linear infinite;
+ 
+  /* Dua animasi sekaligus (lebar teks + kedip kursor) digabung dalam satu
+     nilai animation, dipisah koma, supaya cukup satu class: animate-hero-typing */
+  --animate-hero-typing: hero-typing-width 5s steps(21, end) infinite,
+    hero-typing-caret 0.7s step-end infinite;
+}
+ 
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    /* Konten di-duplikasi 2x di template AnnouncementTicker, jadi -50% = tepat satu putaran penuh, mulus tanpa jeda */
+    transform: translateX(-50%);
+  }
+}
+ 
+/* "Kalurahan Bimomartani" = 21 karakter (termasuk spasi) -> lebar dianimasikan
+   dalam satuan ch (lebar 1 karakter), diketik lalu dihapus, berulang terus */
+@keyframes hero-typing-width {
+  0% {
+    width: 0;
+  }
+  8% {
+    width: 0;
+  }
+  45% {
+    width: 21ch;
+  }
+  85% {
+    width: 21ch;
+  }
+  100% {
+    width: 0;
+  }
+}
+ 
+@keyframes hero-typing-caret {
+  50% {
+    border-color: transparent;
+  }
+}
