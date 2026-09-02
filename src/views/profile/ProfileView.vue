@@ -19,6 +19,12 @@ L.Icon.Default.mergeOptions({
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
 })
+const orgPhotos = Object.fromEntries(
+  Object.entries(orgPhotoModules).map(([path, url]) => [path.split('/').pop(), url])
+)
+function photoUrl(filename) {
+  return filename ? orgPhotos[filename] || null : null
+}
 
 
 const heroImageUrl = '/images/kalurahan-bimo.jpeg'
@@ -70,7 +76,6 @@ function accentFor(i) {
   return accentStyles[i % accentStyles.length]
 }
 
-/* Content data */
 const missions = [
   'Meningkatkan kualitas pelayanan publik berbasis teknologi informasi.',
   'Mengembangkan potensi ekonomi lokal melalui pemberdayaan UMKM dan BUMDes.',
@@ -200,6 +205,7 @@ onMounted(() => {
           entry.target.classList.remove(...REVEAL_HIDDEN)
           entry.target.classList.add(...REVEAL_VISIBLE)
           if (entry.target.dataset.trigger === 'stats') animateStats()
+          if (entry.target.dataset.trigger === 'map') initMap()
           if (entry.target.dataset.section) activeSection.value = entry.target.dataset.section
         }
       })
@@ -213,7 +219,11 @@ onMounted(() => {
       .forEach((el) => observer.observe(el))
   })
 
-  initMap()
+  nextTick(() => {
+    document
+      .querySelectorAll('.js-reveal, [data-section], [data-trigger]')
+      .forEach((el) => observer.observe(el))
+  })
 
   window.addEventListener('scroll', onHeroScroll, { passive: true })
 })
@@ -233,6 +243,8 @@ const VILLAGE_CENTER = [-7.7132, 110.4551]
 const VILLAGE_QUERY = 'Bimomartani, Ngemplak, Sleman, Daerah Istimewa Yogyakarta, Indonesia'
 
 async function initMap() {
+  if (!mapEl.value || leafletMap) return
+  await loadLeaflet()
   if (!mapEl.value) return
 
   leafletMap = L.map(mapEl.value, {
@@ -445,7 +457,7 @@ async function initMap() {
           <p class="relative">
             <span class="absolute -left-[2.05rem] top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-[0_0_0_2px_#f59e0b]" />
             Nama Kalurahan Bimomartani terbentuk pada tanggal 29 April 1946 yang merupakan
-            gabungan dari tiga kelurahan yaitu kelurahan Jatisari, Cokrosari dan Opaksari.
+            gabungan dari tiga kalurahan yaitu kalurahan Jatisari, Cokrosari dan Opaksari.
           </p>
           <p class="relative">
             <span class="absolute -left-[2.05rem] top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-[0_0_0_2px_#f59e0b]" />
@@ -727,7 +739,7 @@ async function initMap() {
         >
           <template #content>
             <div class="relative h-80 w-full">
-              <div ref="mapEl" class="h-full w-full" />
+              <div ref="mapEl" data-trigger="map" class="h-full w-full" />
 
               <div
                 v-if="mapStatus === 'loading'"
