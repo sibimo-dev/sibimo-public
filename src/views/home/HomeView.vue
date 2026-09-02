@@ -189,6 +189,18 @@ const newsDummy = [
   },
 ];
 
+/* Memotong excerpt di batas kata terdekat + "…" eksplisit, supaya
+   preview berita tidak terpotong janggal di tengah kalimat seperti
+   saat mengandalkan line-clamp CSS saja. */
+function truncateExcerpt(text, maxLength = 100) {
+  if (!text) return "";
+  const clean = text.trim().replace(/\s+/g, " ");
+  if (clean.length <= maxLength) return clean;
+  const cut = clean.slice(0, maxLength);
+  const lastSpace = cut.lastIndexOf(" ");
+  return cut.slice(0, lastSpace > 0 ? lastSpace : maxLength).trim() + "…";
+}
+
 // Dijaga hanya 3 item agar tinggi card Agenda tidak melebihi card Berita di sebelahnya
 const agendaDummy = [
   { day: "15", month: "OKT", title: "Penyaluran BLT Tahap III", time: "08:00 - Selesai" },
@@ -261,12 +273,12 @@ const potentialDummy = [
 ];
 
 const galleryDummy = [
-  { image: "/images/gallery/1.jpg", caption: "Kerja Bakti Dusun I" },
-  { image: "/images/gallery/2.jpg", caption: "Posyandu Balita" },
-  { image: "/images/gallery/3.jpg", caption: "Panen Raya Padi" },
-  { image: "/images/gallery/4.jpg", caption: "Musyawarah Desa" },
-  { image: "/images/gallery/5.jpg", caption: "Pelatihan UMKM" },
-  { image: "/images/gallery/6.jpg", caption: "Peringatan HUT RI" },
+    { image: "/images/gallery/pmt-padukuhan-1.jpeg", caption: "Pemberian PMT dan Bantuan Alat Kesehatan" },
+  { image: "/images/gallery/pembinaan-kader-1.jpeg", caption: "Pembinaan Kader Gizi" },
+  { image: "/images/gallery/musrenbangkal-1.jpeg", caption: "Musyawarah Perencanaan Pembangunan Kalurahan" },
+  { image: "/images/gallery/pembinaan-kader-2.jpeg", caption: "Pembinaan Kader Gizi" },
+  { image: "/images/gallery/musrenbangkal-2.jpeg", caption: "Musyawarah Perencanaan Pembangunan Kalurahan" },
+  { image: "/images/gallery/pmt-padukuhan-2.jpeg", caption: "Pemberian PMT dan Bantuan Alat Kesehatan" },
 ];
 
 /* ============ STRUKTUR ORGANISASI ============ */
@@ -274,35 +286,34 @@ const lurah = {
   nama: "Tutik Wahyuningsih, S.Sos., M.AP",
   jabatan: "Lurah Kalurahan Bimomartani",
   desc: "Memimpin penyelenggaraan pemerintahan, pembangunan, dan kemasyarakatan di Kalurahan Bimomartani.",
-  foto: null,
 };
 
 const pamongList = [
-  { nama: "Yudi Priyo Utomo, SE", jabatan: "Carik", desc: "Membantu Lurah dalam bidang tata usaha dan pelayanan administrasi kalurahan.", foto: null },
-  { nama: "Rifai Nurmansyah, S.Pd., M.Pd", jabatan: "Jagabaya", desc: "Bertanggung jawab atas urusan ketentraman dan ketertiban wilayah kalurahan.", foto: null },
-  { nama: "Yordan Ardi Tamara, S.Kom", jabatan: "Ulu-Ulu", desc: "Mengelola urusan pengairan dan pertanian di wilayah kalurahan.", foto: null },
-  { nama: "Sutriyana, S.Ag", jabatan: "Kamituwa", desc: "Mengoordinasikan wilayah kadukuhan dan urusan kemasyarakatan.", foto: null },
-  { nama: "Nanda Mutiara Dewi, S.Psi", jabatan: "Kaur Danarta", desc: "Mengelola urusan keuangan dan anggaran kalurahan.", foto: null },
-  { nama: "Rasyifa Anom Sudaryono, Amd.Kes", jabatan: "Kaur Tata Laksana", desc: "Mengelola tata laksana pemerintahan dan administrasi umum.", foto: null },
-  { nama: "Hanang Tri Nugroho, S.Kom", jabatan: "Kaur Pangripta", desc: "Menyusun perencanaan dan pelaporan pembangunan kalurahan.", foto: null },
-  { nama: "Jaka Widada", jabatan: "Dukuh I Krebet", desc: "Memimpin wilayah Padukuhan Krebet dan pelayanan warga setempat.", foto: null },
-  { nama: "Angga Wahyu Indra Irawan, S.Pd", jabatan: "Dukuh II Rogobangsan", desc: "Memimpin wilayah Padukuhan Rogobangsan dan pelayanan warga setempat.", foto: null },
-  { nama: "Umi Solikah", jabatan: "Dukuh III Kalibulus", desc: "Memimpin wilayah Padukuhan Kalibulus dan pelayanan warga setempat.", foto: null },
-  { nama: "Kaharudin", jabatan: "Dukuh IV Macanan", desc: "Memimpin wilayah Padukuhan Macanan dan pelayanan warga setempat.", foto: null },
-  { nama: "Mucharom", jabatan: "Dukuh V Cokrogaten", desc: "Memimpin wilayah Padukuhan Cokrogaten dan pelayanan warga setempat.", foto: null },
-  { nama: "TH Dwi Wahyu P, Amd", jabatan: "Dukuh VI Purwobinangun", desc: "Memimpin wilayah Padukuhan Purwobinangun dan pelayanan warga setempat.", foto: null },
-  { nama: "Sukirman", jabatan: "Dukuh VII Pondok Suruh", desc: "Memimpin wilayah Padukuhan Pondok Suruh dan pelayanan warga setempat.", foto: null },
-  { nama: "Sunaryo", jabatan: "Dukuh VIII Balong", desc: "Memimpin wilayah Padukuhan Balong dan pelayanan warga setempat.", foto: null },
-  { nama: "Suharyono", jabatan: "Dukuh IX Kragilan", desc: "Memimpin wilayah Padukuhan Kragilan dan pelayanan warga setempat.", foto: null },
-  { nama: "Basuki Wibowo", jabatan: "Dukuh X Banjarharjo", desc: "Memimpin wilayah Padukuhan Banjarharjo dan pelayanan warga setempat.", foto: null },
-  { nama: "Drs. Jazim Thoyibi", jabatan: "Dukuh XI Sorasan", desc: "Memimpin wilayah Padukuhan Sorasan dan pelayanan warga setempat.", foto: null },
-  { nama: "Purnomo", jabatan: "Dukuh XII Koroulon Kidul", desc: "Memimpin wilayah Padukuhan Koroulon Kidul dan pelayanan warga setempat.", foto: null },
-  { nama: "Ratna Kurnia Dewi", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan.", foto: null },
-  { nama: "Khoirunnisa Hidaya", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan.", foto: null },
-  { nama: "Mega Dwi Jayanti", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan.", foto: null },
-  { nama: "Sigit Raharjo", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan.", foto: null },
-  { nama: "Linggar Yudha Pranata", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan.", foto: null },
-  { nama: "Riyanto", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan.", foto: null },
+  { nama: "Yudi Priyo Utomo, SE", jabatan: "Carik", desc: "Membantu Lurah dalam bidang tata usaha dan pelayanan administrasi kalurahan." },
+  { nama: "Rifai Nurmansyah, S.Pd., M.Pd", jabatan: "Jagabaya", desc: "Bertanggung jawab atas urusan ketentraman dan ketertiban wilayah kalurahan." },
+  { nama: "Yordan Ardi Tamara, S.Kom", jabatan: "Ulu-Ulu", desc: "Mengelola urusan pengairan dan pertanian di wilayah kalurahan." },
+  { nama: "Sutriyana, S.Ag", jabatan: "Kamituwa", desc: "Mengoordinasikan wilayah kadukuhan dan urusan kemasyarakatan." },
+  { nama: "Nanda Mutiara Dewi, S.Psi", jabatan: "Kaur Danarta", desc: "Mengelola urusan keuangan dan anggaran kalurahan." },
+  { nama: "Rasyifa Anom Sudaryono, Amd.Kes", jabatan: "Kaur Tata Laksana", desc: "Mengelola tata laksana pemerintahan dan administrasi umum." },
+  { nama: "Hanang Tri Nugroho, S.Kom", jabatan: "Kaur Pangripta", desc: "Menyusun perencanaan dan pelaporan pembangunan kalurahan." },
+  { nama: "Jaka Widada", jabatan: "Dukuh I Krebet", desc: "Memimpin wilayah Padukuhan Krebet dan pelayanan warga setempat." },
+  { nama: "Angga Wahyu Indra Irawan, S.Pd", jabatan: "Dukuh II Rogobangsan", desc: "Memimpin wilayah Padukuhan Rogobangsan dan pelayanan warga setempat." },
+  { nama: "Umi Solikah", jabatan: "Dukuh III Kalibulus", desc: "Memimpin wilayah Padukuhan Kalibulus dan pelayanan warga setempat." },
+  { nama: "Kaharudin", jabatan: "Dukuh IV Macanan", desc: "Memimpin wilayah Padukuhan Macanan dan pelayanan warga setempat." },
+  { nama: "Mucharom", jabatan: "Dukuh V Cokrogaten", desc: "Memimpin wilayah Padukuhan Cokrogaten dan pelayanan warga setempat." },
+  { nama: "TH Dwi Wahyu P, Amd", jabatan: "Dukuh VI Purwobinangun", desc: "Memimpin wilayah Padukuhan Purwobinangun dan pelayanan warga setempat." },
+  { nama: "Sukirman", jabatan: "Dukuh VII Pondok Suruh", desc: "Memimpin wilayah Padukuhan Pondok Suruh dan pelayanan warga setempat." },
+  { nama: "Sunaryo", jabatan: "Dukuh VIII Balong", desc: "Memimpin wilayah Padukuhan Balong dan pelayanan warga setempat." },
+  { nama: "Suharyono", jabatan: "Dukuh IX Kragilan", desc: "Memimpin wilayah Padukuhan Kragilan dan pelayanan warga setempat." },
+  { nama: "Basuki Wibowo", jabatan: "Dukuh X Banjarharjo", desc: "Memimpin wilayah Padukuhan Banjarharjo dan pelayanan warga setempat." },
+  { nama: "Drs. Jazim Thoyibi", jabatan: "Dukuh XI Sorasan", desc: "Memimpin wilayah Padukuhan Sorasan dan pelayanan warga setempat." },
+  { nama: "Purnomo", jabatan: "Dukuh XII Koroulon Kidul", desc: "Memimpin wilayah Padukuhan Koroulon Kidul dan pelayanan warga setempat." },
+  { nama: "Ratna Kurnia Dewi", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan." },
+  { nama: "Khoirunnisa Hidaya", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan." },
+  { nama: "Mega Dwi Jayanti", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan." },
+  { nama: "Sigit Raharjo", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan." },
+  { nama: "Linggar Yudha Pranata", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan." },
+  { nama: "Riyanto", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan." },
 ];
 
 function getInitials(nama) {
@@ -314,6 +325,52 @@ function getInitials(nama) {
     .map((w) => w[0])
     .join("")
     .toUpperCase();
+}
+
+/* ============ FOTO PAMONG OTOMATIS DARI ASSETS ============
+   Semua foto sudah ada di src/assets/struktur-organisasi/, jadi tidak
+   perlu diketik satu-satu di pamongList. Path diambil otomatis lewat
+   import.meta.glob, lalu dicocokkan ke `nama` masing-masing pamong. */
+const pamongImages = import.meta.glob("@/assets/struktur-organisasi/*.{jpg,jpeg,png}", {
+  eager: true,
+  import: "default",
+});
+
+function normalize(text) {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // buang aksen
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, ""); // buang spasi, koma, titik, dst
+}
+
+const normalizedImageMap = {};
+for (const path in pamongImages) {
+  const filename = path.split("/").pop().replace(/\.(jpg|jpeg|png)$/i, "");
+  normalizedImageMap[normalize(filename)] = pamongImages[path];
+}
+
+// nama resmi (dinormalisasi) -> nama file asli, khusus untuk file yang
+// ejaannya berbeda dari nama resmi di pamongList
+const fotoOverride = {
+  [normalize("Rifai Nurmansyah")]: "Rifai Nurmansah",
+  [normalize("Basuki Wibowo")]: "Basuki Wibawa",
+  [normalize("Khoirunnisa Hidaya")]: "Khoirunisa Nurhidaya",
+  [normalize("Sunaryo")]: "Sunarya",
+  [normalize("Linggar Yudha Pranata")]: "Linggar Yudha",
+};
+
+function pamongFotoSrc(item) {
+  const cleanName = item.nama
+    .replace(/^(Drs\.?\s*)/i, "") // buang gelar di depan, mis. "Drs."
+    .replace(/,.*$/, "") // buang gelar setelah koma
+    .trim();
+
+  const key = normalize(cleanName);
+  const overrideFilename = fotoOverride[key];
+  const lookupKey = overrideFilename ? normalize(overrideFilename) : key;
+
+  return normalizedImageMap[lookupKey] || null;
 }
 
 const orgTrackRef = ref(null);
@@ -502,8 +559,8 @@ onBeforeUnmount(() => {
               <h3 class="font-heading font-extrabold text-[14px] text-heading mt-2.5 leading-snug line-clamp-2">
                 {{ item.title }}
               </h3>
-              <p class="text-[12px] text-muted mt-1.5 leading-relaxed line-clamp-2 flex-1">
-                {{ item.excerpt }}
+              <p class="text-[12px] text-muted mt-1.5 leading-relaxed flex-1">
+                {{ truncateExcerpt(item.excerpt) }}
               </p>
               <div class="flex items-center justify-between mt-3 pt-3 border-t border-border-default">
                 <div class="flex items-center gap-1.5 text-[11.5px] text-muted">
@@ -657,11 +714,10 @@ onBeforeUnmount(() => {
           class="relative shrink-0 w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center overflow-hidden"
         >
           <img
-            v-if="lurah.foto"
-            :src="lurah.foto"
+            v-if="pamongFotoSrc(lurah)"
+            :src="pamongFotoSrc(lurah)"
             :alt="lurah.nama"
             class="w-full h-full object-cover"
-            @error="handleImgError"
           />
           <div v-else class="flex flex-col items-center justify-center gap-2">
             <i class="pi pi-user text-4xl sm:text-5xl text-white/50" />
@@ -718,11 +774,10 @@ onBeforeUnmount(() => {
               :class="[colorAt(i).iconBg, colorAt(i).iconText]"
             >
               <img
-                v-if="item.foto"
-                :src="item.foto"
+                v-if="pamongFotoSrc(item)"
+                :src="pamongFotoSrc(item)"
                 :alt="item.nama"
                 class="w-full h-full object-cover"
-                @error="handleImgError"
               />
               <div v-else class="flex flex-col items-center justify-center gap-1.5">
                 <i class="pi pi-user text-3xl" />
@@ -767,7 +822,7 @@ onBeforeUnmount(() => {
         </RouterLink>
       </div>
 
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5 auto-rows-[90px] sm:auto-rows-[110px] lg:auto-rows-[160px]">
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5 auto-rows-[90px] sm:auto-rows-[110px] lg:auto-rows-[240px]">
         <RouterLink
           v-for="(item, i) in galleryDummy"
           :key="i"
