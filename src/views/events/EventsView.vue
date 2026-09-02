@@ -6,7 +6,7 @@
 
 <template>
   <div class="p-6">
-    <h1 class="text-2xl font-semibold">Agenda Desa</h1>
+    <h1 class="text-2xl font-semibold">Agenda Bimomartani</h1>
     <p class="text-sm mt-1" style="color: var(--color-text-muted)">
       Placeholder — belum diimplementasikan.
     </p>

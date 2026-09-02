@@ -46,7 +46,7 @@ function goNextMonth() {
       class="inline-flex items-center gap-1.5 text-[13px] font-bold text-sky-700 hover:text-violet-700 transition-colors"
     >
       <i class="pi pi-arrow-left text-[11px]" />
-      Kembali ke Agenda Desa
+      Kembali ke Agenda Bimomartani
     </RouterLink>
 
     <!-- ============ HEADER ============ -->
@@ -58,11 +58,11 @@ function goNextMonth() {
       <h1 class="mt-2 text-2xl sm:text-3xl font-extrabold text-heading">
         Agenda
         <span class="bg-gradient-to-r from-sky-600 to-violet-600 bg-clip-text text-transparent">
-          Desa
+          Bimomartani
         </span>
       </h1>
       <p class="text-[13.5px] sm:text-[15px] text-muted mt-2 leading-relaxed">
-        Jadwal kegiatan, musyawarah, dan acara penting komunitas Desa untuk bulan terpilih.
+        Jadwal kegiatan, musyawarah, dan acara penting komunitas Kalurahan untuk bulan terpilih.
       </p>
     </div>
 
