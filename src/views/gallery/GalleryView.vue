@@ -26,36 +26,39 @@ const timeOptions = [
 const events = [
   {
     id: 1,
-    day: '17',
-    month: 'AGUSTUS',
-    monthKey: '2024-08',
-    category: 'kegiatan-sosial',
-    location: 'Lapangan Desa Bimomartani',
-    title: 'Perayaan HUT RI ke-79 & Malam Tirakatan',
+    day: '02',
+    month: 'SEPTEMBER',
+    monthKey: '2026-09',
+    category: 'musyawarah',
+    location: 'Balai Kalurahan Bimomartani',
+    title: 'MUSRENBANGKAL 2026',
     description:
-      'Rangkaian kegiatan peringatan Hari Kemerdekaan RI ke-79, perlombaan antar dusun, malam tirakatan, dan upacara bendera di lapangan desa. Termasuk jadwal lomba dan pentas seni warga.',
+      'Penyusunan perubahan RPJMKAL dan perpanjangan masa jabatan lurah tahun 2028-2029.',
+    image: '/images/gallery/musrenbangkal.jpeg',
   },
   {
     id: 2,
-    day: '05',
-    month: 'JULI',
-    monthKey: '2024-07',
-    category: 'musyawarah',
-    location: 'Balai Desa Bimomartani',
-    title: 'Musrenbangdes Tahunan 2024',
+    day: '10',
+    month: 'AGUSTUS',
+    monthKey: '2026-08',
+    category: 'kegiatan-sosial',
+    location: 'Balai Kalurahan Bimomartani',
+    title: 'Pemberian PMT Kalurahan Bimomartani',
     description:
-      'Musyawarah Perencanaan Pembangunan Desa (Musrenbangdes) tahunan. Pembahasan alokasi dana desa semester dua, evaluasi program kerja BUMDes, dan usulan prioritas pembangunan.',
+      'Pemberian PMT bagi ibu hamil dan balita stunting Kalurahan Bimomartani.',
+    image: '/images/gallery/Pemberian PMT.jpeg',
   },
   {
     id: 3,
-    day: '12',
-    month: 'JUNI',
-    monthKey: '2024-06',
-    category: 'pembangunan',
-    location: 'Saluran Irigasi Utama',
-    title: 'Gotong Royong Massal Persiapan Musim Tanam',
+    day: '11',
+    month: 'AGUSTUS',
+    monthKey: '2026-08',
+    category: 'kegiatan-sosial',
+    location: 'Balai Kalurahan Bimomartani',
+    title: 'Pemberian Bantuan Alat Kesehatan',
     description:
-      'Kegiatan gotong royong massal pembersihan saluran irigasi menjelang musim tanam. Pelatihan UMKM pengolahan hasil panen untuk kelompok ibu-ibu PKK.',
+      'Pemberian bantuan alat kesehatan di padukuhan.',
+    image: '/images/gallery/Pemberian bantuan alat kesehatan.jpeg',
   },
   {
     id: 4,
@@ -63,8 +66,8 @@ const events = [
     month: 'MEI',
     monthKey: '2024-05',
     category: 'budaya',
-    location: 'Pendopo Desa',
-    title: 'Festival Seni & Budaya Desa',
+    location: 'Pendopo Kalurahan',
+    title: 'Festival Seni & Budaya Kalurahan',
     description:
       'Pentas seni tahunan menampilkan potensi budaya lokal, pameran kerajinan tangan BUMDes, dan pertunjukan wayang kulit semalam suntuk sebagai penutup acara.',
   },
@@ -72,12 +75,13 @@ const events = [
     id: 5,
     day: '20',
     month: 'APRIL',
-    monthKey: '2024-04',
+    monthKey: '2026-04',
     category: 'kegiatan-sosial',
-    location: 'Balai Desa Bimomartani',
-    title: 'Pelatihan Pengolahan Hasil Panen UMKM',
+    location: 'Balai Kalurahan Bimomartani',
+    title: 'Pembinaan Kader',
     description:
-      'Pelatihan bagi pelaku UMKM desa dalam mengolah hasil panen menjadi produk bernilai jual tinggi, bekerja sama dengan Dinas Pertanian Kabupaten Sleman.',
+      'Pembinaan kader di Kalurahan Bimomartani.',
+    image: '/images/gallery/Pembinaan kader.jpeg',
   },
   {
     id: 6,
@@ -88,7 +92,7 @@ const events = [
     location: 'Ruang Rapat Kalurahan',
     title: 'Rapat Koordinasi RT/RW Se-Kalurahan',
     description:
-      'Koordinasi rutin seluruh ketua RT dan RW se-Kalurahan Bimomartani membahas pendataan warga, keamanan lingkungan, dan persiapan agenda desa mendatang.',
+      'Koordinasi rutin seluruh ketua RT dan RW se-Kalurahan Bimomartani membahas pendataan warga, keamanan lingkungan, dan persiapan agenda kalurahan mendatang.',
   },
   {
     id: 7,
@@ -99,7 +103,7 @@ const events = [
     location: 'Dusun Jetis',
     title: 'Pembangunan Talud Jalan Dusun Jetis',
     description:
-      'Proyek pembangunan talud penahan jalan di Dusun Jetis menggunakan dana desa, bertujuan mencegah longsor dan kerusakan jalan saat musim hujan.',
+      'Proyek pembangunan talud penahan jalan di Dusun Jetis menggunakan dana kalurahan, bertujuan mencegah longsor dan kerusakan jalan saat musim hujan.',
   },
   {
     id: 8,
@@ -107,10 +111,10 @@ const events = [
     month: 'JANUARI',
     monthKey: '2024-01',
     category: 'budaya',
-    location: 'Pendopo Desa',
+    location: 'Pendopo Kalurahan',
     title: 'Pentas Wayang Kulit Semalam Suntuk',
     description:
-      'Pagelaran wayang kulit semalam suntuk dalam rangka bersih desa, menghadirkan dalang lokal dan diikuti oleh seluruh warga dari 12 padukuhan.',
+      'Pagelaran wayang kulit semalam suntuk dalam rangka bersih kalurahan, menghadirkan dalang lokal dan diikuti oleh seluruh warga dari 12 padukuhan.',
   },
 ]
 
@@ -130,7 +134,6 @@ const filteredEvents = computed(() =>
 const visibleEvents = computed(() => filteredEvents.value.slice(0, visibleCount.value))
 const hasMore = computed(() => visibleCount.value < filteredEvents.value.length)
 
-// scrolled past what's actually available for the new filter.
 watch([activeCategory, activeTime], () => {
   visibleCount.value = pageSize
 })
@@ -143,7 +146,6 @@ function categoryLabel(slug) {
   return categories.find((c) => c.slug === slug)?.label ?? slug
 }
 
-/* Per-category color + icon identity */
 const categoryStyles = {
   musyawarah: {
     icon: 'pi pi-users',
@@ -237,8 +239,8 @@ function styleFor(slug) {
         Galeri <span class="heading-accent">Bimomartani</span>
       </h1>
       <p class="mt-2 max-w-2xl text-sm text-muted leading-relaxed">
-        Jadwal kegiatan, musyawarah, dan acara penting komunitas Desa. Tetap
-        terhubung dan berpartisipasi aktif dalam pembangunan desa kita.
+        Jadwal kegiatan, musyawarah, dan acara penting komunitas Kalurahan. Tetap
+        terhubung dan berpartisipasi aktif dalam pembangunan kalurahan kita.
       </p>
     </div>
 
@@ -323,11 +325,20 @@ function styleFor(slug) {
             <!-- image + date badge -->
             <div class="relative">
               <div
-                class="shimmer-wrap relative flex h-44 w-full items-center justify-center overflow-hidden bg-gradient-to-br transition-transform duration-500 group-hover:scale-105"
-                :class="styleFor(event.category).imageGrad"
+                class="relative flex h-44 w-full items-center justify-center overflow-hidden transition-transform duration-500 group-hover:scale-105"
+                :class="!event.image && ['shimmer-wrap bg-gradient-to-br', styleFor(event.category).imageGrad]"
               >
-                <i class="pi pi-image text-3xl opacity-40" :class="styleFor(event.category).location" />
-                <span class="shimmer-sweep absolute inset-0 bg-gradient-to-r from-transparent to-transparent" :class="styleFor(event.category).shimmer" />
+                <img
+                  v-if="event.image"
+                  :src="event.image"
+                  :alt="event.title"
+                  class="h-full w-full object-cover"
+                  style="object-position: center 35%;"
+                />
+                <template v-else>
+                  <i class="pi pi-image text-3xl opacity-40" :class="styleFor(event.category).location" />
+                  <span class="shimmer-sweep absolute inset-0 bg-gradient-to-r from-transparent to-transparent" :class="styleFor(event.category).shimmer" />
+                </template>
               </div>
               <div
                 class="date-badge absolute left-4 -bottom-4 rounded-xl px-3 py-2 text-center shadow-md"
@@ -380,7 +391,6 @@ function styleFor(slug) {
 </template>
 
 <style scoped>
-/* header / sidebar entrance */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -395,7 +405,6 @@ function styleFor(slug) {
   animation: fadeInUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Small pulsing dot next to the "Agenda" kicker label */
 .header-kicker-dot {
   animation: kickerPulse 2.2s ease-in-out infinite;
 }
@@ -404,7 +413,6 @@ function styleFor(slug) {
   50% { transform: scale(1.4); opacity: 0.6; }
 }
 
-/* Gradient-highlighted "Desa" word in the heading */
 .heading-accent {
   background: linear-gradient(90deg, #0284c7, #7c3aed);
   -webkit-background-clip: text;
@@ -412,8 +420,6 @@ function styleFor(slug) {
   -webkit-text-fill-color: transparent;
 }
 
-/* Ambient background blobs: slow independent drift so the page feels alive
-   without being distracting */
 @keyframes blobFloat {
   0%, 100% { transform: translate(0, 0) scale(1); }
   50% { transform: translate(-16px, 18px) scale(1.08); }
@@ -429,12 +435,10 @@ function styleFor(slug) {
   animation: blobFloatSlow 13s ease-in-out infinite;
 }
 
-/* Sidebar tabs */
 .sidebar-tab {
   transform-origin: center;
 }
 
-/* Date badge: small pop-in + gentle hover lift, echoing the card's own hover */
 .date-badge {
   transition: transform 0.25s ease;
 }
@@ -442,7 +446,6 @@ function styleFor(slug) {
   transform: translateY(-2px) scale(1.04);
 }
 
-/* Shimmer sweep across each placeholder image */
 .shimmer-wrap {
   background-size: 200% 200%;
 }
@@ -459,8 +462,6 @@ function styleFor(slug) {
   animation: fadeInUp 0.5s ease both;
 }
 
-/* "Muat Lebih Banyak": small bounce + colorful border sweep on hover so the
-   button doesn't feel like a dead end */
 .load-more-btn {
   transition: transform 0.2s ease;
 }
@@ -471,8 +472,6 @@ function styleFor(slug) {
   transform: translateY(0) scale(0.97);
 }
 
-/* Card enter/leave/move — a slightly bouncier, more "greget" pop-in than a
-   plain fade, using an overshoot easing curve */
 .card-enter-from {
   opacity: 0;
   transform: translateY(22px) scale(0.92) rotate(-1deg);
