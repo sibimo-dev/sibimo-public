@@ -20,6 +20,30 @@ export function getCategoryClasses(category) {
 
 const newsDummy = [
   {
+    slug: "gapura-batas-kalurahan-bimomartani-diperbarui",
+    category: "Pemerintahan",
+    date: "15 Okt 2026",
+    dateISO: "2026-10-15",
+    author: "Admin Desa",
+    title: "Gapura Batas Kalurahan Bimomartani Tampil Baru, Jadi Ikon Penanda Wilayah",
+    excerpt:
+      "Gapura selamat datang di Jalan Cangkringan direvitalisasi dengan ornamen khas Yogyakarta, mempertegas identitas Kalurahan Bimomartani bagi warga dan pengunjung.",
+    content: [
+      "Pemerintah Kalurahan Bimomartani merampungkan revitalisasi gapura batas wilayah yang berlokasi di Jalan Cangkringan KM 6,5, tepat di pintu masuk utama menuju kalurahan. Gapura ini kini tampil lebih megah dengan ornamen khas Daerah Istimewa Yogyakarta serta lambang-lambang kelembagaan desa yang terpasang rapi di badan gapura.",
+      "Lurah Bimomartani, Tutik Wahyuningsih, S.Sos., M.A.P., menyampaikan bahwa gapura tidak sekadar penanda batas administratif, melainkan juga cerminan identitas budaya dan kebanggaan warga. Desain gapura sengaja mempertahankan unsur tradisional seperti motif kawung dan ornamen gunungan di kedua sisinya.",
+      {
+        type: "image",
+        src: "/images/news/gapura-kalurahan-bimomartani.jpg",
+        caption: "Gapura selamat datang Kalurahan Bimomartani di Jalan Cangkringan KM 6,5 yang telah direvitalisasi.",
+      },
+      "Selain mempercantik wajah desa, keberadaan gapura yang dilengkapi kode QR informasi kependudukan ini diharapkan memudahkan warga maupun tamu mengakses data dan layanan kalurahan secara digital hanya dengan memindai kode yang tersedia.",
+      "Revitalisasi gapura ini merupakan bagian dari rangkaian penataan wajah kalurahan yang juga beriringan dengan pembahasan perubahan RPJMKal, sebagai wujud pembenahan menyeluruh baik dari sisi tata kelola pemerintahan maupun tampilan fisik wilayah.",
+    ],
+    image: "/images/news/gapura-kalurahan-bimomartani.jpeg",
+    popular: true,
+    isPinned: true,
+  },
+  {
     slug: "musrenbangdes-2027-berjalan-lancar",
     category: "Pemerintahan",
     date: "12 Okt 2026",
@@ -34,8 +58,9 @@ const newsDummy = [
       "Lurah Bimomartani dalam sambutannya menekankan pentingnya skala prioritas mengingat keterbatasan anggaran desa. Usulan yang berdampak langsung ke banyak warga, terutama infrastruktur jalan, akan didahulukan.",
       "Hasil Musrenbangdes ini selanjutnya akan dibawa ke Musyawarah Antar Desa (MAD) tingkat kapanewon sebelum ditetapkan sebagai dokumen resmi perencanaan pembangunan desa.",
     ],
-    image: "/images/news/musrenbangdes-2027.jpg",
+    image: "/images/news/musrenbangkal-penyusunan-rpjmkal-2.jpg",
     popular: false,
+    isPinned: false,
   },
   {
     slug: "pengaspalan-jalan-dusun-mekarsari-selesai",
@@ -51,8 +76,9 @@ const newsDummy = [
       "Ketua RT setempat menyampaikan bahwa jalan tersebut sebelumnya rusak parah dan kerap membuat kendaraan warga, terutama roda dua, terjatuh saat musim hujan. Kini jalan sudah mulus dan anak-anak sekolah lebih aman melintas.",
       "Pemerintah kalurahan berterima kasih kepada seluruh warga yang telah berpartisipasi dalam pengawasan pelaksanaan proyek melalui Tim Pelaksana Kegiatan (TPK), sehingga kualitas pekerjaan dapat terjaga sesuai spesifikasi.",
     ],
-    image: "/images/news/pengaspalan-mekarsari.jpg",
+    image: "/images/news/gapura-kalurahan-bimomartani.jpeg",
     popular: true,
+    isPinned: false,
   },
   {
     slug: "pasar-tani-mingguan-ekonomi-lokal",
@@ -68,8 +94,9 @@ const newsDummy = [
       "Sedikitnya 25 lapak diisi oleh petani dan pelaku UMKM yang menjajakan sayur mayur segar, hasil palawija, hingga produk olahan seperti keripik dan jamu tradisional. Perputaran uang di pasar ini diperkirakan mencapai belasan juta rupiah setiap kali penyelenggaraan.",
       "Selain menambah penghasilan, pasar ini juga menjadi ajang silaturahmi warga antar-dusun. Pemerintah desa berencana memperluas area pasar agar dapat menampung lebih banyak pedagang pada tahun mendatang.",
     ],
-    image: "/images/news/pasar-tani-mingguan.jpg",
+    image: "/images/news/pemberian-pmt-bumil-kek-balita-gizi-buruk-4.jpg",
     popular: true,
+    isPinned: false,
   },
   {
     slug: "jadwal-posyandu-lansia-oktober",
@@ -85,8 +112,9 @@ const newsDummy = [
       "Setiap peserta lanjut usia dihimbau membawa Kartu Menuju Sehat (KMS) Lansia dan datang sesuai jadwal padukuhan masing-masing untuk menghindari penumpukan antrean. Layanan yang tersedia meliputi pemeriksaan tekanan darah, gula darah, serta konsultasi gizi lansia.",
       "Kader kesehatan mengingatkan pentingnya pemeriksaan rutin bagi lansia guna mendeteksi dini penyakit tidak menular seperti hipertensi dan diabetes. Jadwal lengkap per padukuhan dapat dilihat di papan pengumuman balai dusun masing-masing.",
     ],
-    image: "/images/news/posyandu-lansia-oktober.jpg",
+    image: "/images/news/musrenbangkal-penyusunan-rpjmkal-3.jpg",
     popular: true,
+    isPinned: false,
   },
   {
     slug: "persiapan-lomba-desa-hut-ri-ke-81",
@@ -102,8 +130,9 @@ const newsDummy = [
       "Panitia HUT RI tingkat kalurahan juga telah menyusun rangkaian lomba yang akan digelar, mulai dari lomba gapura antar-dusun, lomba kebersihan lingkungan, hingga lomba tradisional untuk anak-anak dan ibu-ibu PKK.",
       "Ketua Panitia HUT RI Kalurahan Bimomartani berharap semangat gotong royong ini terus terjaga bukan hanya saat perayaan kemerdekaan saja. Puncak perayaan akan digelar di lapangan desa dengan upacara bendera dan pentas seni warga.",
     ],
-    image: "/images/news/persiapan-hut-ri-81.jpg",
+    image: "/images/news/pembinaan-kader-gizi-3.jpg",
     popular: false,
+    isPinned: false,
   },
   {
     slug: "perbaikan-saluran-irigasi-tahap-2",
@@ -119,8 +148,9 @@ const newsDummy = [
       "Saluran irigasi sepanjang kurang lebih 800 meter ini melayani area persawahan seluas puluhan hektare di wilayah selatan desa. Kondisi saluran yang lama kerap mengalami kebocoran sehingga distribusi air ke sawah warga tidak merata, terutama saat musim kemarau.",
       "Kelompok Tani setempat menyambut baik proyek ini dan berharap dapat meningkatkan hasil panen padi pada musim tanam berikutnya.",
     ],
-    image: "/images/news/irigasi-tahap-2.jpg",
+    image: "/images/news/gapura-kalurahan-bimomartani.jpeg",
     popular: false,
+    isPinned: false,
   },
   {
     slug: "pemadaman-listrik-bergilir-area-barat",
@@ -136,8 +166,9 @@ const newsDummy = [
       "Warga dihimbau untuk mempersiapkan kebutuhan yang bergantung pada listrik sebelum jadwal pemadaman, termasuk mengisi daya perangkat penting dan menyimpan bahan makanan yang mudah rusak dengan baik.",
       "Pemerintah desa akan menginformasikan lebih lanjut apabila terdapat perubahan jadwal dari pihak PLN. Informasi resmi juga dapat dipantau melalui pengumuman di balai dusun masing-masing.",
     ],
-    image: "/images/news/pemadaman-listrik-barat.jpg",
+    image: "/images/news/pemberian-pmt-bumil-kek-balita-gizi-buruk-4.jpg",
     popular: false,
+    isPinned: false,
   },
   {
     slug: "pembinaan-kader-gizi",
@@ -151,10 +182,16 @@ const newsDummy = [
     content: [
       "Jumat, 7 Agustus 2026 pukul 08.30 WIB, Pemerintah Kalurahan Bimomartani menyelenggarakan kegiatan Pembinaan Kader Gizi di Pendopo Kalurahan Bimomartani. Kegiatan diikuti oleh 30 kader gizi yang berasal dari 12 padukuhan di wilayah Kalurahan Bimomartani.",
       "Acara diawali dengan sambutan dari Lurah Bimomartani, Tutik Wahyuningsih, S.Sos., M.A.P., yang menyampaikan pentingnya peran kader gizi dalam meningkatkan kualitas kesehatan ibu dan anak di tingkat padukuhan.",
+      {
+        type: "image",
+        src: "/images/news/pembinaan-kader-gizi-2.jpg",
+        caption: "Para kader gizi menyimak materi pembinaan yang disampaikan narasumber di Pendopo Kalurahan.",
+      },
       "Materi pembinaan meliputi cara pengukuran status gizi balita, deteksi dini stunting, serta penyusunan menu makanan tambahan bergizi seimbang berbahan pangan lokal. Kader gizi diharapkan dapat menularkan ilmu ini kepada kader posyandu di wilayah masing-masing.",
     ],
     image: "/images/news/pembinaan-kader-gizi.jpg",
     popular: false,
+    isPinned: false,
   },
   {
     slug: "pemberian-pmt-bumil-kek-balita-gizi-buruk",
@@ -168,10 +205,39 @@ const newsDummy = [
     content: [
       "Bimomartani, 3 Agustus 2026 — Pemerintah Kalurahan Bimomartani melaksanakan kegiatan Pemberian Makanan Tambahan (PMT) bagi ibu hamil dengan Kekurangan Energi Kronis (KEK) dan balita gizi buruk pada Senin pagi di Balai Kalurahan.",
       "Kegiatan ini merupakan bagian dari program percepatan penurunan stunting yang menjadi prioritas nasional. Makanan tambahan yang diberikan berbahan pangan lokal dengan kandungan protein dan gizi seimbang, disusun bersama ahli gizi Puskesmas.",
-      "Bidan desa menyampaikan bahwa pemberian PMT akan berlangsung selama 90 hari dengan pemantauan berkala terhadap perkembangan berat badan ibu hamil dan balita penerima manfaat.",
+      {
+        type: "image",
+        src: "/images/news/pemberian-pmt-bumil-kek-balita-gizi-buruk-2.jpg",
+        caption: "Penyerahan paket makanan tambahan kepada ibu hamil KEK di Balai Kalurahan Bimomartani.",
+      },
+      "Bidan desa menyampaikan bahwa pemberian PMT akan berlangsung selama 90 hari dengan pemantauan berkala terhadap perkembangan berat badan ibu hamil dan balita penerima manfaat, disertai penyerahan bantuan alat kesehatan bagi padukuhan guna menunjang layanan kesehatan dasar di tingkat masyarakat.",
     ],
-    image: "/images/news/pmt-bumil-kek.jpg",
+    image: "/images/news/pemberian-pmt-bumil-kek-balita-gizi-buruk.jpg",
     popular: false,
+    isPinned: false,
+  },
+  {
+    slug: "musrenbangkal-penyusunan-perubahan-rpjmkal",
+    category: "Pemerintahan",
+    date: "28 Agu 2026",
+    dateISO: "2026-08-28",
+    author: "Admin Desa",
+    title: "Musrenbangkal Penyusunan Perubahan RPJMKal Digelar di Kalurahan Bimomartani",
+    excerpt:
+      "Kalurahan Bimomartani menggelar Musyawarah Perencanaan Pembangunan Kalurahan untuk penyusunan perubahan RPJMKal, sehubungan dengan perpanjangan masa jabatan Lurah tahun 2028–2029.",
+    content: [
+      "Pemerintah Kalurahan Bimomartani menyelenggarakan Musyawarah Perencanaan Pembangunan Kalurahan (Musrenbangkal) dalam rangka penyusunan perubahan Rencana Pembangunan Jangka Menengah Kalurahan (RPJMKal), sehubungan dengan perpanjangan masa jabatan Lurah untuk periode 2028–2029.",
+      "Kegiatan yang berlangsung pada Jumat, 28 Agustus 2026 ini bertempat di Balai Kalurahan Bimomartani dan dihadiri oleh unsur pemerintah kalurahan, tokoh masyarakat, serta perwakilan warga dari berbagai padukuhan.",
+      {
+        type: "image",
+        src: "/images/news/musrenbangkal-penyusunan-rpjmkal-2.jpg",
+        caption: "Suasana Musrenbangkal di Balai Kalurahan Bimomartani dihadiri perwakilan warga tiap padukuhan.",
+      },
+      "Dalam forum tersebut, dibahas penyesuaian arah kebijakan pembangunan kalurahan agar tetap selaras dengan kebutuhan masyarakat selama masa transisi kepemimpinan. Musyawarah ini menjadi bagian dari proses partisipatif warga dalam menentukan prioritas pembangunan di Kalurahan Bimomartani untuk periode mendatang.",
+    ],
+    image: "/images/news/musrenbangkal-penyusunan-rpjmkal.jpg",
+    popular: false,
+    isPinned: false,
   },
 ];
 

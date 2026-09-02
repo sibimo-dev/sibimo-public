@@ -1,25 +1,27 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { RouterLink } from "vue-router";
-import NewsCard from "@/components/shared/NewsCard.vue";
-import {
-  getAllNews,
-  newsCategories,
-  getCategoryClasses,
-} from "@/services/news.js";
+
+import InputText from "primevue/inputtext";
+import IconField from "primevue/iconfield";
+import InputIcon from "primevue/inputicon";
+import SelectButton from "primevue/selectbutton";
+import Paginator from "primevue/paginator";
+import Tag from "primevue/tag";
+
+import { getAllNews, newsCategories } from "@/services/news.js";
 
 const allNews = getAllNews();
 
 const pinnedNews = computed(() => allNews.find((item) => item.isPinned) || null);
 
 const latestNews = computed(() =>
-  [...allNews]
-    .sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO))
-    .slice(0, 3)
+  [...allNews].sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO)).slice(0, 3)
 );
 
-const categoryOptions = ["Semua Kategori", ...newsCategories];
-const activeCategory = ref("Semua Kategori");
+const ALL_CATEGORY_LABEL = "Semua Kategori";
+const categoryOptions = [ALL_CATEGORY_LABEL, ...newsCategories];
+const activeCategory = ref(ALL_CATEGORY_LABEL);
 const searchQuery = ref("");
 
 const sortOptions = [
@@ -34,15 +36,15 @@ const currentPage = ref(1);
 const filteredSorted = computed(() => {
   let items = [...allNews];
 
-  if (activeCategory.value !== "Semua Kategori") {
+  if (activeCategory.value !== ALL_CATEGORY_LABEL) {
     items = items.filter((item) => item.category === activeCategory.value);
   }
 
-  const q = searchQuery.value.trim().toLowerCase();
-  if (q) {
+  const query = searchQuery.value.trim().toLowerCase();
+  if (query) {
     items = items.filter(
       (item) =>
-        item.title.toLowerCase().includes(q) || item.excerpt.toLowerCase().includes(q)
+        item.title.toLowerCase().includes(query) || item.excerpt.toLowerCase().includes(query)
     );
   }
 
@@ -56,388 +58,407 @@ const filteredSorted = computed(() => {
 });
 
 const featured = computed(() => {
-  const isAllCategory = activeCategory.value === "Semua Kategori";
+  const isAllCategory = activeCategory.value === ALL_CATEGORY_LABEL;
   if (!isAllCategory) return null;
   return pinnedNews.value || filteredSorted.value[0] || null;
 });
 
-const rest = computed(() =>
+const restNews = computed(() =>
   featured.value
     ? filteredSorted.value.filter((item) => item.slug !== featured.value.slug)
     : filteredSorted.value
 );
-const totalPages = computed(() => Math.max(1, Math.ceil(rest.value.length / pageSize)));
+
 const pagedRest = computed(() => {
   const start = (currentPage.value - 1) * pageSize;
-  return rest.value.slice(start, start + pageSize);
+  return restNews.value.slice(start, start + pageSize);
 });
+
+function onPageChange(event) {
+  currentPage.value = event.page + 1;
+}
 
 watch([activeCategory, searchQuery, sortOrder], () => {
   currentPage.value = 1;
 });
 
-function handleImgError(event) {
+function handleImageError(event) {
   event.target.style.display = "none";
 }
 
-/* ============ WARNA PER KATEGORI (ala Gallery) ============
-   Warna ditentukan otomatis dari nama kategori supaya konsisten
-   di seluruh halaman, tanpa perlu daftar kategori hardcode. */
-const colorPalette = [
+/* ============ Warna per kategori (digabung langsung di sini) ============
+   Warna ditentukan otomatis dari nama kategori (hash) supaya konsisten
+   di seluruh halaman, tanpa perlu daftar kategori hardcode dan tanpa
+   file terpisah. */
+const CATEGORY_PALETTE = [
   {
     dot: "bg-sky-500",
     topBar: "bg-gradient-to-r from-sky-400 to-cyan-500",
-    imageGrad: "from-sky-100 via-cyan-100 to-sky-200",
-    shimmer: "via-sky-200/70",
-    solidActive: "bg-sky-600 text-white border-sky-600 shadow-sky-600/25",
-    ring: "hover:border-sky-300",
+    imageGradient: "from-sky-100 via-cyan-100 to-sky-200",
+    activeBadge: "bg-gradient-to-r from-sky-500 to-cyan-500 text-white border-transparent shadow-lg shadow-sky-500/30",
+    softBadge: "bg-sky-50 text-sky-700 border border-sky-200",
+    hoverRing: "hover:border-sky-300",
   },
   {
     dot: "bg-rose-500",
     topBar: "bg-gradient-to-r from-rose-400 to-pink-500",
-    imageGrad: "from-rose-100 via-pink-100 to-rose-200",
-    shimmer: "via-rose-200/70",
-    solidActive: "bg-rose-600 text-white border-rose-600 shadow-rose-600/25",
-    ring: "hover:border-rose-300",
+    imageGradient: "from-rose-100 via-pink-100 to-rose-200",
+    activeBadge: "bg-gradient-to-r from-rose-500 to-pink-500 text-white border-transparent shadow-lg shadow-rose-500/30",
+    softBadge: "bg-rose-50 text-rose-700 border border-rose-200",
+    hoverRing: "hover:border-rose-300",
   },
   {
     dot: "bg-amber-500",
     topBar: "bg-gradient-to-r from-amber-400 to-orange-500",
-    imageGrad: "from-amber-100 via-orange-100 to-amber-200",
-    shimmer: "via-amber-200/70",
-    solidActive: "bg-amber-600 text-white border-amber-600 shadow-amber-600/25",
-    ring: "hover:border-amber-300",
+    imageGradient: "from-amber-100 via-orange-100 to-amber-200",
+    activeBadge: "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-transparent shadow-lg shadow-amber-500/30",
+    softBadge: "bg-amber-50 text-amber-700 border border-amber-200",
+    hoverRing: "hover:border-amber-300",
   },
   {
     dot: "bg-violet-500",
     topBar: "bg-gradient-to-r from-violet-400 to-purple-500",
-    imageGrad: "from-violet-100 via-purple-100 to-violet-200",
-    shimmer: "via-violet-200/70",
-    solidActive: "bg-violet-600 text-white border-violet-600 shadow-violet-600/25",
-    ring: "hover:border-violet-300",
+    imageGradient: "from-violet-100 via-purple-100 to-violet-200",
+    activeBadge: "bg-gradient-to-r from-violet-500 to-purple-500 text-white border-transparent shadow-lg shadow-violet-500/30",
+    softBadge: "bg-violet-50 text-violet-700 border border-violet-200",
+    hoverRing: "hover:border-violet-300",
   },
   {
     dot: "bg-emerald-500",
     topBar: "bg-gradient-to-r from-emerald-400 to-teal-500",
-    imageGrad: "from-emerald-100 via-teal-100 to-emerald-200",
-    shimmer: "via-emerald-200/70",
-    solidActive: "bg-emerald-600 text-white border-emerald-600 shadow-emerald-600/25",
-    ring: "hover:border-emerald-300",
+    imageGradient: "from-emerald-100 via-teal-100 to-emerald-200",
+    activeBadge: "bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-transparent shadow-lg shadow-emerald-500/30",
+    softBadge: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    hoverRing: "hover:border-emerald-300",
   },
 ];
 
-function hashCategory(cat) {
+function hashString(value) {
   let hash = 0;
-  for (let i = 0; i < cat.length; i++) hash = (hash * 31 + cat.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
   return hash;
 }
 
-function styleFor(category) {
-  if (!category) return colorPalette[0];
-  return colorPalette[hashCategory(category) % colorPalette.length];
+function getCategoryStyle(category) {
+  if (!category) return CATEGORY_PALETTE[0];
+  return CATEGORY_PALETTE[hashString(category) % CATEGORY_PALETTE.length];
 }
 </script>
 
 <template>
-  <div class="relative overflow-hidden py-6 lg:py-8 flex flex-col gap-8">
-    <!-- ============ AMBIENT BLOBS ============ -->
-    <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 rounded-full bg-sky-400/10 blur-3xl" />
-    <div class="pointer-events-none absolute -right-20 top-64 -z-10 h-64 w-64 rounded-full bg-rose-400/10 blur-3xl animate-blob-float" />
-    <div class="pointer-events-none absolute left-1/3 bottom-0 -z-10 h-56 w-56 rounded-full bg-violet-400/10 blur-3xl animate-blob-float-slow" />
+  <div class="relative flex flex-col gap-8 overflow-hidden py-6 lg:py-8">
+    <!-- Ambient glow, gantinya blob custom keyframes -->
+    <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 animate-pulse rounded-full bg-sky-400/10 blur-3xl" />
+    <div class="pointer-events-none absolute -right-20 top-64 -z-10 h-64 w-64 animate-pulse rounded-full bg-rose-400/10 blur-3xl [animation-delay:0.4s]" />
+    <div class="pointer-events-none absolute bottom-0 left-1/3 -z-10 h-56 w-56 animate-pulse rounded-full bg-violet-400/10 blur-3xl [animation-delay:0.8s]" />
 
-    <!-- ============ HEADER + SEARCH ============ -->
-    <div class="fade-in-up flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-      <div>
-        <div class="inline-flex items-center gap-2">
-          <span class="header-kicker-dot h-2 w-2 rounded-full bg-sky-500" />
-          <span class="text-xs font-bold uppercase tracking-[0.25em] text-sky-600">Info Desa</span>
+    <!-- Header + pencarian -->
+    <Transition
+      appear
+      enter-active-class="transition-all duration-500 ease-out"
+      enter-from-class="opacity-0 -translate-y-2"
+      enter-to-class="opacity-100 translate-y-0"
+    >
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+  
+            <span class="h-2 w-2 rounded-full bg-sky-500" />
+  
+            <span class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-sky-500">
+  
+              Info Desa
+  
+            </span>
+
+          </div>
+          <h1 class="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
+            Berita
+            <span class="bg-gradient-to-r from-sky-600 via-cyan-500 to-violet-600 bg-clip-text text-transparent">
+              Kalurahan
+            </span>
+          </h1>
+          <p class="mt-1 text-[13.5px] text-muted sm:text-[14.5px]">
+            Informasi dan kabar terbaru dari desa kita.
+          </p>
         </div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-heading mt-1">
-          Berita <span class="heading-accent">Desa</span>
-        </h1>
-        <p class="text-[13.5px] sm:text-[14.5px] text-muted mt-1">
-          Informasi dan kabar terbaru dari desa kita.
+
+        <IconField class="w-full shrink-0 lg:w-[300px]">
+          <InputIcon class="pi pi-search text-muted" />
+          <InputText
+            v-model="searchQuery"
+            placeholder="Cari berita..."
+            class="w-full rounded-xl border-border-default py-2.5 text-[13.5px] focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+          />
+        </IconField>
+      </div>
+    </Transition>
+
+    <!-- Filter kategori + urutan -->
+    <Transition
+      appear
+      enter-active-class="transition-all delay-100 duration-500 ease-out"
+      enter-from-class="opacity-0 translate-y-2"
+      enter-to-class="opacity-100 translate-y-0"
+    >
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="category in categoryOptions"
+            :key="category"
+            type="button"
+            class="flex items-center gap-1.5 rounded-full border px-4 py-2 text-[12.5px] font-bold transition-all duration-200 active:scale-95"
+            :class="
+              activeCategory === category
+                ? category === ALL_CATEGORY_LABEL
+                  ? 'border-transparent bg-gradient-to-r from-primary-800 to-primary-900 text-white shadow-md'
+                  : [getCategoryStyle(category).activeBadge, 'scale-105']
+                : ['border-border-default bg-surface text-default', getCategoryStyle(category).hoverRing]
+            "
+            @click="activeCategory = category"
+          >
+            <span
+              v-if="category !== ALL_CATEGORY_LABEL"
+              class="h-1.5 w-1.5 rounded-full"
+              :class="activeCategory === category ? 'bg-white/80' : getCategoryStyle(category).dot"
+            />
+            {{ category }}
+          </button>
+        </div>
+
+        <SelectButton
+          v-model="sortOrder"
+          :options="sortOptions"
+          optionLabel="label"
+          optionValue="value"
+          :allowEmpty="false"
+          class="w-fit shrink-0"
+        >
+          <template #option="slotProps">
+            <span class="flex items-center gap-1.5 text-[12px] font-bold">
+              <i :class="slotProps.option.icon" class="text-[11px]" />
+              {{ slotProps.option.label }}
+            </span>
+          </template>
+        </SelectButton>
+      </div>
+    </Transition>
+
+    <!-- Empty state -->
+    <Transition
+      appear
+      enter-active-class="transition-all duration-500 ease-out"
+      enter-from-class="opacity-0 scale-95"
+      enter-to-class="opacity-100 scale-100"
+    >
+      <div
+        v-if="filteredSorted.length === 0"
+        class="rounded-2xl border border-dashed border-border-default bg-gradient-to-br from-primary-50 via-surface to-violet-50 p-10 text-center"
+      >
+        <i class="pi pi-inbox text-3xl text-primary-300" />
+        <p class="mt-3 text-[14px] font-bold text-heading">Belum ada berita ditemukan</p>
+        <p class="mt-1 text-[12.5px] text-muted">
+          Coba ubah kata kunci pencarian atau kategori yang dipilih.
         </p>
       </div>
+    </Transition>
 
-      <div class="relative w-full lg:w-[300px] shrink-0">
-        <i
-          class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-muted text-[13px]"
-        />
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Cari berita..."
-          class="w-full rounded-xl border border-border-default bg-surface pl-10 pr-4 py-2.5 text-[13.5px] focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-colors"
-        />
-      </div>
-    </div>
-
-    <!-- ============ FILTER: KATEGORI + URUTAN ============ -->
-    <div class="fade-in-up flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style="animation-delay: 60ms">
-      <div class="flex flex-wrap gap-2">
-        <button
-          v-for="cat in categoryOptions"
-          :key="cat"
-          type="button"
-          @click="activeCategory = cat"
-          :class="
-            activeCategory === cat
-              ? cat === 'Semua Kategori'
-                ? 'bg-primary-900 text-white border-primary-900'
-                : [styleFor(cat).solidActive, 'shadow-md']
-              : ['bg-surface text-default border-border-default', styleFor(cat).ring]
-          "
-          class="rounded-full border px-4 py-2 text-[12.5px] font-bold transition-all duration-200 active:scale-[0.97] flex items-center gap-1.5"
-        >
-          <span
-            v-if="cat !== 'Semua Kategori'"
-            class="h-1.5 w-1.5 rounded-full"
-            :class="activeCategory === cat ? 'bg-white/80' : styleFor(cat).dot"
-          />
-          {{ cat }}
-        </button>
-      </div>
-
-      <div class="flex items-center gap-1 rounded-full border border-border-default bg-surface p-1 w-fit shrink-0">
-        <button
-          v-for="opt in sortOptions"
-          :key="opt.value"
-          type="button"
-          @click="sortOrder = opt.value"
-          :class="sortOrder === opt.value ? 'bg-primary-800 text-white' : 'text-muted hover:text-default'"
-          class="rounded-full px-3.5 py-1.5 text-[12px] font-bold transition-colors flex items-center gap-1.5"
-        >
-          <i :class="opt.icon" class="text-[11px]" />
-          {{ opt.label }}
-        </button>
-      </div>
-    </div>
-
-    <!-- ============ EMPTY STATE ============ -->
-    <div
-      v-if="filteredSorted.length === 0"
-      class="empty-state rounded-2xl border border-dashed border-border-default bg-surface p-10 text-center"
-    >
-      <i class="pi pi-inbox text-3xl text-primary-200" />
-      <p class="text-[14px] font-bold text-heading mt-3">Belum ada berita ditemukan</p>
-      <p class="text-[12.5px] text-muted mt-1">
-        Coba ubah kata kunci pencarian atau kategori yang dipilih.
-      </p>
-    </div>
-
-    <template v-else>
-      <!-- ============ FEATURED + BERITA TERBARU ============ -->
-      <div v-if="featured" class="fade-in-up grid lg:grid-cols-3 gap-6 lg:gap-8 items-start" style="animation-delay: 100ms">
-        <RouterLink
-          :to="{ name: 'news-detail', params: { slug: featured.slug } }"
-          class="featured-card lg:col-span-2 group relative overflow-hidden rounded-2xl border border-border-default bg-surface hover:shadow-xl transition-all duration-300 block"
-        >
-          <span class="absolute inset-x-0 top-0 z-10 h-1" :class="styleFor(featured.category).topBar" />
-
-          <div
-            class="shimmer-wrap relative aspect-[16/9] sm:aspect-[16/8] overflow-hidden flex items-center justify-center bg-gradient-to-br"
-            :class="featured.image ? 'bg-primary-50' : styleFor(featured.category).imageGrad"
+    <template v-if="filteredSorted.length > 0">
+      <!-- Berita unggulan + Berita terbaru -->
+      <Transition
+        appear
+        enter-active-class="transition-all delay-150 duration-500 ease-out"
+        enter-from-class="opacity-0 translate-y-4"
+        enter-to-class="opacity-100 translate-y-0"
+      >
+        <div v-if="featured" class="grid items-start gap-6 lg:grid-cols-3 lg:gap-8">
+          <RouterLink
+            :to="{ name: 'news-detail', params: { slug: featured.slug } }"
+            class="group relative block overflow-hidden rounded-2xl border border-border-default bg-surface transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl lg:col-span-2"
           >
-            <img
-              v-if="featured.image"
-              :src="featured.image"
-              :alt="featured.title"
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              loading="lazy"
-              @error="handleImgError"
-            />
-            <template v-else>
-              <i class="pi pi-image text-4xl opacity-40" />
-              <span class="shimmer-sweep absolute inset-0 bg-gradient-to-r from-transparent to-transparent" :class="styleFor(featured.category).shimmer" />
-            </template>
-            <span
-              :class="getCategoryClasses(featured.category)"
-              class="absolute left-4 top-4 rounded-full px-3 py-1 text-[10.5px] font-bold uppercase tracking-wide"
-            >
-              {{ featured.category }}
-            </span>
-            <span
-              v-if="pinnedNews && featured.slug === pinnedNews.slug"
-              class="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-heading/80 px-3 py-1 text-[10.5px] font-bold uppercase tracking-wide text-white backdrop-blur-sm"
-            >
-              <i class="pi pi-bookmark-fill text-[10px]" />
-              Disematkan
-            </span>
-          </div>
-          <div class="p-5 sm:p-6">
-            <h2 class="text-lg sm:text-xl lg:text-[22px] font-extrabold text-heading leading-snug">
-              {{ featured.title }}
-            </h2>
-            <p class="text-[13px] sm:text-[13.5px] text-muted mt-2 leading-relaxed line-clamp-2">
-              {{ featured.excerpt }}
-            </p>
-            <div class="flex items-center gap-3 text-[12px] text-muted mt-4">
-              <span class="flex items-center gap-1.5">
-                <i class="pi pi-calendar text-[11px]" />
-                {{ featured.date }}
-              </span>
-              <span class="w-1 h-1 rounded-full bg-border-default" />
-              <span class="flex items-center gap-1.5">
-                <i class="pi pi-user text-[11px]" />
-                {{ featured.author }}
-              </span>
-            </div>
-          </div>
-        </RouterLink>
+            <span class="absolute inset-x-0 top-0 z-10 h-1.5" :class="getCategoryStyle(featured.category).topBar" />
 
-        <!-- ============ BERITA TERBARU ============ -->
-        <div class="rounded-2xl border border-border-default bg-surface p-5">
-          <h2 class="text-[15px] font-extrabold text-heading flex items-center gap-2 mb-3">
-            <i class="pi pi-clock text-secondary-500" />
-            Berita Terbaru
-          </h2>
-          <div class="flex flex-col gap-3">
-            <RouterLink
-              v-for="item in latestNews"
-              :key="item.slug"
-              :to="{ name: 'news-detail', params: { slug: item.slug } }"
-              class="group flex items-center gap-3.5 rounded-xl border border-border-default p-2.5 transition-colors"
-              :class="styleFor(item.category).ring"
+            <div
+              class="relative flex aspect-[16/9] items-center justify-center overflow-hidden bg-gradient-to-br sm:aspect-[16/8]"
+              :class="featured.image ? 'bg-primary-50' : getCategoryStyle(featured.category).imageGradient"
             >
-              <div
-                class="shrink-0 w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center bg-gradient-to-br"
-                :class="item.image ? 'bg-primary-50' : styleFor(item.category).imageGrad"
-              >
-                <img
-                  v-if="item.image"
-                  :src="item.image"
-                  :alt="item.title"
-                  class="w-full h-full object-cover"
-                  loading="lazy"
-                  @error="handleImgError"
-                />
-                <i v-else class="pi pi-image text-lg opacity-40" />
-              </div>
-              <div class="min-w-0 flex flex-col gap-1.5">
-                <p
-                  class="text-[13px] font-extrabold text-heading leading-snug line-clamp-2 group-hover:text-primary-700 transition-colors"
-                >
-                  {{ item.title }}
-                </p>
-                <span
-                  class="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary-50 px-2.5 py-1 text-[10.5px] font-bold text-primary-700"
-                >
-                  <span class="h-1.5 w-1.5 rounded-full" :class="styleFor(item.category).dot" />
-                  {{ item.date }}
+              <img
+                v-if="featured.image"
+                :src="featured.image"
+                :alt="featured.title"
+                loading="lazy"
+                class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                @error="handleImageError"
+              />
+              <i v-else class="pi pi-image text-4xl text-white/50" />
+
+              <Tag
+                :value="featured.category"
+                unstyled
+                class="absolute left-4 top-4 rounded-full px-3 py-1 text-[10.5px] font-bold uppercase tracking-wide"
+                :class="getCategoryStyle(featured.category).activeBadge"
+              />
+              <Tag
+                v-if="pinnedNews && featured.slug === pinnedNews.slug"
+                unstyled
+                value="Disematkan"
+                icon="pi pi-bookmark-fill"
+                class="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-heading/80 px-3 py-1 text-[10.5px] font-bold uppercase tracking-wide text-white backdrop-blur-sm"
+              />
+            </div>
+
+            <div class="p-5 sm:p-6">
+              <h2 class="text-lg font-extrabold leading-snug text-heading transition-colors duration-300 group-hover:text-primary-700 sm:text-xl lg:text-[22px]">
+                {{ featured.title }}
+              </h2>
+              <p class="mt-2 line-clamp-2 text-[13px] leading-relaxed text-muted sm:text-[13.5px]">
+                {{ featured.excerpt }}
+              </p>
+              <div class="mt-4 flex items-center gap-3 text-[12px] text-muted">
+                <span class="flex items-center gap-1.5">
+                  <i class="pi pi-calendar text-[11px]" />
+                  {{ featured.date }}
+                </span>
+                <span class="h-1 w-1 rounded-full bg-border-default" />
+                <span class="flex items-center gap-1.5">
+                  <i class="pi pi-user text-[11px]" />
+                  {{ featured.author }}
                 </span>
               </div>
-            </RouterLink>
+            </div>
+          </RouterLink>
+
+          <!-- Berita terbaru -->
+          <div class="rounded-2xl border border-border-default bg-gradient-to-br from-surface to-primary-50/40 p-5">
+            <h2 class="mb-3 flex items-center gap-2 text-[15px] font-extrabold text-heading">
+              <i class="pi pi-clock text-secondary-500" />
+              Berita Terbaru
+            </h2>
+            <div class="flex flex-col gap-3">
+              <RouterLink
+                v-for="item in latestNews"
+                :key="item.slug"
+                :to="{ name: 'news-detail', params: { slug: item.slug } }"
+                class="group flex items-center gap-3.5 rounded-xl border border-border-default p-2.5 transition-all duration-300 hover:-translate-x-0.5 hover:shadow-md"
+                :class="getCategoryStyle(item.category).hoverRing"
+              >
+                <div
+                  class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br"
+                  :class="item.image ? 'bg-primary-50' : getCategoryStyle(item.category).imageGradient"
+                >
+                  <img
+                    v-if="item.image"
+                    :src="item.image"
+                    :alt="item.title"
+                    loading="lazy"
+                    class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    @error="handleImageError"
+                  />
+                  <i v-else class="pi pi-image text-lg text-white/60" />
+                </div>
+                <div class="flex min-w-0 flex-col gap-1.5">
+                  <p class="line-clamp-2 text-[13px] font-extrabold leading-snug text-heading transition-colors group-hover:text-primary-700">
+                    {{ item.title }}
+                  </p>
+                  <span
+                    class="inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-bold"
+                    :class="getCategoryStyle(item.category).softBadge"
+                  >
+                    <span class="h-1.5 w-1.5 rounded-full" :class="getCategoryStyle(item.category).dot" />
+                    {{ item.date }}
+                  </span>
+                </div>
+              </RouterLink>
+            </div>
           </div>
         </div>
-      </div>
+      </Transition>
 
-      <!-- ============ BERITA LAINNYA + PAGINATION ============ -->
-      <div class="fade-in-up" style="animation-delay: 140ms">
-        <h2 v-if="featured" class="text-xl sm:text-2xl font-extrabold text-heading mb-4">Berita Lainnya</h2>
+      <!-- Berita lainnya + pagination (kartu di-inline langsung di sini) -->
+      <div>
+        <h2 v-if="featured" class="mb-4 text-xl font-extrabold text-heading sm:text-2xl">Berita Lainnya</h2>
 
         <TransitionGroup
           v-if="pagedRest.length"
           tag="div"
-          name="card"
-          class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"
+          class="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3"
+          move-class="transition-transform duration-500 ease-out"
+          enter-active-class="transition-all duration-500 ease-out"
+          enter-from-class="opacity-0 translate-y-6 scale-95"
+          leave-active-class="transition-all duration-300 ease-in absolute"
+          leave-to-class="opacity-0 scale-95"
         >
-          <NewsCard v-for="item in pagedRest" :key="item.slug" :item="item" />
+          <RouterLink
+            v-for="item in pagedRest"
+            :key="item.slug"
+            :to="{ name: 'news-detail', params: { slug: item.slug } }"
+            class="group relative flex flex-col overflow-hidden rounded-2xl border border-border-default bg-surface transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary-900/10"
+          >
+            <span
+              class="absolute inset-x-0 top-0 z-10 h-1.5 origin-left scale-x-50 opacity-70 transition-all duration-500 ease-out group-hover:scale-x-100 group-hover:opacity-100"
+              :class="getCategoryStyle(item.category).topBar"
+            />
+
+            <div
+              class="relative aspect-[16/10] overflow-hidden bg-gradient-to-br"
+              :class="item.image ? 'bg-primary-50' : getCategoryStyle(item.category).imageGradient"
+            >
+              <img
+                v-if="item.image"
+                :src="item.image"
+                :alt="item.title"
+                loading="lazy"
+                class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                @error="handleImageError"
+              />
+              <div v-else class="flex h-full w-full items-center justify-center">
+                <i class="pi pi-image text-4xl text-white/50 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6" />
+              </div>
+
+              <Tag
+                :value="item.category"
+                unstyled
+                class="absolute left-3 top-3 rounded-full px-3 py-1 text-[10.5px] font-bold uppercase tracking-wide backdrop-blur-sm transition-transform duration-300 group-hover:-translate-y-0.5"
+                :class="getCategoryStyle(item.category).activeBadge"
+              />
+            </div>
+
+            <div class="flex flex-1 flex-col gap-2 p-4 sm:p-5">
+              <h3 class="line-clamp-2 text-[14.5px] font-extrabold leading-snug text-heading transition-colors duration-300 group-hover:text-primary-700">
+                {{ item.title }}
+              </h3>
+              <p class="line-clamp-2 flex-1 text-[12.5px] leading-relaxed text-muted">
+                {{ item.excerpt }}
+              </p>
+
+              <div class="flex items-center justify-between border-t border-border-default pt-3 text-[11.5px] text-muted">
+                <span class="flex items-center gap-1.5">
+                  <i class="pi pi-calendar text-[10.5px]" />
+                  {{ item.date }}
+                </span>
+                <span
+                  class="flex h-7 w-7 items-center justify-center rounded-full text-primary-700 transition-all duration-300 ease-out group-hover:translate-x-1 group-hover:scale-110"
+                  :class="getCategoryStyle(item.category).softBadge"
+                >
+                  <i class="pi pi-arrow-right text-[11px]" />
+                </span>
+              </div>
+            </div>
+          </RouterLink>
         </TransitionGroup>
         <p v-else class="text-[13px] text-muted">Tidak ada berita lain untuk filter ini.</p>
 
-        <div v-if="totalPages > 1" class="flex items-center justify-center gap-1.5 mt-8">
-          <button
-            type="button"
-            @click="currentPage = Math.max(1, currentPage - 1)"
-            :disabled="currentPage === 1"
-            class="w-9 h-9 rounded-lg border border-border-default flex items-center justify-center text-muted disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-hover transition-colors"
-          >
-            <i class="pi pi-angle-left text-[13px]" />
-          </button>
-          <button
-            v-for="p in totalPages"
-            :key="p"
-            type="button"
-            @click="currentPage = p"
-            :class="
-              currentPage === p
-                ? 'bg-primary-800 text-white border-primary-800'
-                : 'border-border-default text-default hover:bg-surface-hover'
-            "
-            class="w-9 h-9 rounded-lg border text-[12.5px] font-bold transition-colors"
-          >
-            {{ p }}
-          </button>
-          <button
-            type="button"
-            @click="currentPage = Math.min(totalPages, currentPage + 1)"
-            :disabled="currentPage === totalPages"
-            class="w-9 h-9 rounded-lg border border-border-default flex items-center justify-center text-muted disabled:opacity-40 disabled:cursor-not-allowed hover:bg-surface-hover transition-colors"
-          >
-            <i class="pi pi-angle-right text-[13px]" />
-          </button>
-        </div>
+        <Paginator
+          v-if="restNews.length > pageSize"
+          class="mt-8 justify-center rounded-xl border-0 bg-transparent"
+          :first="(currentPage - 1) * pageSize"
+          :rows="pageSize"
+          :totalRecords="restNews.length"
+          @page="onPageChange"
+        />
       </div>
     </template>
   </div>
 </template>
-
-<style scoped>
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(14px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-.fade-in-up { animation: fadeInUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
-
-.header-kicker-dot { animation: kickerPulse 2.2s ease-in-out infinite; }
-@keyframes kickerPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.4); opacity: 0.6; }
-}
-
-.heading-accent {
-  background: linear-gradient(90deg, #0284c7, #7c3aed);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-@keyframes blobFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-16px, 18px) scale(1.08); }
-}
-.animate-blob-float { animation: blobFloat 10s ease-in-out infinite; }
-@keyframes blobFloatSlow {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(14px, -12px) scale(1.05); }
-}
-.animate-blob-float-slow { animation: blobFloatSlow 13s ease-in-out infinite; }
-
-.shimmer-wrap { background-size: 200% 200%; }
-.shimmer-sweep {
-  transform: translateX(-120%) skewX(-12deg);
-  animation: shimmerSweep 3.2s ease-in-out infinite;
-}
-@keyframes shimmerSweep {
-  0% { transform: translateX(-120%) skewX(-12deg); }
-  55%, 100% { transform: translateX(220%) skewX(-12deg); }
-}
-
-.empty-state { animation: fadeInUp 0.5s ease both; }
-
-.card-enter-from { opacity: 0; transform: translateY(22px) scale(0.92) rotate(-1deg); }
-.card-enter-active { transition: opacity 0.5s ease, transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.card-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; position: absolute; }
-.card-leave-to { opacity: 0; transform: scale(0.95); }
-.card-move { transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
-
-@media (prefers-reduced-motion: reduce) {
-  .fade-in-up, .card-enter-active, .card-leave-active, .card-move,
-  .header-kicker-dot, .animate-blob-float, .animate-blob-float-slow,
-  .shimmer-sweep, .empty-state {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-</style>
