@@ -25,7 +25,7 @@ const heroImageUrl = '/images/kalurahan-bimo.jpeg'
 const heroImageLoaded = ref(false)
 const mounted = ref(false)
 
-const heroTitleWords = 'Profil Kelurahan Bimomartani'.split(' ')
+const heroTitleWords = 'Profil Kalurahan Bimomartani'.split(' ')
 
 const heroOffset = ref(0)
 let rafId = null
@@ -438,14 +438,14 @@ async function initMap() {
           <span class="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-amber-700">Sejak 1946</span>
         </div>
         <h2 class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-2 text-2xl font-semibold text-slate-900">
-          Sejarah Kelurahan Bimomartani
+          Sejarah Kalurahan Bimomartani
         </h2>
 
         <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-6 space-y-5 border-l-2 border-amber-200 pl-6 text-slate-600 leading-relaxed">
           <p class="relative">
             <span class="absolute -left-[2.05rem] top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-[0_0_0_2px_#f59e0b]" />
             Nama Kalurahan Bimomartani terbentuk pada tanggal 29 April 1946 yang merupakan
-            gabungan dari tiga kelurahan yaitu kelurahan Jatisari, Cokrosari dan Opaksari.
+            gabungan dari tiga kalurahan yaitu kalurahan Jatisari, Cokrosari dan Opaksari.
           </p>
           <p class="relative">
             <span class="absolute -left-[2.05rem] top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-[0_0_0_2px_#f59e0b]" />
@@ -508,7 +508,7 @@ async function initMap() {
             </span>
             <h2 class="mt-1 text-2xl font-semibold text-slate-900">Visi</h2>
             <p class="mx-auto mt-3 text-slate-600">
-              "Mewujudkan Kelurahan Bimomartani yang Mandiri, Sejahtera, dan Berbudaya melalui
+              "Mewujudkan Kalurahan Bimomartani yang Mandiri, Sejahtera, dan Berbudaya melalui
               Tata Kelola Pemerintahan yang Transparan dan Pembangunan Berkelanjutan."
             </p>
           </template>
@@ -602,7 +602,7 @@ async function initMap() {
                       <div class="mt-4 flex flex-wrap gap-2">
                         <Tag
                           icon="pi pi-map-marker"
-                          value="Kelurahan Bimomartani"
+                          value="Kalurahan Bimomartani"
                           class="!rounded-full !border-none !bg-blue-50 !text-blue-700"
                         />
                         <Tag
