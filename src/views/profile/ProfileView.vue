@@ -21,6 +21,29 @@ L.Icon.Default.mergeOptions({
 })
 
 
+/* ============ FOTO STRUKTUR ORGANISASI ============ */
+const orgPhotoModules = import.meta.glob('@/assets/struktur-organisasi/*.{jpg,jpeg,png,JPG,JPEG,PNG}', {
+  eager: true,
+  import: 'default',
+})
+const orgPhotos = Object.fromEntries(
+  Object.entries(orgPhotoModules).map(([path, url]) => [path.split('/').pop(), url])
+)
+function photoUrl(filename) {
+  return filename ? orgPhotos[filename] || null : null
+}
+
+/* ============ FOTO SEJARAH ============ */
+const sejarahPhotoModules = import.meta.glob('@/assets/sejarah/*.{jpg,jpeg,png,JPG,JPEG,PNG}', {
+  eager: true,
+  import: 'default',
+})
+const sejarahPhotos = Object.fromEntries(
+  Object.entries(sejarahPhotoModules).map(([path, url]) => [path.split('/').pop(), url])
+)
+const sejarahKalurahanImg = sejarahPhotos['Kalurahan.jpg']
+const sejarahKegiatanImg = sejarahPhotos['kegiatan.jpeg']
+
 const heroImageUrl = '/images/kalurahan-bimo.jpeg'
 const heroImageLoaded = ref(false)
 const mounted = ref(false)
@@ -70,7 +93,6 @@ function accentFor(i) {
   return accentStyles[i % accentStyles.length]
 }
 
-/* Content data */
 const missions = [
   'Meningkatkan kualitas pelayanan publik berbasis teknologi informasi.',
   'Mengembangkan potensi ekonomi lokal melalui pemberdayaan UMKM dan BUMDes.',
@@ -88,15 +110,11 @@ function initials(name) {
     .join('')
 }
 
-function person(name, title, desc) {
-  return { name, title, desc, initials: initials(name) }
+function person(name, title, desc, photo) {
+  return { name, title, desc, initials: initials(name), photo: photoUrl(photo) }
 }
 
-/* ============ STRUKTUR ORGANISASI ============
-   - Hanya Lurah yang tampil sebagai kartu unggulan (pimpinan: true).
-   - Carik digabung ke level kesekretariatan bersama para Kaur.
-   - Setiap perangkat (selain Lurah) diberi deskripsi jobdesk singkat
-     (field `desc`) yang dirender di kartu grid/slider. */
+/* ============ STRUKTUR ORGANISASI ============ */
 const orgStructure = [
   {
     level: 'Lurah',
@@ -105,42 +123,43 @@ const orgStructure = [
       person(
         'Tutik Wahyuningsih, S.Sos., M.AP',
         'Lurah',
-        'Memimpin penyelenggaraan pemerintahan Kalurahan Bimomartani.'
+        'Memimpin penyelenggaraan pemerintahan Kalurahan Bimomartani.',
+        'Tutik Wahyuningsih.jpeg'
       ),
     ],
   },
   {
     level: 'Sekretariat & Keuangan',
     people: [
-      person('Yudi Priyo Utomo, SE', 'Carik', 'Memimpin sekretariat & mengoordinasikan seluruh urusan administrasi kalurahan.'),
-      person('Nanda Mutiara Dewi, S.Psi', 'Kaur Danarta', 'Mengelola administrasi dan pelaporan keuangan kalurahan.'),
+      person('Yudi Priyo Utomo, SE', 'Carik', 'Memimpin sekretariat & mengoordinasikan seluruh urusan administrasi kalurahan.', 'Yudi Priyo Utomo.jpeg'),
+      person('Nanda Mutiara Dewi, S.Psi', 'Kaur Danarta', 'Mengelola administrasi dan pelaporan keuangan kalurahan.', 'Nanda Mutiara Dewi.jpg'),
       person('Rasyifa Anom Sudaryono, Amd.Kes', 'Kaur Tata Laksana', 'Mengelola tata naskah dan pelayanan administrasi umum.'),
-      person('Hanang Tri Nugroho, S.Kom', 'Kaur Pangripta', 'Menyusun perencanaan dan pelaporan pembangunan kalurahan.'),
+      person('Hanang Tri Nugroho, S.Kom', 'Kaur Pangripta', 'Menyusun perencanaan dan pelaporan pembangunan kalurahan.', 'Hanang Tri Nugroho.jpeg'),
     ],
   },
   {
     level: 'Kepala Seksi',
     people: [
-      person('Sutriyana, S.Ag', 'Kamituwa', 'Mengoordinasikan kesejahteraan dan pemberdayaan masyarakat.'),
-      person('Yordan Ardi Tamara, S.Kom', 'Ulu-Ulu', 'Mengelola tata guna lahan, irigasi, dan sektor pertanian.'),
-      person('Rifai Nurmansyah, S.Pd., M.Pd', 'Jagabaya', 'Menjaga ketenteraman, ketertiban, dan keamanan wilayah.'),
+      person('Sutriyana, S.Ag', 'Kamituwa', 'Mengoordinasikan kesejahteraan dan pemberdayaan masyarakat.', 'Sutriyana.jpeg'),
+      person('Yordan Ardi Tamara, S.Kom', 'Ulu-Ulu', 'Mengelola tata guna lahan, irigasi, dan sektor pertanian.', 'Yordan Ardi Tamara.jpeg'),
+      person('Rifai Nurmansyah, S.Pd., M.Pd', 'Jagabaya', 'Menjaga ketenteraman, ketertiban, dan keamanan wilayah.', 'Rifai Nurmansah.jpeg'),
     ],
   },
   {
     level: 'Dukuh (Kepala Padukuhan)',
     slider: true,
     people: [
-      person('Jaka Widada', 'Dukuh I Krebet', 'Kepala wilayah Padukuhan Krebet.'),
-      person('Angga Wahyu Indra Irawan, S.Pd', 'Dukuh II Rogobangsan', 'Kepala wilayah Padukuhan Rogobangsan.'),
-      person('Umi Solikah', 'Dukuh III Kalibulus', 'Kepala wilayah Padukuhan Kalibulus.'),
-      person('Kaharudin', 'Dukuh IV Macanan', 'Kepala wilayah Padukuhan Macanan.'),
-      person('Mucharom', 'Dukuh V Cokrogaten', 'Kepala wilayah Padukuhan Cokrogaten.'),
+      person('Jaka Widada', 'Dukuh I Krebet', 'Kepala wilayah Padukuhan Krebet.', 'Jaka Widada.jpeg'),
+      person('Angga Wahyu Indra Irawan, S.Pd', 'Dukuh II Rogobangsan', 'Kepala wilayah Padukuhan Rogobangsan.', 'Angga Wahyu Indra Irawan.jpeg'),
+      person('Umi Solikah', 'Dukuh III Kalibulus', 'Kepala wilayah Padukuhan Kalibulus.', 'Umi Solikah.jpeg'),
+      person('Kaharudin', 'Dukuh IV Macanan', 'Kepala wilayah Padukuhan Macanan.', 'Kaharudin.jpeg'),
+      person('Mucharom', 'Dukuh V Cokrogaten', 'Kepala wilayah Padukuhan Cokrogaten.', 'Mucharom.jpeg'),
       person('TH Dwi Wahyu P, Amd', 'Dukuh VI Purwobinangun', 'Kepala wilayah Padukuhan Purwobinangun.'),
       person('Sukirman', 'Dukuh VII Pondok Suruh', 'Kepala wilayah Padukuhan Pondok Suruh.'),
-      person('Sunaryo', 'Dukuh VIII Balong', 'Kepala wilayah Padukuhan Balong.'),
-      person('Suharyono', 'Dukuh IX Kragilan', 'Kepala wilayah Padukuhan Kragilan.'),
-      person('Basuki Wibowo', 'Dukuh X Banjarharjo', 'Kepala wilayah Padukuhan Banjarharjo.'),
-      person('Drs. Jazim Thoyibi', 'Dukuh XI Sorasan', 'Kepala wilayah Padukuhan Sorasan.'),
+      person('Sunaryo', 'Dukuh VIII Balong', 'Kepala wilayah Padukuhan Balong.', 'Sunarya.jpeg'),
+      person('Suharyono', 'Dukuh IX Kragilan', 'Kepala wilayah Padukuhan Kragilan.', 'Suharyono.jpeg'),
+      person('Basuki Wibowo', 'Dukuh X Banjarharjo', 'Kepala wilayah Padukuhan Banjarharjo.', 'Basuki Wibawa.jpeg'),
+      person('Drs. Jazim Thoyibi', 'Dukuh XI Sorasan', 'Kepala wilayah Padukuhan Sorasan.', 'Jazim Thoyibi.jpeg'),
       person('Purnomo', 'Dukuh XII Koroulon Kidul', 'Kepala wilayah Padukuhan Koroulon Kidul.'),
     ],
   },
@@ -148,12 +167,12 @@ const orgStructure = [
     level: 'Staff Pamong Kalurahan',
     slider: true,
     people: [
-      person('Ratna Kurnia Dewi', 'Staff Pamong Kalurahan', 'Membantu administrasi keuangan kalurahan.'),
-      person('Khoirunnisa Hidaya', 'Staff Pamong Kalurahan', 'Membantu administrasi perkantoran kalurahan.'),
-      person('Mega Dwi Jayanti', 'Staff Pamong Kalurahan', 'Membantu pelayanan kesehatan dan sosial masyarakat.'),
-      person('Sigit Raharjo', 'Staff Pamong Kalurahan', 'Membantu pelaksanaan tugas kepamongan kalurahan.'),
-      person('Linggar Yudha Pranata', 'Staff Pamong Kalurahan', 'Membantu administrasi dan kearsipan kalurahan.'),
-      person('Riyanto', 'Staff Pamong Kalurahan', 'Membantu pelaksanaan tugas kepamongan kalurahan.'),
+      person('Ratna Kurnia Dewi', 'Staff Pamong Kalurahan', 'Membantu administrasi keuangan kalurahan.', 'Ratna Kurnia Dewi.jpg'),
+      person('Khoirunnisa Hidaya', 'Staff Pamong Kalurahan', 'Membantu administrasi perkantoran kalurahan.', 'Khoirunisa Nurhidaya.jpg'),
+      person('Mega Dwi Jayanti', 'Staff Pamong Kalurahan', 'Membantu pelayanan kesehatan dan sosial masyarakat.', 'Mega Dwi Jayanti.jpg'),
+      person('Sigit Raharjo', 'Staff Pamong Kalurahan', 'Membantu pelaksanaan tugas kepamongan kalurahan.', 'Sigit Raharjo.jpeg'),
+      person('Linggar Yudha Pranata', 'Staff Pamong Kalurahan', 'Membantu administrasi dan kearsipan kalurahan.', 'Linggar Yudha.jpg'),
+      person('Riyanto', 'Staff Pamong Kalurahan', 'Membantu pelaksanaan tugas kepamongan kalurahan.', 'Riyanto.jpg'),
     ],
   },
 ]
@@ -473,9 +492,11 @@ async function initMap() {
             :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }"
           >
             <template #content>
-              <div class="flex h-40 items-center justify-center gap-2 text-sm text-amber-600/70">
-                <i class="pi pi-camera" /> Foto Balai Desa
-              </div>
+              <img
+                :src="sejarahKalurahanImg"
+                alt="Foto Balai Desa Kalurahan Bimomartani"
+                class="h-40 w-full object-cover"
+              />
             </template>
           </Card>
           <Card
@@ -483,9 +504,11 @@ async function initMap() {
             :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }"
           >
             <template #content>
-              <div class="flex h-40 items-center justify-center gap-2 text-sm text-amber-600/70">
-                <i class="pi pi-camera" /> Foto Kegiatan Warga
-              </div>
+              <img
+                :src="sejarahKegiatanImg"
+                alt="Foto Kegiatan Warga Kalurahan Bimomartani"
+                class="h-40 w-full object-cover"
+              />
             </template>
           </Card>
         </div>
@@ -567,18 +590,11 @@ async function initMap() {
               <span class="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-blue-500" />
             </div>
 
-            <!-- Label level: bullet + teks uppercase, rata kiri (mengikuti
-                 referensi desain). Tidak ditampilkan untuk level "pimpinan"
-                 (Lurah) karena nama levelnya sudah tampil sebagai eyebrow
-                 di dalam kartu unggulan itu sendiri. -->
             <div v-if="!level.pimpinan" class="mb-5 flex items-center gap-2">
               <span class="h-2 w-2 flex-none rounded-full bg-blue-600" />
               <p class="text-xs font-bold uppercase tracking-widest text-blue-700/80">{{ level.level }}</p>
             </div>
 
-            <!-- Lurah: kartu unggulan (featured card) — foto di kiri,
-                 identitas + dua Tag beratribusi di kanan. Hanya Lurah yang
-                 tampil di sini; Carik sudah dipindah ke level sekretariat. -->
             <div v-if="level.pimpinan" class="flex flex-col items-center gap-5">
               <Card
                 v-for="(p, pi) in level.people"
@@ -589,7 +605,14 @@ async function initMap() {
               >
                 <template #content>
                   <div class="flex flex-col gap-5 sm:flex-row">
+                    <img
+                      v-if="p.photo"
+                      :src="p.photo"
+                      :alt="p.name"
+                      class="aspect-[3/4] h-auto w-full flex-none rounded-xl object-cover sm:w-44"
+                    />
                     <Avatar
+                      v-else
                       icon="pi pi-user"
                       shape="square"
                       size="xlarge"
@@ -616,13 +639,6 @@ async function initMap() {
                 </template>
               </Card>
             </div>
-
-            <!-- Level dengan `slider: true` (Dukuh & Staff Pamong Kalurahan) ->
-                 horizontal scroll/slider (native scroll-snap via Tailwind),
-                 start-aligned supaya kartu paling kiri/kanan selalu tampil
-                 FULL dan tidak kepotong saat digeser di mobile. Avatar
-                 dibuat persegi (aspect-square) agar tidak terlalu dominan,
-                 dan setiap kartu diberi deskripsi jobdesk singkat. -->
             <div
               v-else-if="level.slider"
               class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex snap-x snap-proximity gap-4 overflow-x-auto scroll-pl-4 pb-3 [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-blue-200"
@@ -633,7 +649,14 @@ async function initMap() {
                 :key="p.title + p.name"
                 class="flex w-44 flex-none flex-col snap-start overflow-hidden rounded-xl border border-slate-100 bg-white text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg sm:w-48"
               >
+                <img
+                  v-if="p.photo"
+                  :src="p.photo"
+                  :alt="p.name"
+                  class="aspect-square h-auto w-full flex-none rounded-none object-cover"
+                />
                 <Avatar
+                  v-else
                   icon="pi pi-image"
                   shape="square"
                   size="xlarge"
@@ -647,10 +670,6 @@ async function initMap() {
               </div>
             </div>
 
-            <!-- Level lain (Sekretariat & Keuangan — termasuk Carik, dan
-                 Kepala Seksi): grid portrait card ala foto jajaran pejabat —
-                 foto persegi di bagian atas, nama tebal + jabatan biru huruf
-                 kapital, lalu deskripsi jobdesk singkat di bawahnya. -->
             <div v-else class="flex flex-wrap justify-center gap-4">
               <div
                 v-for="(p, pi) in level.people"
@@ -658,7 +677,14 @@ async function initMap() {
                 class="js-reveal opacity-0 translate-y-4 flex w-44 flex-none flex-col overflow-hidden rounded-xl border border-slate-100 bg-white text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg sm:w-48 motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0"
                 :style="{ transitionDelay: `${(li * 3 + pi) * 60}ms` }"
               >
+                <img
+                  v-if="p.photo"
+                  :src="p.photo"
+                  :alt="p.name"
+                  class="aspect-square h-auto w-full flex-none rounded-none object-cover"
+                />
                 <Avatar
+                  v-else
                   icon="pi pi-image"
                   shape="square"
                   size="xlarge"
