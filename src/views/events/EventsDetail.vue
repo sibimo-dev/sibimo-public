@@ -43,7 +43,7 @@ function goNextMonth() {
     <!-- ============ BACK LINK ============ -->
     <RouterLink
       :to="{ name: 'events' }"
-      class="inline-flex items-center gap-1.5 text-[13px] font-bold text-primary-700 hover:text-primary-800 transition-colors"
+      class="inline-flex items-center gap-1.5 text-[13px] font-bold text-sky-700 hover:text-violet-700 transition-colors"
     >
       <i class="pi pi-arrow-left text-[11px]" />
       Kembali ke Agenda Desa
@@ -51,7 +51,16 @@ function goNextMonth() {
 
     <!-- ============ HEADER ============ -->
     <div class="max-w-2xl mt-4">
-      <h1 class="text-2xl sm:text-3xl font-extrabold text-heading">Agenda Desa</h1>
+      <div class="inline-flex items-center gap-2">
+        <span class="h-2 w-2 rounded-full bg-sky-500 animate-pulse" />
+        <span class="text-xs font-bold uppercase tracking-[0.25em] text-sky-600">Agenda</span>
+      </div>
+      <h1 class="mt-2 text-2xl sm:text-3xl font-extrabold text-heading">
+        Agenda
+        <span class="bg-gradient-to-r from-sky-600 to-violet-600 bg-clip-text text-transparent">
+          Desa
+        </span>
+      </h1>
       <p class="text-[13.5px] sm:text-[15px] text-muted mt-2 leading-relaxed">
         Jadwal kegiatan, musyawarah, dan acara penting komunitas Desa untuk bulan terpilih.
       </p>
@@ -65,6 +74,7 @@ function goNextMonth() {
         rounded
         aria-label="Bulan sebelumnya"
         :disabled="currentMonthIndex <= 0"
+        class="!text-sky-700 hover:!bg-sky-50"
         @click="goPrevMonth"
       />
       <Select
@@ -81,13 +91,17 @@ function goNextMonth() {
         rounded
         aria-label="Bulan berikutnya"
         :disabled="currentMonthIndex >= agendaMonths.length - 1"
+        class="!text-sky-700 hover:!bg-sky-50"
         @click="goNextMonth"
       />
     </div>
 
     <!-- ============ TABEL BULANAN ============ -->
-    <div class="rounded-2xl border border-border-default bg-surface overflow-hidden">
-      <div class="px-5 py-3.5 bg-surface-hover border-b border-border-default">
+    <div class="relative overflow-hidden rounded-2xl border border-border-default bg-surface">
+      <span class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-400 to-violet-500" />
+
+      <div class="px-5 py-3.5 bg-gradient-to-r from-sky-50 to-violet-50 border-b border-border-default flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-sky-500" />
         <h2 class="text-[15px] sm:text-base font-extrabold text-heading">
           {{ selectedMonth.monthLabel }} {{ selectedMonth.year }}
         </h2>

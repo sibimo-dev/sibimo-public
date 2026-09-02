@@ -4,21 +4,24 @@ import { RouterLink } from "vue-router";
 import NewsCard from "@/components/shared/NewsCard.vue";
 import {
   getAllNews,
-  getPopularNews,
   newsCategories,
   getCategoryClasses,
 } from "@/services/news.js";
 
-
-
 const allNews = getAllNews();
-const popularNews = getPopularNews(3);
+
+const pinnedNews = computed(() => allNews.find((item) => item.isPinned) || null);
+
+const latestNews = computed(() =>
+  [...allNews]
+    .sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO))
+    .slice(0, 3)
+);
 
 const categoryOptions = ["Semua Kategori", ...newsCategories];
 const activeCategory = ref("Semua Kategori");
 const searchQuery = ref("");
 
-// Filter "terbaru/terkini" yang diminta — urutkan berdasarkan tanggal.
 const sortOptions = [
   { label: "Terbaru", value: "newest", icon: "pi pi-sort-amount-down" },
   { label: "Terlama", value: "oldest", icon: "pi pi-sort-amount-up" },
@@ -52,10 +55,17 @@ const filteredSorted = computed(() => {
   return items;
 });
 
-// Item pertama hasil filter dipakai sebagai kartu unggulan, sisanya masuk
-// ke grid "Berita Lainnya" yang dipaginasi.
-const featured = computed(() => filteredSorted.value[0] || null);
-const rest = computed(() => filteredSorted.value.slice(1));
+const featured = computed(() => {
+  const isAllCategory = activeCategory.value === "Semua Kategori";
+  if (!isAllCategory) return null;
+  return pinnedNews.value || filteredSorted.value[0] || null;
+});
+
+const rest = computed(() =>
+  featured.value
+    ? filteredSorted.value.filter((item) => item.slug !== featured.value.slug)
+    : filteredSorted.value
+);
 const totalPages = computed(() => Math.max(1, Math.ceil(rest.value.length / pageSize)));
 const pagedRest = computed(() => {
   const start = (currentPage.value - 1) * pageSize;
@@ -69,14 +79,82 @@ watch([activeCategory, searchQuery, sortOrder], () => {
 function handleImgError(event) {
   event.target.style.display = "none";
 }
+
+/* ============ WARNA PER KATEGORI (ala Gallery) ============
+   Warna ditentukan otomatis dari nama kategori supaya konsisten
+   di seluruh halaman, tanpa perlu daftar kategori hardcode. */
+const colorPalette = [
+  {
+    dot: "bg-sky-500",
+    topBar: "bg-gradient-to-r from-sky-400 to-cyan-500",
+    imageGrad: "from-sky-100 via-cyan-100 to-sky-200",
+    shimmer: "via-sky-200/70",
+    solidActive: "bg-sky-600 text-white border-sky-600 shadow-sky-600/25",
+    ring: "hover:border-sky-300",
+  },
+  {
+    dot: "bg-rose-500",
+    topBar: "bg-gradient-to-r from-rose-400 to-pink-500",
+    imageGrad: "from-rose-100 via-pink-100 to-rose-200",
+    shimmer: "via-rose-200/70",
+    solidActive: "bg-rose-600 text-white border-rose-600 shadow-rose-600/25",
+    ring: "hover:border-rose-300",
+  },
+  {
+    dot: "bg-amber-500",
+    topBar: "bg-gradient-to-r from-amber-400 to-orange-500",
+    imageGrad: "from-amber-100 via-orange-100 to-amber-200",
+    shimmer: "via-amber-200/70",
+    solidActive: "bg-amber-600 text-white border-amber-600 shadow-amber-600/25",
+    ring: "hover:border-amber-300",
+  },
+  {
+    dot: "bg-violet-500",
+    topBar: "bg-gradient-to-r from-violet-400 to-purple-500",
+    imageGrad: "from-violet-100 via-purple-100 to-violet-200",
+    shimmer: "via-violet-200/70",
+    solidActive: "bg-violet-600 text-white border-violet-600 shadow-violet-600/25",
+    ring: "hover:border-violet-300",
+  },
+  {
+    dot: "bg-emerald-500",
+    topBar: "bg-gradient-to-r from-emerald-400 to-teal-500",
+    imageGrad: "from-emerald-100 via-teal-100 to-emerald-200",
+    shimmer: "via-emerald-200/70",
+    solidActive: "bg-emerald-600 text-white border-emerald-600 shadow-emerald-600/25",
+    ring: "hover:border-emerald-300",
+  },
+];
+
+function hashCategory(cat) {
+  let hash = 0;
+  for (let i = 0; i < cat.length; i++) hash = (hash * 31 + cat.charCodeAt(i)) >>> 0;
+  return hash;
+}
+
+function styleFor(category) {
+  if (!category) return colorPalette[0];
+  return colorPalette[hashCategory(category) % colorPalette.length];
+}
 </script>
 
 <template>
-  <div class="py-6 lg:py-8 flex flex-col gap-8">
+  <div class="relative overflow-hidden py-6 lg:py-8 flex flex-col gap-8">
+    <!-- ============ AMBIENT BLOBS ============ -->
+    <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 rounded-full bg-sky-400/10 blur-3xl" />
+    <div class="pointer-events-none absolute -right-20 top-64 -z-10 h-64 w-64 rounded-full bg-rose-400/10 blur-3xl animate-blob-float" />
+    <div class="pointer-events-none absolute left-1/3 bottom-0 -z-10 h-56 w-56 rounded-full bg-violet-400/10 blur-3xl animate-blob-float-slow" />
+
     <!-- ============ HEADER + SEARCH ============ -->
-    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+    <div class="fade-in-up flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
       <div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-heading">Berita Desa</h1>
+        <div class="inline-flex items-center gap-2">
+          <span class="header-kicker-dot h-2 w-2 rounded-full bg-sky-500" />
+          <span class="text-xs font-bold uppercase tracking-[0.25em] text-sky-600">Info Desa</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-heading mt-1">
+          Berita <span class="heading-accent">Desa</span>
+        </h1>
         <p class="text-[13.5px] sm:text-[14.5px] text-muted mt-1">
           Informasi dan kabar terbaru dari desa kita.
         </p>
@@ -96,7 +174,7 @@ function handleImgError(event) {
     </div>
 
     <!-- ============ FILTER: KATEGORI + URUTAN ============ -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="fade-in-up flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3" style="animation-delay: 60ms">
       <div class="flex flex-wrap gap-2">
         <button
           v-for="cat in categoryOptions"
@@ -105,11 +183,18 @@ function handleImgError(event) {
           @click="activeCategory = cat"
           :class="
             activeCategory === cat
-              ? 'bg-primary-900 text-white border-primary-900'
-              : 'bg-surface text-default border-border-default hover:border-primary-300'
+              ? cat === 'Semua Kategori'
+                ? 'bg-primary-900 text-white border-primary-900'
+                : [styleFor(cat).solidActive, 'shadow-md']
+              : ['bg-surface text-default border-border-default', styleFor(cat).ring]
           "
-          class="rounded-full border px-4 py-2 text-[12.5px] font-bold transition-colors"
+          class="rounded-full border px-4 py-2 text-[12.5px] font-bold transition-all duration-200 active:scale-[0.97] flex items-center gap-1.5"
         >
+          <span
+            v-if="cat !== 'Semua Kategori'"
+            class="h-1.5 w-1.5 rounded-full"
+            :class="activeCategory === cat ? 'bg-white/80' : styleFor(cat).dot"
+          />
           {{ cat }}
         </button>
       </div>
@@ -132,7 +217,7 @@ function handleImgError(event) {
     <!-- ============ EMPTY STATE ============ -->
     <div
       v-if="filteredSorted.length === 0"
-      class="rounded-2xl border border-dashed border-border-default bg-surface p-10 text-center"
+      class="empty-state rounded-2xl border border-dashed border-border-default bg-surface p-10 text-center"
     >
       <i class="pi pi-inbox text-3xl text-primary-200" />
       <p class="text-[14px] font-bold text-heading mt-3">Belum ada berita ditemukan</p>
@@ -142,14 +227,18 @@ function handleImgError(event) {
     </div>
 
     <template v-else>
-      <!-- ============ FEATURED + BERITA POPULER ============ -->
-      <div class="grid lg:grid-cols-3 gap-6 lg:gap-8 items-start">
+      <!-- ============ FEATURED + BERITA TERBARU ============ -->
+      <div v-if="featured" class="fade-in-up grid lg:grid-cols-3 gap-6 lg:gap-8 items-start" style="animation-delay: 100ms">
         <RouterLink
-          v-if="featured"
           :to="{ name: 'news-detail', params: { slug: featured.slug } }"
-          class="lg:col-span-2 group rounded-2xl border border-border-default bg-surface overflow-hidden hover:shadow-lg transition-all block"
+          class="featured-card lg:col-span-2 group relative overflow-hidden rounded-2xl border border-border-default bg-surface hover:shadow-xl transition-all duration-300 block"
         >
-          <div class="relative aspect-[16/9] sm:aspect-[16/8] bg-primary-50 overflow-hidden flex items-center justify-center">
+          <span class="absolute inset-x-0 top-0 z-10 h-1" :class="styleFor(featured.category).topBar" />
+
+          <div
+            class="shimmer-wrap relative aspect-[16/9] sm:aspect-[16/8] overflow-hidden flex items-center justify-center bg-gradient-to-br"
+            :class="featured.image ? 'bg-primary-50' : styleFor(featured.category).imageGrad"
+          >
             <img
               v-if="featured.image"
               :src="featured.image"
@@ -158,12 +247,22 @@ function handleImgError(event) {
               loading="lazy"
               @error="handleImgError"
             />
-            <i v-else class="pi pi-image text-4xl text-primary-200" />
+            <template v-else>
+              <i class="pi pi-image text-4xl opacity-40" />
+              <span class="shimmer-sweep absolute inset-0 bg-gradient-to-r from-transparent to-transparent" :class="styleFor(featured.category).shimmer" />
+            </template>
             <span
               :class="getCategoryClasses(featured.category)"
               class="absolute left-4 top-4 rounded-full px-3 py-1 text-[10.5px] font-bold uppercase tracking-wide"
             >
               {{ featured.category }}
+            </span>
+            <span
+              v-if="pinnedNews && featured.slug === pinnedNews.slug"
+              class="absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-heading/80 px-3 py-1 text-[10.5px] font-bold uppercase tracking-wide text-white backdrop-blur-sm"
+            >
+              <i class="pi pi-bookmark-fill text-[10px]" />
+              Disematkan
             </span>
           </div>
           <div class="p-5 sm:p-6">
@@ -187,20 +286,24 @@ function handleImgError(event) {
           </div>
         </RouterLink>
 
-        <!-- ============ BERITA POPULER (dirapikan) ============ -->
+        <!-- ============ BERITA TERBARU ============ -->
         <div class="rounded-2xl border border-border-default bg-surface p-5">
           <h2 class="text-[15px] font-extrabold text-heading flex items-center gap-2 mb-3">
-            <i class="pi pi-star-fill text-secondary-500" />
-            Berita Populer
+            <i class="pi pi-clock text-secondary-500" />
+            Berita Terbaru
           </h2>
           <div class="flex flex-col gap-3">
             <RouterLink
-              v-for="item in popularNews"
+              v-for="item in latestNews"
               :key="item.slug"
               :to="{ name: 'news-detail', params: { slug: item.slug } }"
-              class="group flex items-center gap-3.5 rounded-xl border border-border-default p-2.5 hover:border-primary-300 hover:bg-primary-50/40 transition-colors"
+              class="group flex items-center gap-3.5 rounded-xl border border-border-default p-2.5 transition-colors"
+              :class="styleFor(item.category).ring"
             >
-              <div class="shrink-0 w-16 h-16 rounded-xl bg-primary-50 overflow-hidden flex items-center justify-center">
+              <div
+                class="shrink-0 w-16 h-16 rounded-xl overflow-hidden flex items-center justify-center bg-gradient-to-br"
+                :class="item.image ? 'bg-primary-50' : styleFor(item.category).imageGrad"
+              >
                 <img
                   v-if="item.image"
                   :src="item.image"
@@ -209,7 +312,7 @@ function handleImgError(event) {
                   loading="lazy"
                   @error="handleImgError"
                 />
-                <i v-else class="pi pi-image text-lg text-primary-200" />
+                <i v-else class="pi pi-image text-lg opacity-40" />
               </div>
               <div class="min-w-0 flex flex-col gap-1.5">
                 <p
@@ -220,7 +323,7 @@ function handleImgError(event) {
                 <span
                   class="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary-50 px-2.5 py-1 text-[10.5px] font-bold text-primary-700"
                 >
-                  <i class="pi pi-calendar text-[9.5px]" />
+                  <span class="h-1.5 w-1.5 rounded-full" :class="styleFor(item.category).dot" />
                   {{ item.date }}
                 </span>
               </div>
@@ -230,12 +333,17 @@ function handleImgError(event) {
       </div>
 
       <!-- ============ BERITA LAINNYA + PAGINATION ============ -->
-      <div>
-        <h2 class="text-xl sm:text-2xl font-extrabold text-heading mb-4">Berita Lainnya</h2>
+      <div class="fade-in-up" style="animation-delay: 140ms">
+        <h2 v-if="featured" class="text-xl sm:text-2xl font-extrabold text-heading mb-4">Berita Lainnya</h2>
 
-        <div v-if="pagedRest.length" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <TransitionGroup
+          v-if="pagedRest.length"
+          tag="div"
+          name="card"
+          class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"
+        >
           <NewsCard v-for="item in pagedRest" :key="item.slug" :item="item" />
-        </div>
+        </TransitionGroup>
         <p v-else class="text-[13px] text-muted">Tidak ada berita lain untuk filter ini.</p>
 
         <div v-if="totalPages > 1" class="flex items-center justify-center gap-1.5 mt-8">
@@ -274,3 +382,62 @@ function handleImgError(event) {
     </template>
   </div>
 </template>
+
+<style scoped>
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.fade-in-up { animation: fadeInUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+.header-kicker-dot { animation: kickerPulse 2.2s ease-in-out infinite; }
+@keyframes kickerPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+
+.heading-accent {
+  background: linear-gradient(90deg, #0284c7, #7c3aed);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+@keyframes blobFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-16px, 18px) scale(1.08); }
+}
+.animate-blob-float { animation: blobFloat 10s ease-in-out infinite; }
+@keyframes blobFloatSlow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(14px, -12px) scale(1.05); }
+}
+.animate-blob-float-slow { animation: blobFloatSlow 13s ease-in-out infinite; }
+
+.shimmer-wrap { background-size: 200% 200%; }
+.shimmer-sweep {
+  transform: translateX(-120%) skewX(-12deg);
+  animation: shimmerSweep 3.2s ease-in-out infinite;
+}
+@keyframes shimmerSweep {
+  0% { transform: translateX(-120%) skewX(-12deg); }
+  55%, 100% { transform: translateX(220%) skewX(-12deg); }
+}
+
+.empty-state { animation: fadeInUp 0.5s ease both; }
+
+.card-enter-from { opacity: 0; transform: translateY(22px) scale(0.92) rotate(-1deg); }
+.card-enter-active { transition: opacity 0.5s ease, transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.card-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; position: absolute; }
+.card-leave-to { opacity: 0; transform: scale(0.95); }
+.card-move { transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in-up, .card-enter-active, .card-leave-active, .card-move,
+  .header-kicker-dot, .animate-blob-float, .animate-blob-float-slow,
+  .shimmer-sweep, .empty-state {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+</style>

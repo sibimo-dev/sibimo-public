@@ -234,7 +234,7 @@ function styleFor(slug) {
         <span class="text-xs font-bold uppercase tracking-[0.25em] text-sky-600">Agenda</span>
       </div>
       <h1 class="mt-2 text-2xl md:text-3xl font-bold text-heading">
-        Gallery <span class="heading-accent">Desa</span>
+        Galeri <span class="heading-accent">Bimomartani</span>
       </h1>
       <p class="mt-2 max-w-2xl text-sm text-muted leading-relaxed">
         Jadwal kegiatan, musyawarah, dan acara penting komunitas Desa. Tetap
