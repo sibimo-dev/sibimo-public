@@ -28,12 +28,12 @@ function loadMore() {
       <h1 class="mt-2 text-2xl sm:text-3xl font-extrabold text-heading">
         Agenda
         <span class="bg-gradient-to-r from-sky-600 to-violet-600 bg-clip-text text-transparent">
-          Desa
+          Bimomartani
         </span>
       </h1>
       <p class="text-[13.5px] sm:text-[15px] text-muted mt-2 leading-relaxed">
-        Jadwal kegiatan, musyawarah, dan acara penting komunitas Desa. Tetap terhubung dan
-        berpartisipasi aktif dalam pembangunan desa kita.
+        Jadwal kegiatan, musyawarah, dan acara penting komunitas Kalurahan. Tetap terhubung dan
+        berpartisipasi aktif dalam pembangunan kalurahan kita.
       </p>
     </div>
 
