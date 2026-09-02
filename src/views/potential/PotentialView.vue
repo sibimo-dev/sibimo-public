@@ -94,10 +94,10 @@ const allTabActive = 'border-transparent bg-gradient-to-r from-primary-500 via-v
         <span class="text-xs font-bold uppercase tracking-[0.25em] text-primary-500">Jelajahi</span>
       </div>
       <h1 class="mt-2 text-2xl font-bold text-heading md:text-3xl">
-        Potensi <span class="heading-accent">Desa</span>
+        Potensi <span class="heading-accent">Bimomartani</span>
       </h1>
       <p class="mt-2 max-w-2xl text-sm text-muted leading-relaxed">
-        Eksplorasi kekayaan dan aset unggulan desa kami.
+        Eksplorasi kekayaan dan aset unggulan kalurahan kami.
       </p>
     </div>
 
