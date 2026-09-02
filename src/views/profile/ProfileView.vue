@@ -1,10 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
-import markerIcon from 'leaflet/dist/images/marker-icon.png'
-import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 import Avatar from 'primevue/avatar'
@@ -12,21 +7,58 @@ import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
 import ProgressSpinner from 'primevue/progressspinner'
-import OrganizationChart from 'primevue/organizationchart'
 
-/* Fix the default Leaflet marker icon path, which often breaks once bundled (Vite/Webpack) */
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
+let L = null
+async function loadLeaflet() {
+  if (L) return L
+  const [leaflet, markerIcon2x, markerIcon, markerShadow] = await Promise.all([
+    import('leaflet'),
+    import('leaflet/dist/images/marker-icon-2x.png'),
+    import('leaflet/dist/images/marker-icon.png'),
+    import('leaflet/dist/images/marker-shadow.png'),
+    import('leaflet/dist/leaflet.css'),
+  ])
+  L = leaflet.default
+
+  delete L.Icon.Default.prototype._getIconUrl
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: markerIcon2x.default,
+    iconUrl: markerIcon.default,
+    shadowUrl: markerShadow.default,
+  })
+
+  return L
+}
+
+
+/* ============ FOTO STRUKTUR ORGANISASI ============ */
+const orgPhotoModules = import.meta.glob('@/assets/struktur-organisasi/*.{jpg,jpeg,png,JPG,JPEG,PNG}', {
+  eager: true,
+  import: 'default',
 })
+const orgPhotos = Object.fromEntries(
+  Object.entries(orgPhotoModules).map(([path, url]) => [path.split('/').pop(), url])
+)
+function photoUrl(filename) {
+  return filename ? orgPhotos[filename] || null : null
+}
 
-/* Hero: background photo + parallax + title animation */
-const heroImageUrl = '/images/kalurahan-bimo.jpeg'
+/* ============ FOTO SEJARAH ============ */
+const sejarahPhotoModules = import.meta.glob('@/assets/sejarah/*.{jpg,jpeg,png,JPG,JPEG,PNG}', {
+  eager: true,
+  import: 'default',
+})
+const sejarahPhotos = Object.fromEntries(
+  Object.entries(sejarahPhotoModules).map(([path, url]) => [path.split('/').pop(), url])
+)
+const sejarahKalurahanImg = sejarahPhotos['Kalurahan.jpg']
+const sejarahKegiatanImg = sejarahPhotos['kegiatan.jpeg']
+
+const heroImageUrl = sejarahKalurahanImg
 const heroImageLoaded = ref(false)
+const mounted = ref(false)
 
-const heroTitleWords = 'Profil Desa Bimomartani'.split(' ')
+const heroTitleWords = 'Profil Kalurahan Bimomartani'.split(' ')
 
 const heroOffset = ref(0)
 let rafId = null
@@ -38,7 +70,6 @@ function onHeroScroll() {
   })
 }
 
-/* Anchor nav (scroll-spy tabs) */
 const sections = [
   { id: 'history', label: 'Sejarah' },
   { id: 'vision-mission', label: 'Visi & Misi' },
@@ -51,21 +82,27 @@ function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-// Fires when the user clicks a tab. Tabs' `value` is two-way bound to
-// activeSection, so clicking already updates the highlighted tab; this
-// just adds the actual scroll behavior on top of that.
 function onTabChange(id) {
   activeSection.value = id
   scrollTo(id)
 }
 
-/* Color accents */
-const accentPalette = ['blue', 'purple', 'teal', 'amber', 'rose', 'indigo']
-function accentClass(i) {
-  return `accent-${accentPalette[i % accentPalette.length]}`
+const accentStyles = [
+  { border: '!border-l-blue-600', soft: '!from-blue-50', avatarBg: 'bg-blue-600', statBorder: 'border-blue-100', statIconBg: 'bg-blue-100', statIconText: 'text-blue-600', statHover: 'group-hover:bg-blue-600' },
+  { border: '!border-l-violet-600', soft: '!from-violet-50', avatarBg: 'bg-violet-600', statBorder: 'border-violet-100', statIconBg: 'bg-violet-100', statIconText: 'text-violet-600', statHover: 'group-hover:bg-violet-600' },
+  { border: '!border-l-teal-600', soft: '!from-teal-50', avatarBg: 'bg-teal-600', statBorder: 'border-teal-100', statIconBg: 'bg-teal-100', statIconText: 'text-teal-600', statHover: 'group-hover:bg-teal-600' },
+  { border: '!border-l-amber-600', soft: '!from-amber-50', avatarBg: 'bg-amber-600', statBorder: 'border-amber-100', statIconBg: 'bg-amber-100', statIconText: 'text-amber-600', statHover: 'group-hover:bg-amber-600' },
+  { border: '!border-l-rose-600', soft: '!from-rose-50', avatarBg: 'bg-rose-600', statBorder: 'border-rose-100', statIconBg: 'bg-rose-100', statIconText: 'text-rose-600', statHover: 'group-hover:bg-rose-600' },
+  { border: '!border-l-indigo-600', soft: '!from-indigo-50', avatarBg: 'bg-indigo-600', statBorder: 'border-indigo-100', statIconBg: 'bg-indigo-100', statIconText: 'text-indigo-600', statHover: 'group-hover:bg-indigo-600' },
+]
+const accentHex = ['#2563eb', '#7c3aed', '#0d9488', '#d97706', '#e11d48', '#4f46e5']
+function accentHexFor(i) {
+  return accentHex[i % accentHex.length]
+}
+function accentFor(i) {
+  return accentStyles[i % accentStyles.length]
 }
 
-/* Content data */
 const missions = [
   'Meningkatkan kualitas pelayanan publik berbasis teknologi informasi.',
   'Mengembangkan potensi ekonomi lokal melalui pemberdayaan UMKM dan BUMDes.',
@@ -73,54 +110,93 @@ const missions = [
   'Membangun infrastruktur desa yang memadai dan berwawasan lingkungan.',
 ]
 
-const orgRoles = [
-  { no: 1, title: 'Kepala Desa', desc: 'Memimpin penyelenggaraan pemerintahan desa.' },
-  { no: 2, title: 'Sekretaris Desa', desc: 'Membantu Kepala Desa dalam bidang administrasi pemerintahan.' },
-  { no: 3, title: 'Kaur Tata Usaha & Umum', desc: 'Mengurus administrasi persuratan, kearsipan, dan perlengkapan.' },
-  { no: 4, title: 'Kaur Keuangan', desc: 'Mengelola administrasi keuangan desa.' },
-  { no: 5, title: 'Kaur Perencanaan', desc: 'Menyusun rencana pembangunan dan monitoring.' },
-  { no: 6, title: 'Kasi Pemerintahan', desc: 'Melaksanakan manajemen tata praja dan kependudukan.' },
-  { no: 7, title: 'Kasi Kesejahteraan', desc: 'Melaksanakan pembangunan sarana prasarana dan sosial.' },
-  { no: 8, title: 'Kasi Pelayanan', desc: 'Melaksanakan penyuluhan dan pembinaan masyarakat.' },
-]
 
-const orgChartLeaves = [
-  'Kaur Tata Usaha & Umum',
-  'Kaur Keuangan',
-  'Kaur Perencanaan',
-  'Kasi Pemerintahan',
-  'Kasi Kesejahteraan',
-  'Kasi Pelayanan',
-]
+function initials(name) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join('')
+}
 
-const orgChartData = ref([
+function person(name, title, desc, photo) {
+  return { name, title, desc, initials: initials(name), photo: photoUrl(photo) }
+}
+
+/* ============ STRUKTUR ORGANISASI ============ */
+const orgStructure = [
   {
-    key: '0',
-    label: 'Kepala Desa',
-    children: [
-      {
-        key: '0-0',
-        label: 'Sekretaris Desa',
-        children: orgChartLeaves.map((label, index) => ({
-          key: `0-0-${index}`,
-          label,
-        })),
-      },
+    level: 'Lurah',
+    pimpinan: true,
+    people: [
+      person(
+        'Tutik Wahyuningsih, S.Sos., M.AP',
+        'Lurah',
+        'Memimpin penyelenggaraan pemerintahan Kalurahan Bimomartani.',
+        'Tutik Wahyuningsih.jpeg'
+      ),
     ],
   },
-])
+  {
+    level: 'Sekretariat & Keuangan',
+    people: [
+      person('Yudi Priyo Utomo, SE', 'Carik', 'Memimpin sekretariat & mengoordinasikan seluruh urusan administrasi kalurahan.', 'Yudi Priyo Utomo.jpeg'),
+      person('Nanda Mutiara Dewi, S.Psi', 'Kaur Danarta', 'Mengelola administrasi dan pelaporan keuangan kalurahan.', 'Nanda Mutiara Dewi.jpg'),
+      person('Rasyifa Anom Sudaryono, Amd.Kes', 'Kaur Tata Laksana', 'Mengelola tata naskah dan pelayanan administrasi umum.'),
+      person('Hanang Tri Nugroho, S.Kom', 'Kaur Pangripta', 'Menyusun perencanaan dan pelaporan pembangunan kalurahan.', 'Hanang Tri Nugroho.jpeg'),
+    ],
+  },
+  {
+    level: 'Kepala Seksi',
+    people: [
+      person('Sutriyana, S.Ag', 'Kamituwa', 'Mengoordinasikan kesejahteraan dan pemberdayaan masyarakat.', 'Sutriyana.jpeg'),
+      person('Yordan Ardi Tamara, S.Kom', 'Ulu-Ulu', 'Mengelola tata guna lahan, irigasi, dan sektor pertanian.', 'Yordan Ardi Tamara.jpeg'),
+      person('Rifai Nurmansyah, S.Pd., M.Pd', 'Jagabaya', 'Menjaga ketenteraman, ketertiban, dan keamanan wilayah.', 'Rifai Nurmansah.jpeg'),
+    ],
+  },
+  {
+    level: 'Dukuh (Kepala Padukuhan)',
+    slider: true,
+    people: [
+      person('Jaka Widada', 'Dukuh I Krebet', 'Kepala wilayah Padukuhan Krebet.', 'Jaka Widada.jpeg'),
+      person('Angga Wahyu Indra Irawan, S.Pd', 'Dukuh II Rogobangsan', 'Kepala wilayah Padukuhan Rogobangsan.', 'Angga Wahyu Indra Irawan.jpeg'),
+      person('Umi Solikah', 'Dukuh III Kalibulus', 'Kepala wilayah Padukuhan Kalibulus.', 'Umi Solikah.jpeg'),
+      person('Kaharudin', 'Dukuh IV Macanan', 'Kepala wilayah Padukuhan Macanan.', 'Kaharudin.jpeg'),
+      person('Mucharom', 'Dukuh V Cokrogaten', 'Kepala wilayah Padukuhan Cokrogaten.', 'Mucharom.jpeg'),
+      person('TH Dwi Wahyu P, Amd', 'Dukuh VI Purwobinangun', 'Kepala wilayah Padukuhan Purwobinangun.'),
+      person('Sukirman', 'Dukuh VII Pondok Suruh', 'Kepala wilayah Padukuhan Pondok Suruh.'),
+      person('Sunaryo', 'Dukuh VIII Balong', 'Kepala wilayah Padukuhan Balong.', 'Sunarya.jpeg'),
+      person('Suharyono', 'Dukuh IX Kragilan', 'Kepala wilayah Padukuhan Kragilan.', 'Suharyono.jpeg'),
+      person('Basuki Wibowo', 'Dukuh X Banjarharjo', 'Kepala wilayah Padukuhan Banjarharjo.', 'Basuki Wibawa.jpeg'),
+      person('Drs. Jazim Thoyibi', 'Dukuh XI Sorasan', 'Kepala wilayah Padukuhan Sorasan.', 'Jazim Thoyibi.jpeg'),
+      person('Purnomo', 'Dukuh XII Koroulon Kidul', 'Kepala wilayah Padukuhan Koroulon Kidul.'),
+    ],
+  },
+  {
+    level: 'Staff Pamong Kalurahan',
+    slider: true,
+    people: [
+      person('Ratna Kurnia Dewi', 'Staff Pamong Kalurahan', 'Membantu administrasi keuangan kalurahan.', 'Ratna Kurnia Dewi.jpg'),
+      person('Khoirunnisa Hidaya', 'Staff Pamong Kalurahan', 'Membantu administrasi perkantoran kalurahan.', 'Khoirunisa Nurhidaya.jpg'),
+      person('Mega Dwi Jayanti', 'Staff Pamong Kalurahan', 'Membantu pelayanan kesehatan dan sosial masyarakat.', 'Mega Dwi Jayanti.jpg'),
+      person('Sigit Raharjo', 'Staff Pamong Kalurahan', 'Membantu pelaksanaan tugas kepamongan kalurahan.', 'Sigit Raharjo.jpeg'),
+      person('Linggar Yudha Pranata', 'Staff Pamong Kalurahan', 'Membantu administrasi dan kearsipan kalurahan.', 'Linggar Yudha.jpg'),
+      person('Riyanto', 'Staff Pamong Kalurahan', 'Membantu pelaksanaan tugas kepamongan kalurahan.', 'Riyanto.jpg'),
+    ],
+  },
+]
 
-/* Stats with count-up animation */
 const stats = reactive([
-  { icon: '👥', label: 'Total Penduduk', target: 4521, value: 0, suffix: '' },
-  { icon: '🏠', label: 'Kepala Keluarga', target: 1120, value: 0, suffix: '' },
-  { icon: '🗺️', label: 'Luas Wilayah', target: 245, value: 0, suffix: ' Ha' },
-  { icon: '🏘️', label: 'Jumlah RT/RW', target: 24, value: 0, suffix: ' / 6' },
+  { icon: 'pi pi-users', label: 'Total Penduduk', target: 4521, value: 0, suffix: '' },
+  { icon: 'pi pi-home', label: 'Kepala Keluarga', target: 1120, value: 0, suffix: '' },
+  { icon: 'pi pi-map', label: 'Luas Wilayah', target: 245, value: 0, suffix: ' Ha' },
+  { icon: 'pi pi-sitemap', label: 'Jumlah RT/RW', target: 24, value: 0, suffix: ' / 6' },
 ])
 
 let statsAnimated = false
 function animateStats() {
-  if (statsAnimated) return 
+  if (statsAnimated) return
   statsAnimated = true
   stats.forEach((s) => {
     const duration = 1200
@@ -136,27 +212,36 @@ function animateStats() {
   })
 }
 
-/* Scroll reveal */
+const REVEAL_HIDDEN = ['opacity-0', 'translate-y-4']
+const REVEAL_VISIBLE = ['opacity-100', 'translate-y-0']
+
 let observer
 
 onMounted(() => {
+  requestAnimationFrame(() => {
+    mounted.value = true
+  })
+
   observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible')
+          entry.target.classList.remove(...REVEAL_HIDDEN)
+          entry.target.classList.add(...REVEAL_VISIBLE)
           if (entry.target.dataset.trigger === 'stats') animateStats()
+          if (entry.target.dataset.trigger === 'map') initMap()
           if (entry.target.dataset.section) activeSection.value = entry.target.dataset.section
         }
       })
     },
     { threshold: 0.2, rootMargin: '-80px 0px -40% 0px' }
   )
-  document
-    .querySelectorAll('.reveal, [data-section], [data-trigger]')
-    .forEach((el) => observer.observe(el))
 
-  initMap()
+  nextTick(() => {
+    document
+      .querySelectorAll('.js-reveal, [data-section], [data-trigger]')
+      .forEach((el) => observer.observe(el))
+  })
 
   window.addEventListener('scroll', onHeroScroll, { passive: true })
 })
@@ -168,16 +253,16 @@ onBeforeUnmount(() => {
   if (rafId) cancelAnimationFrame(rafId)
 })
 
-/* Interactive map (Leaflet + OSM boundary) */
 const mapEl = ref(null)
 const mapStatus = ref('loading')
 let leafletMap = null
 
-// Used as a fallback / initial point before the boundary polygon finishes loading.
 const VILLAGE_CENTER = [-7.7132, 110.4551]
 const VILLAGE_QUERY = 'Bimomartani, Ngemplak, Sleman, Daerah Istimewa Yogyakarta, Indonesia'
 
 async function initMap() {
+  if (!mapEl.value || leafletMap) return
+  await loadLeaflet()
   if (!mapEl.value) return
 
   leafletMap = L.map(mapEl.value, {
@@ -185,13 +270,21 @@ async function initMap() {
     zoomControl: true,
   }).setView(VILLAGE_CENTER, 14)
 
+  leafletMap.getPane('tilePane').style.zIndex = 1
+  leafletMap.getPane('overlayPane').style.zIndex = 4
+  leafletMap.getPane('markerPane').style.zIndex = 5
+  leafletMap.getPane('popupPane').style.zIndex = 6
+  const topLeft = leafletMap._controlCorners?.topleft
+  const topRight = leafletMap._controlCorners?.topright
+  if (topLeft) topLeft.style.zIndex = 10
+  if (topRight) topRight.style.zIndex = 10
+
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
   }).addTo(leafletMap)
 
-  // Enable scroll-zoom only after the map is clicked/focused, so it doesn't hijack page scroll
   leafletMap.on('click', () => leafletMap.scrollWheelZoom.enable())
   mapEl.value.addEventListener('mouseleave', () => leafletMap.scrollWheelZoom.disable())
 
@@ -235,13 +328,15 @@ async function initMap() {
   <div class="bg-white text-slate-800">
     <!-- ===== HERO ===== -->
     <section class="relative px-4 py-6 md:px-6 md:py-8">
-      <div class="hero-card relative isolate mx-auto max-w-6xl overflow-hidden rounded-3xl shadow-2xl">
+      <div class="relative isolate mx-auto max-w-6xl overflow-hidden rounded-3xl shadow-2xl">
+        <!-- Background photo with parallax (scroll) + a one-shot zoom-out on load -->
         <div
-          class="hero-photo absolute inset-0 -z-20 overflow-hidden bg-slate-900"
+          class="absolute inset-0 -z-20 overflow-hidden bg-slate-900 motion-reduce:!transform-none"
           :style="{ transform: `translateY(${heroOffset}px)` }"
         >
           <div
-            class="hero-photo__zoom h-[130%] w-[110%] -m-[6%] bg-cover bg-[center_30%]"
+            class="h-[130%] w-[110%] -m-[6%] bg-cover bg-[center_30%] transition-transform duration-[9000ms] ease-out motion-reduce:transition-none"
+            :class="mounted ? 'scale-100' : 'scale-110'"
             :style="{ backgroundImage: `url(${heroImageUrl})` }"
           />
           <img
@@ -255,59 +350,72 @@ async function initMap() {
 
         <!-- Gradient fallback for when the photo hasn't loaded yet -->
         <div
-          class="absolute inset-0 -z-20 transition-opacity duration-700"
+          class="absolute inset-0 -z-20 bg-gradient-to-br from-[#0a0f1c] via-[#101a2e] to-[#0d1526] transition-opacity duration-700"
           :class="heroImageLoaded ? 'opacity-0' : 'opacity-100'"
-          style="background: linear-gradient(135deg,#0a0f1c 0%,#101a2e 50%,#0d1526 100%)"
         />
 
-        <!-- Left-to-right dark overlay so the left-side text stays readable
-             while the photo remains visible on the right. -->
-        <div
-          class="absolute inset-0 -z-10"
-          style="background: linear-gradient(90deg, rgba(5,9,20,0.92) 0%, rgba(5,9,20,0.72) 38%, rgba(5,9,20,0.35) 68%, rgba(5,9,20,0.12) 100%)"
-        />
-        <div
-          class="absolute inset-0 -z-10"
-          style="background: linear-gradient(180deg, rgba(5,9,20,0.45) 0%, rgba(5,9,20,0.05) 30%, rgba(5,9,20,0.05) 70%, rgba(5,9,20,0.55) 100%)"
-        />
+        <!-- Left-to-right dark overlay so the left-side text stays readable -->
+        <div class="absolute inset-0 -z-10 bg-gradient-to-r from-[rgba(5,9,20,0.92)] via-[rgba(5,9,20,0.55)] to-[rgba(5,9,20,0.1)]" />
+        <div class="absolute inset-0 -z-10 bg-gradient-to-b from-[rgba(5,9,20,0.45)] via-transparent to-[rgba(5,9,20,0.55)]" />
 
         <!-- Subtle dot texture -->
-        <div class="hero-dots pointer-events-none absolute inset-0 -z-10 opacity-20" />
+        <div class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(rgba(255,255,255,0.5)_1px,transparent_1px)] bg-[length:22px_22px] opacity-20" />
 
-        <!-- Accent blobs (warmer, two-tone: blue + amber echoes the sections below) -->
-        <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl animate-pulse-slow" />
-        <div class="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-amber-400/10 blur-3xl animate-float-slow" />
+        <!-- Accent blobs -->
+        <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl motion-safe:animate-[pulse_6s_ease-in-out_infinite]" />
+        <div class="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-amber-400/10 blur-3xl motion-safe:animate-[pulse_9s_ease-in-out_infinite]" />
 
-        <!-- Content: left-aligned, fixed card height (not a huge vertical padding) -->
+        <!-- Content -->
         <div class="relative flex min-h-[440px] items-center px-6 py-14 md:min-h-[520px] md:px-14 md:py-20">
           <div class="max-w-xl">
-            <div class="hero-pop inline-flex items-center gap-3">
-              <span class="hero-kicker-dot h-2.5 w-2.5 flex-none rotate-45 bg-gradient-to-br from-sky-400 to-violet-500" />
-              <span class="hero-kicker-label text-xs font-semibold uppercase tracking-[0.3em]">Tentang Kami</span>
+            <div
+              class="inline-flex items-center gap-3 transition-all duration-500 ease-out motion-reduce:transition-none"
+              :class="mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'"
+            >
+              <span class="h-2.5 w-2.5 flex-none rotate-45 bg-gradient-to-br from-sky-400 to-violet-500 motion-safe:animate-pulse" />
+              <span class="text-xs font-semibold uppercase tracking-[0.3em] bg-gradient-to-r from-sky-300 to-violet-300 bg-clip-text text-transparent">
+                Tentang Kami
+              </span>
             </div>
 
-            <h1 class="mt-5 text-3xl font-bold leading-tight tracking-tight [perspective:800px] md:text-5xl">
+            <h1 class="mt-5 text-3xl font-bold leading-tight tracking-tight md:text-5xl">
               <span
                 v-for="(word, i) in heroTitleWords"
                 :key="i"
-                class="hero-word inline-block"
-                :class="{ 'hero-word--accent': i === heroTitleWords.length - 1 }"
-                :style="{ animationDelay: `${0.3 + i * 0.16}s` }"
+                class="inline-block text-slate-100 [text-shadow:0_2px_24px_rgba(15,23,42,0.35)] transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!blur-none motion-reduce:!translate-y-0"
+                :class="[
+                  mounted ? 'opacity-100 translate-y-0 blur-none' : 'opacity-0 translate-y-8 blur-sm',
+                  i === heroTitleWords.length - 1
+                    ? '!bg-gradient-to-r !from-sky-400 !via-indigo-500 !to-purple-500 !bg-clip-text !text-transparent drop-shadow-[0_2px_18px_rgba(99,102,241,0.45)]'
+                    : '',
+                ]"
+                :style="{ transitionDelay: `${300 + i * 160}ms` }"
               >
-                <span v-if="i === heroTitleWords.length - 1" class="hero-typing align-bottom">{{ word }}</span>
-                <template v-else>{{ word }}<span>&nbsp;</span></template>
+                {{ word }}<span v-if="i !== heroTitleWords.length - 1">&nbsp;</span>
               </span>
             </h1>
 
-            <!-- Accent underline that "grows" once the last word has appeared -->
-            <span class="hero-underline mt-4 block h-[3px] w-16 rounded-full bg-gradient-to-r from-sky-400 via-indigo-500 to-violet-500" />
+            <!-- Accent underline that grows once the words have appeared -->
+            <span
+              class="mt-4 block h-[3px] w-16 origin-left rounded-full bg-gradient-to-r from-sky-400 via-indigo-500 to-violet-500 transition-transform duration-700 ease-out motion-reduce:transition-none"
+              :class="mounted ? 'scale-x-100' : 'scale-x-0'"
+              style="transition-delay: 1100ms"
+            />
 
-            <p class="hero-in mt-5 text-sm leading-relaxed !text-slate-200 md:text-base" style="animation-delay: 0.95s">
+            <p
+              class="mt-5 text-sm leading-relaxed !text-slate-200 md:text-base transition-all duration-700 ease-out motion-reduce:transition-none"
+              :class="mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
+              style="transition-delay: 950ms"
+            >
               Mengenal lebih dekat sejarah, visi misi, dan potensi wilayah desa kami
               yang kaya akan warisan budaya dan keindahan alam.
             </p>
 
-            <div class="hero-in mt-4 flex items-center gap-2 text-xs font-medium !text-slate-300" style="animation-delay: 1.1s">
+            <div
+              class="mt-4 flex items-center gap-2 text-xs font-medium !text-slate-300 transition-all duration-700 ease-out motion-reduce:transition-none"
+              :class="mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
+              style="transition-delay: 1100ms"
+            >
               <span class="h-px w-6 bg-blue-400/50" />
               Kapanewon Ngemplak, Kabupaten Sleman, Daerah Istimewa Yogyakarta
             </div>
@@ -318,43 +426,67 @@ async function initMap() {
 
     <!-- ===== STICKY ANCHOR NAV (PrimeVue Tabs, scroll-spy) ===== -->
     <nav class="sticky top-0 z-20 border-b border-slate-100 bg-white/80 backdrop-blur-md">
-      <div class="anchor-tabs mx-auto max-w-4xl px-6">
-        <Tabs :value="activeSection" @update:value="onTabChange">
-          <TabList>
-            <Tab v-for="s in sections" :key="s.id" :value="s.id">{{ s.label }}</Tab>
+      <div class="mx-auto max-w-4xl px-6">
+        <Tabs :value="activeSection" @update:value="onTabChange" :pt="{ root: { class: 'bg-transparent' } }">
+          <TabList
+            :pt="{
+              root: { class: 'border-none bg-transparent' },
+              tabList: { class: 'gap-1 flex-nowrap overflow-x-auto border-none' },
+              activeBar: { class: '!bg-blue-600 !h-0.5' },
+            }"
+          >
+            <Tab
+              v-for="s in sections"
+              :key="s.id"
+              :value="s.id"
+              :pt="{
+                root: ({ context }) => ({
+                  class: [
+                    'border-none bg-transparent px-3 py-4 text-sm font-medium whitespace-nowrap',
+                    context.active ? 'text-blue-600' : 'text-slate-500',
+                  ],
+                }),
+              }"
+            >
+              {{ s.label }}
+            </Tab>
           </TabList>
         </Tabs>
       </div>
     </nav>
 
     <!-- ===== HISTORY (amber / heritage tone) ===== -->
-    <section id="history" data-section="history" class="section-tint section-tint--amber relative overflow-hidden px-6 py-20">
-      <div class="section-dots section-dots--amber pointer-events-none absolute inset-0" />
-      <span class="section-year pointer-events-none absolute -right-4 top-6 select-none">1946</span>
+    <section id="history" data-section="history" class="relative overflow-hidden bg-gradient-to-b from-amber-50 to-white px-6 py-20">
+      <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(#fcd34d_1px,transparent_1px)] bg-[length:20px_20px] opacity-25" />
+      <span class="pointer-events-none absolute -right-4 top-6 select-none text-[9rem] font-extrabold leading-none text-amber-500 opacity-[0.08]">
+        1946
+      </span>
 
       <div class="relative mx-auto max-w-4xl">
-        <div class="reveal flex items-center gap-3">
-          <span class="section-eyebrow-dash section-eyebrow-dash--amber" />
-          <span class="section-eyebrow section-eyebrow--amber">Sejak 1946</span>
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex items-center gap-3">
+          <span class="h-px w-8 bg-amber-500" />
+          <span class="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-amber-700">Sejak 1946</span>
         </div>
-        <h2 class="reveal mt-2 text-2xl font-semibold text-slate-900">Sejarah Desa Bimomartani</h2>
+        <h2 class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-2 text-2xl font-semibold text-slate-900">
+          Sejarah Kalurahan Bimomartani
+        </h2>
 
-        <div class="reveal mt-6 space-y-5 border-l-2 border-amber-200 pl-6 text-slate-600 leading-relaxed">
-          <p class="history-milestone">
-            <span class="history-dot history-dot--amber" />
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-6 space-y-5 border-l-2 border-amber-200 pl-6 text-slate-600 leading-relaxed">
+          <p class="relative">
+            <span class="absolute -left-[2.05rem] top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-[0_0_0_2px_#f59e0b]" />
             Nama Kalurahan Bimomartani terbentuk pada tanggal 29 April 1946 yang merupakan
-            gabungan dari tiga kelurahan yaitu kelurahan Jatisari, Cokrosari dan Opaksari.
+            gabungan dari tiga kalurahan yaitu kalurahan Jatisari, Cokrosari dan Opaksari.
           </p>
-          <p class="history-milestone">
-            <span class="history-dot history-dot--amber" />
+          <p class="relative">
+            <span class="absolute -left-[2.05rem] top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-[0_0_0_2px_#f59e0b]" />
             Awal terbentuknya Kalurahan Bimomartani, kalurahan ini baru dipimpin oleh empat
             orang lurah. Sedangkan struktur organisasi dan tata kerja pemerintah kalurahan
             (SOTK) terbaru saat ini sesuai dengan Peraturan Bupati Sleman Nomor 46 Tahun 2016
             tentang Pedoman SOTK dan Peraturan Kalurahan Bimomartani Nomor 1 Tahun 2020
             tentang Susunan Organisasi dan Tata Kerja Tahun 2020.
           </p>
-          <p class="history-milestone">
-            <span class="history-dot history-dot--amber" />
+          <p class="relative">
+            <span class="absolute -left-[2.05rem] top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-[0_0_0_2px_#f59e0b]" />
             Pemerintah Kalurahan Bimomartani terdiri dari Lurah dan Perangkat Kalurahan.
             Perangkat Kalurahan terdiri dari Sekretaris Kalurahan, Pelaksana Teknis, dan
             Pelaksana Kewilayahan. Sekretaris Kalurahan dipimpin oleh Carik yang berada di
@@ -365,19 +497,33 @@ async function initMap() {
           </p>
         </div>
 
-        <div class="reveal mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Card class="photo-placeholder-card">
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Card
+            class="!rounded-xl overflow-hidden !border !border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_24px_rgba(217,119,6,0.14)]"
+            :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }"
+          >
             <template #content>
-              <div class="flex h-40 items-center justify-center text-amber-600/70 text-sm">
-                📷 Foto Balai Desa
-              </div>
+              <img
+                :src="sejarahKalurahanImg"
+                alt="Foto Balai Desa Kalurahan Bimomartani"
+                loading="lazy"
+                decoding="async"
+                class="h-40 w-full object-cover"
+              />
             </template>
           </Card>
-          <Card class="photo-placeholder-card">
+          <Card
+            class="!rounded-xl overflow-hidden !border !border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_24px_rgba(217,119,6,0.14)]"
+            :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }"
+          >
             <template #content>
-              <div class="flex h-40 items-center justify-center text-amber-600/70 text-sm">
-                📷 Foto Kegiatan Warga
-              </div>
+              <img
+                :src="sejarahKegiatanImg"
+                alt="Foto Kegiatan Warga Kalurahan Bimomartani"
+                loading="lazy"
+                decoding="async"
+                class="h-40 w-full object-cover"
+              />
             </template>
           </Card>
         </div>
@@ -385,38 +531,52 @@ async function initMap() {
     </section>
 
     <!-- ===== VISION & MISSION (indigo / violet tone) ===== -->
-    <section id="vision-mission" data-section="vision-mission" class="section-tint section-tint--violet relative overflow-hidden px-6 py-20">
-      <div class="section-dots section-dots--violet pointer-events-none absolute inset-0" />
+    <section id="vision-mission" data-section="vision-mission" class="relative overflow-hidden bg-gradient-to-b from-violet-50 via-indigo-50 to-white px-6 py-20">
+      <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(#c4b5fd_1px,transparent_1px)] bg-[length:20px_20px] opacity-25" />
 
       <div class="relative mx-auto max-w-4xl text-center">
-        <Card class="reveal vision-card mx-auto max-w-2xl">
+        <Card
+          class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 relative mx-auto max-w-2xl !rounded-2xl !border-0 bg-gradient-to-b from-white to-violet-50/40 !shadow-[0_16px_40px_rgba(124,58,237,0.14)]"
+          :pt="{ content: { class: '!p-8 relative' } }"
+        >
           <template #content>
-            <span class="vision-quote">&ldquo;</span>
+            <span class="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-violet-600 to-blue-600" />
+            <span class="block font-serif text-5xl leading-none bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
+              &ldquo;
+            </span>
             <h2 class="mt-1 text-2xl font-semibold text-slate-900">Visi</h2>
             <p class="mx-auto mt-3 text-slate-600">
-              "Mewujudkan Desa Bimomartani yang Mandiri, Sejahtera, dan Berbudaya melalui
+              "Mewujudkan Kalurahan Bimomartani yang Mandiri, Sejahtera, dan Berbudaya melalui
               Tata Kelola Pemerintahan yang Transparan dan Pembangunan Berkelanjutan."
             </p>
           </template>
         </Card>
 
-        <div class="reveal mt-14 flex items-center justify-center gap-3">
-          <span class="section-eyebrow-dash section-eyebrow-dash--violet" />
-          <span class="section-eyebrow section-eyebrow--violet">Arah Kami</span>
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-14 flex items-center justify-center gap-3">
+          <span class="h-px w-8 bg-violet-600" />
+          <span class="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-violet-700">Arah Kami</span>
         </div>
-        <h2 class="reveal mt-2 text-2xl font-semibold text-slate-900">Misi</h2>
+        <h2 class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-2 text-2xl font-semibold text-slate-900">
+          Misi
+        </h2>
 
         <div class="mt-6 space-y-3 text-left">
           <Card
             v-for="(item, i) in missions"
             :key="i"
-            class="reveal mission-card"
-            :class="accentClass(i)"
+            class="js-reveal opacity-0 translate-y-4 transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 !rounded-xl !border !border-slate-100 !border-l-4 bg-gradient-to-r !to-white hover:-translate-y-0.5 hover:shadow-lg"
+            :class="[accentFor(i).border, accentFor(i).soft]"
             :style="{ transitionDelay: `${i * 60}ms` }"
+            :pt="{ content: { class: '!p-4' } }"
           >
             <template #content>
               <div class="flex items-start gap-4">
-                <Avatar :label="String(i + 1)" shape="circle" class="mission-avatar flex-none" />
+                <Avatar
+                  :label="String(i + 1)"
+                  shape="circle"
+                  class="flex-none !text-white font-semibold text-sm"
+                  :style="{ backgroundColor: accentHexFor(i) }"
+                />
                 <p class="pt-1 text-slate-600">{{ item }}</p>
               </div>
             </template>
@@ -425,82 +585,173 @@ async function initMap() {
       </div>
     </section>
 
-    <!-- ===== ORGANIZATION STRUCTURE (teal tone) ===== -->
-    <section id="org-structure" data-section="org-structure" class="section-tint section-tint--teal relative overflow-hidden px-6 py-20">
-      <div class="section-dots section-dots--teal pointer-events-none absolute inset-0" />
+    <!-- ===== ORGANIZATION STRUCTURE (blue tone) ===== -->
+    <section id="org-structure" data-section="org-structure" class="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white px-6 py-20">
+      <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(#93c5fd_1px,transparent_1px)] bg-[length:20px_20px] opacity-25" />
 
-      <div class="relative mx-auto max-w-4xl">
-        <div class="reveal flex items-center gap-3">
-          <span class="section-eyebrow-dash section-eyebrow-dash--teal" />
-          <span class="section-eyebrow section-eyebrow--teal">Tata Kelola</span>
+      <div class="relative mx-auto max-w-5xl">
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex items-center gap-3">
+          <span class="h-px w-8 bg-blue-600" />
+          <span class="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-blue-700">Tata Kelola</span>
         </div>
-        <h2 class="reveal mt-2 text-2xl font-semibold text-slate-900">Struktur Organisasi Pemerintah Desa</h2>
+        <h2 class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-2 text-2xl font-semibold text-slate-900">
+          Struktur Organisasi Pemerintah Desa
+        </h2>
 
-        <Card class="reveal org-chart-card mt-6">
-          <template #content>
-            <p class="mb-6 text-center text-sm font-medium uppercase tracking-wide text-teal-600/70">
-              Pemerintah Desa
-            </p>
-
-            <!-- PrimeVue OrganizationChart replaces the hand-rolled flowchart markup. -->
-            <div class="org-chart-wrap overflow-x-auto">
-              <OrganizationChart :value="orgChartData">
-                <template #default="slotProps">
-                  <span class="org-chart-node-label">{{ slotProps.node.label }}</span>
-                </template>
-              </OrganizationChart>
+        <div class="mt-10">
+          <div v-for="(level, li) in orgStructure" :key="level.level" :class="li > 0 ? 'mt-10' : ''">
+            <!-- Connector line to the level above -->
+            <div v-if="li > 0" class="relative mx-auto mb-8 h-8 w-px bg-blue-300">
+              <span class="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-blue-500" />
             </div>
-          </template>
-        </Card>
-
-        <div class="mt-10 flex items-center gap-2">
-          <span class="text-teal-600">🗂️</span>
-          <p class="text-sm font-medium text-slate-500">Deskripsi Tugas &amp; Fungsi</p>
-        </div>
-
-        <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Card
-            v-for="role in orgRoles"
-            :key="role.no"
-            class="reveal role-card"
-            :class="accentClass(role.no - 1)"
-            :style="{ transitionDelay: `${(role.no - 1) * 40}ms` }"
-          >
-            <template #content>
-              <div class="flex items-start gap-3">
-                <span class="role-badge flex-none">{{ role.no }}</span>
-                <div>
-                  <p class="font-semibold text-slate-900">{{ role.title }}</p>
-                  <p class="mt-1.5 text-sm text-slate-500">{{ role.desc }}</p>
+            <div v-if="!level.pimpinan" class="mb-5 flex items-center gap-2">
+              <span class="h-2 w-2 flex-none rounded-full bg-blue-600" />
+              <p class="text-xs font-bold uppercase tracking-widest text-blue-700/80">{{ level.level }}</p>
+            </div>
+            <div v-if="level.pimpinan" class="flex flex-col items-center gap-5">
+              <Card
+                v-for="(p, pi) in level.people"
+                :key="p.title + p.name"
+                class="js-reveal opacity-0 translate-y-4 w-full max-w-3xl overflow-hidden !rounded-2xl !border !border-blue-200 !shadow-md transition-all duration-300 hover:-translate-y-1 hover:!shadow-xl motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0"
+                :style="{ transitionDelay: `${pi * 90}ms` }"
+                :pt="{ content: { class: '!p-5 sm:!p-6' } }"
+              >
+                <template #content>
+                  <div class="flex flex-col gap-5 sm:flex-row">
+                    <img
+                      v-if="p.photo"
+                      :src="p.photo"
+                      :alt="p.name"
+                      loading="lazy"
+                      decoding="async"
+                      class="aspect-[3/4] h-auto w-full flex-none rounded-xl object-cover sm:w-44"
+                    />
+                    <Avatar
+                      v-else
+                      icon="pi pi-user"
+                      shape="square"
+                      size="xlarge"
+                      class="!aspect-[3/4] !h-auto !w-full flex-none !rounded-xl !bg-blue-600 !text-5xl !text-white sm:!w-44"
+                    />
+                    <div class="flex flex-col justify-center text-left">
+                      <span class="text-xs font-bold uppercase tracking-wider text-blue-600">{{ level.level }}</span>
+                      <h3 class="mt-1 text-xl font-bold leading-tight text-blue-950 sm:text-2xl">{{ p.name }}</h3>
+                      <p class="mt-2 text-sm leading-relaxed text-slate-500">{{ p.desc }}</p>
+                      <div class="mt-4 flex flex-wrap gap-2">
+                        <Tag
+                          icon="pi pi-map-marker"
+                          value="Kalurahan Bimomartani"
+                          class="!rounded-full !border-none !bg-blue-50 !text-blue-700"
+                        />
+                        <Tag
+                          icon="pi pi-verified"
+                          :value="p.title"
+                          class="!rounded-full !border-none !bg-blue-50 !text-blue-700"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </Card>
+            </div>
+            <div
+              v-else-if="level.slider"
+              class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex snap-x snap-proximity gap-4 overflow-x-auto scroll-pl-4 pb-3 [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-blue-200"
+              :class="level.centerOnDesktop ? 'justify-start lg:justify-center' : 'justify-start'"
+            >
+              <div
+                v-for="p in level.people"
+                :key="p.title + p.name"
+                class="flex w-44 flex-none flex-col snap-start overflow-hidden rounded-xl border border-slate-100 bg-white text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg sm:w-48"
+              >
+                <img
+                  v-if="p.photo"
+                  :src="p.photo"
+                  :alt="p.name"
+                  loading="lazy"
+                  decoding="async"
+                  class="aspect-square h-auto w-full flex-none rounded-none object-cover"
+                />
+                <Avatar
+                  v-else
+                  icon="pi pi-image"
+                  shape="square"
+                  size="xlarge"
+                  class="!aspect-square !h-auto !w-full !flex-none !rounded-none !bg-blue-600 !text-3xl !text-white"
+                />
+                <div class="flex flex-1 flex-col px-3 py-3">
+                  <p class="text-sm font-bold leading-tight text-slate-900">{{ p.name }}</p>
+                  <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-blue-600">{{ p.title }}</p>
+                  <p class="mt-2 text-[11px] leading-snug text-slate-400 line-clamp-2">{{ p.desc }}</p>
                 </div>
               </div>
-            </template>
-          </Card>
+            </div>
+            <div v-else class="flex flex-wrap justify-center gap-4">
+              <div
+                v-for="(p, pi) in level.people"
+                :key="p.title + p.name"
+                class="js-reveal opacity-0 translate-y-4 flex w-44 flex-none flex-col overflow-hidden rounded-xl border border-slate-100 bg-white text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg sm:w-48 motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0"
+                :style="{ transitionDelay: `${(li * 3 + pi) * 60}ms` }"
+              >
+                <img
+                  v-if="p.photo"
+                  :src="p.photo"
+                  :alt="p.name"
+                  loading="lazy"
+                  decoding="async"
+                  class="aspect-square h-auto w-full flex-none rounded-none object-cover"
+                />
+                <Avatar
+                  v-else
+                  icon="pi pi-image"
+                  shape="square"
+                  size="xlarge"
+                  class="!aspect-square !h-auto !w-full !flex-none !rounded-none !bg-blue-600 !text-3xl !text-white"
+                />
+                <div class="flex flex-1 flex-col px-3 py-3">
+                  <p class="text-sm font-bold leading-tight text-slate-900">{{ p.name }}</p>
+                  <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-blue-600">{{ p.title }}</p>
+                  <p class="mt-2 text-[11px] leading-snug text-slate-400 line-clamp-3">{{ p.desc }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- ===== REGION & DEMOGRAPHICS (emerald / green tone) ===== -->
-    <section id="wilayah" data-section="wilayah" class="section-tint section-tint--emerald relative overflow-hidden px-6 py-20">
-      <div class="section-dots section-dots--emerald pointer-events-none absolute inset-0" />
+    <section id="wilayah" data-section="wilayah" class="relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white px-6 py-20">
+      <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(#6ee7b7_1px,transparent_1px)] bg-[length:20px_20px] opacity-25" />
 
       <div class="relative mx-auto max-w-4xl">
-        <div class="reveal flex items-center gap-3">
-          <span class="section-eyebrow-dash section-eyebrow-dash--emerald" />
-          <span class="section-eyebrow section-eyebrow--emerald">Fakta &amp; Angka</span>
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex items-center gap-3">
+          <span class="h-px w-8 bg-emerald-600" />
+          <span class="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-emerald-700">Fakta &amp; Angka</span>
         </div>
-        <h2 class="reveal mt-2 text-2xl font-semibold text-slate-900">Data Wilayah &amp; Demografi</h2>
+        <h2 class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-2 text-2xl font-semibold text-slate-900">
+          Data Wilayah &amp; Demografi
+        </h2>
 
-        <div class="reveal mt-6 grid grid-cols-2 gap-4 md:grid-cols-4" data-trigger="stats">
+        <div
+          class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-6 grid grid-cols-2 gap-4 md:grid-cols-4"
+          data-trigger="stats"
+        >
           <Card
             v-for="(s, i) in stats"
             :key="s.label"
-            class="stat-card"
-            :class="accentClass(i)"
+            class="group !rounded-xl border bg-gradient-to-br to-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+            :class="accentFor(i).statBorder"
             :style="{ transitionDelay: `${i * 70}ms` }"
+            :pt="{ content: { class: '!p-5' } }"
           >
             <template #content>
-              <Avatar :label="s.icon" shape="circle" class="stat-avatar transition-all duration-300" />
+              <Avatar
+                :icon="s.icon"
+                shape="circle"
+                class="text-lg transition-all duration-300 group-hover:!text-white group-hover:scale-110"
+                :class="[accentFor(i).statIconBg, accentFor(i).statIconText, accentFor(i).statHover]"
+              />
               <p class="mt-4 text-[11px] font-medium uppercase tracking-wide text-slate-400">
                 {{ s.label }}
               </p>
@@ -511,13 +762,16 @@ async function initMap() {
           </Card>
         </div>
 
-        <div class="reveal my-10 h-px w-full bg-emerald-100" />
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 my-10 h-px w-full bg-emerald-100" />
 
         <!-- ===== INTERACTIVE MAP ===== -->
-        <Card class="reveal map-card isolate overflow-hidden" :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }">
+        <Card
+          class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 isolate overflow-hidden !rounded-2xl !border !border-emerald-200 !shadow-[0_14px_32px_rgba(5,150,105,0.1)]"
+          :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }"
+        >
           <template #content>
             <div class="relative h-80 w-full">
-              <div ref="mapEl" class="h-full w-full" />
+              <div ref="mapEl" data-trigger="map" class="h-full w-full" />
 
               <div
                 v-if="mapStatus === 'loading'"
@@ -546,501 +800,3 @@ async function initMap() {
     </section>
   </div>
 </template>
-
-<style scoped>
-.reveal {
-  opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
-}
-.reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Hero entrance */
-.hero-in {
-  opacity: 0;
-  transform: translateY(14px);
-  animation: heroFadeUp 0.7s ease forwards;
-}
-@keyframes heroFadeUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* "TENTANG KAMI" kicker: pops in slightly, accent dot pulses gently */
-.hero-pop {
-  opacity: 0;
-  transform: translateX(-8px);
-  animation: heroKickerIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-@keyframes heroKickerIn {
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-.hero-kicker-dot {
-  animation: kickerPulse 2.4s ease-in-out infinite 0.8s;
-}
-@keyframes kickerPulse {
-  0%, 100% { transform: rotate(45deg) scale(1); opacity: 1; }
-  50% { transform: rotate(45deg) scale(1.25); opacity: 0.7; }
-}
-
-/* "Tentang Kami" kicker label: soft gradient text instead of flat blue-300 */
-.hero-kicker-label {
-  background: linear-gradient(90deg, #7dd3fc, #c4b5fd);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-/* Title: each word appears one by one with a blur-in + 3D rotation */
-.hero-word {
-  opacity: 0;
-  filter: blur(10px);
-  transform: translateY(34px) rotateX(55deg) scale(0.92);
-  transform-origin: bottom;
-  color: #f1f5f9;
-  text-shadow: 0 2px 24px rgba(15, 23, 42, 0.35);
-  animation: heroWordIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-@keyframes heroWordIn {
-  to {
-    opacity: 1;
-    filter: blur(0);
-    transform: translateY(0) rotateX(0) scale(1);
-  }
-}
-
-/* Last title word ("Bimomartani") */
-.hero-word--accent {
-  background: linear-gradient(90deg, #38bdf8 0%, #6366f1 55%, #a855f7 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 18px rgba(99, 102, 241, 0.45));
-}
-
-/* Looping typewriter effect on the last title word */
-.hero-typing {
-  display: inline-block;
-  overflow: hidden;
-  white-space: nowrap;
-  vertical-align: bottom;
-  width: 0;
-  border-right: 3px solid #a855f7;
-  animation:
-    heroTypingLoop 5s steps(11, end) infinite,
-    heroCaretBlink 0.7s step-end infinite;
-  animation-delay: 1.6s, 1.6s;
-  animation-fill-mode: backwards, backwards;
-}
-@keyframes heroTypingLoop {
-  0% { width: 0; }
-  8% { width: 0; }
-  45% { width: 11ch; }
-  85% { width: 11ch; }
-  100% { width: 0; }
-}
-@keyframes heroCaretBlink {
-  50% { border-color: transparent; }
-}
-
-/* Accent underline: grows from the left once the last word has appeared */
-.hero-underline {
-  transform: scaleX(0);
-  transform-origin: left;
-  animation: underlineGrow 0.7s cubic-bezier(0.65, 0, 0.35, 1) forwards;
-  animation-delay: 1.15s;
-}
-@keyframes underlineGrow {
-  to { transform: scaleX(1); }
-}
-
-/* Hero background photo: outer wrapper (scroll parallax) */
-.hero-photo {
-  transition: transform 0.05s linear;
-  will-change: transform;
-}
-/* Inner layer: Ken Burns effect — a single smooth zoom-out on load */
-.hero-photo__zoom {
-  animation: heroKenBurns 9s ease-out forwards;
-  will-change: transform;
-}
-@keyframes heroKenBurns {
-  from { transform: scale(1.1); }
-  to { transform: scale(1); }
-}
-
-/* Subtle dot texture over the hero photo/gradient */
-.hero-dots {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px);
-  background-size: 22px 22px;
-}
-
-@keyframes pulse-slow {
-  0%, 100% { transform: scale(1); opacity: 0.5; }
-  50% { transform: scale(1.15); opacity: 0.8; }
-}
-.animate-pulse-slow {
-  animation: pulse-slow 6s ease-in-out infinite;
-}
-
-@keyframes float-slow {
-  0%, 100% { transform: translate(0, 0); }
-  50% { transform: translate(12px, -14px); }
-}
-.animate-float-slow {
-  animation: float-slow 9s ease-in-out infinite;
-}
-
-/* SECTION COLOR IDENTITIES */
-.section-tint--amber {
-  background: linear-gradient(180deg, #fffaf0 0%, #ffffff 85%);
-}
-.section-tint--violet {
-  background: linear-gradient(180deg, #f5f3ff 0%, #eef2ff 55%, #ffffff 100%);
-}
-.section-tint--teal {
-  background: linear-gradient(180deg, #f0fdfa 0%, #ffffff 85%);
-}
-.section-tint--emerald {
-  background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 85%);
-}
-
-.section-dots {
-  opacity: 0.5;
-  background-size: 20px 20px;
-}
-.section-dots--amber {
-  background-image: radial-gradient(#fcd34d 1px, transparent 1px);
-  opacity: 0.25;
-}
-.section-dots--violet {
-  background-image: radial-gradient(#c4b5fd 1px, transparent 1px);
-  opacity: 0.25;
-}
-.section-dots--teal {
-  background-image: radial-gradient(#5eead4 1px, transparent 1px);
-  opacity: 0.22;
-}
-.section-dots--emerald {
-  background-image: radial-gradient(#6ee7b7 1px, transparent 1px);
-  opacity: 0.22;
-}
-
-/* Big translucent watermark year behind the history heading */
-.section-year {
-  font-size: 9rem;
-  font-weight: 800;
-  line-height: 1;
-  color: #f59e0b;
-  opacity: 0.08;
-}
-
-/* Small colored "eyebrow" label + dash, one variant per section hue */
-.section-eyebrow-dash {
-  height: 1px;
-  width: 2rem;
-}
-.section-eyebrow-dash--amber { background: #f59e0b; }
-.section-eyebrow-dash--violet { background: #7c3aed; }
-.section-eyebrow-dash--teal { background: #0d9488; }
-.section-eyebrow-dash--emerald { background: #059669; }
-
-.section-eyebrow {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-}
-.section-eyebrow--amber { color: #b45309; }
-.section-eyebrow--violet { color: #6d28d9; }
-.section-eyebrow--teal { color: #0f766e; }
-.section-eyebrow--emerald { color: #047857; }
-
-/* History timeline dots marking each paragraph/milestone */
-.history-milestone {
-  position: relative;
-}
-.history-dot {
-  position: absolute;
-  left: -2.05rem;
-  top: 0.5rem;
-  width: 10px;
-  height: 10px;
-  border-radius: 9999px;
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 2px currentColor;
-}
-.history-dot--amber {
-  background: #f59e0b;
-  color: #f59e0b;
-}
-
-/* PrimeVue component styling overrides */
-.anchor-tabs :deep(.p-tabs) {
-  background: transparent;
-}
-.anchor-tabs :deep(.p-tablist) {
-  border: none;
-  background: transparent;
-}
-.anchor-tabs :deep(.p-tablist-tab-list) {
-  gap: 0.25rem;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  border: none;
-}
-.anchor-tabs :deep(.p-tab) {
-  border: none;
-  background: transparent;
-  padding: 1rem 0.75rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #64748b;
-  white-space: nowrap;
-}
-.anchor-tabs :deep(.p-tab-active) {
-  color: #2563eb;
-  background: transparent;
-}
-.anchor-tabs :deep(.p-tablist-active-bar) {
-  background: #2563eb;
-  height: 2px;
-}
-
-/* Accent tokens */
-.accent-blue {
-  --accent: #2563eb;
-  --accent-soft: #eff6ff;
-  --accent-soft2: #dbeafe;
-}
-.accent-purple {
-  --accent: #7c3aed;
-  --accent-soft: #f5f3ff;
-  --accent-soft2: #ede9fe;
-}
-.accent-teal {
-  --accent: #0d9488;
-  --accent-soft: #f0fdfa;
-  --accent-soft2: #ccfbf1;
-}
-.accent-amber {
-  --accent: #d97706;
-  --accent-soft: #fffbeb;
-  --accent-soft2: #fef3c7;
-}
-.accent-rose {
-  --accent: #e11d48;
-  --accent-soft: #fff1f2;
-  --accent-soft2: #ffe4e6;
-}
-.accent-indigo {
-  --accent: #4f46e5;
-  --accent-soft: #eef2ff;
-  --accent-soft2: #e0e7ff;
-}
-
-/* Card blocks used as generic content containers */
-.photo-placeholder-card :deep(.p-card-body),
-.role-card :deep(.p-card-body),
-.mission-card :deep(.p-card-body),
-.vision-card :deep(.p-card-body),
-.stat-card :deep(.p-card-body) {
-  padding: 0;
-}
-.photo-placeholder-card :deep(.p-card-content),
-.stat-card :deep(.p-card-content) {
-  padding: 1.25rem;
-}
-.photo-placeholder-card {
-  border-radius: 0.75rem;
-  overflow: hidden;
-  background: linear-gradient(to bottom right, #fff7ed, #ffedd5);
-  border: 1px solid #fed7aa;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.photo-placeholder-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 24px rgba(217, 119, 6, 0.14);
-}
-
-/* Vision card: gradient top bar + a soft violet glow to stand out from the rest of the page */
-.vision-card :deep(.p-card-content) {
-  padding: 2rem;
-  position: relative;
-}
-.vision-card {
-  border-radius: 1rem;
-  border: none;
-  position: relative;
-  background: linear-gradient(180deg, #ffffff 0%, #faf9ff 100%);
-  box-shadow: 0 16px 40px rgba(124, 58, 237, 0.14);
-}
-.vision-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 4px;
-  border-radius: 1rem 1rem 0 0;
-  background: linear-gradient(90deg, #7c3aed, #2563eb);
-}
-.vision-quote {
-  display: block;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 3rem;
-  line-height: 1;
-  background: linear-gradient(90deg, #7c3aed, #2563eb);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.mission-card :deep(.p-card-content) {
-  padding: 1rem;
-}
-.mission-card {
-  border-radius: 0.75rem;
-  border: 1px solid #f1f5f9;
-  border-left: 3px solid var(--accent, #2563eb);
-  background: linear-gradient(90deg, var(--accent-soft, #eff6ff) 0%, #ffffff 14%);
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
-}
-.mission-card:hover {
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-  transform: translateY(-2px);
-}
-.mission-avatar {
-  background: var(--accent, #2563eb) !important;
-  color: #fff !important;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.role-card :deep(.p-card-content) {
-  padding: 1.25rem;
-}
-.role-card {
-  border-radius: 0.75rem;
-  border: 1px solid #f1f5f9;
-  border-top: 3px solid var(--accent, #2563eb);
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
-}
-.role-card:hover {
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.1);
-  transform: translateY(-2px);
-}
-.role-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 9999px;
-  background: var(--accent-soft, #eff6ff);
-  color: var(--accent, #2563eb);
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.stat-card {
-  border-radius: 0.75rem;
-  border: 1px solid var(--accent-soft2, #f1f5f9);
-  background: linear-gradient(160deg, var(--accent-soft, #ffffff) 0%, #ffffff 65%);
-  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
-}
-.stat-card:hover {
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
-  transform: translateY(-4px);
-}
-.stat-avatar {
-  background: var(--accent-soft2, #eff6ff) !important;
-  color: var(--accent, #2563eb) !important;
-  font-size: 1.125rem;
-}
-.stat-card:hover .stat-avatar {
-  background: var(--accent, #2563eb) !important;
-  color: #fff !important;
-  transform: scale(1.1);
-}
-
-/* Org chart card + node styling: teal identity for the "Struktur Organisasi" section */
-.org-chart-card {
-  border-radius: 1rem;
-  border: 1px solid #ccfbf1;
-  box-shadow: 0 10px 30px rgba(13, 148, 136, 0.08);
-}
-.org-chart-wrap :deep(.p-organizationchart-node-content) {
-  border-radius: 10px;
-  border: 1px solid #99f6e4;
-  background: linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%);
-  padding: 10px 18px;
-  box-shadow: 0 1px 2px rgba(13, 148, 136, 0.08);
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-}
-.org-chart-wrap :deep(.p-organizationchart-node-content:hover) {
-  transform: translateY(-2px);
-  border-color: #2dd4bf;
-  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.18);
-}
-.org-chart-node-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #0f766e;
-}
-.org-chart-wrap :deep(.p-organizationchart-line-down),
-.org-chart-wrap :deep(.p-organizationchart-line-left),
-.org-chart-wrap :deep(.p-organizationchart-line-right) {
-  border-color: #5eead4;
-}
-
-/* Map card: emerald identity for the "Wilayah & Demografi" section */
-.map-card {
-  border-radius: 1rem;
-  border: 1px solid #a7f3d0;
-  box-shadow: 0 14px 32px rgba(5, 150, 105, 0.1);
-}
-
-/* Leaflet: keep the map controls (zoom, etc.) below the sticky nav's z-index */
-:deep(.leaflet-pane),
-:deep(.leaflet-top),
-:deep(.leaflet-bottom) {
-  z-index: 10;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* Decorative looping animations (blobs, dot pulse, kicker, Ken Burns, typing) fully disabled */
-  .animate-pulse-slow, .animate-float-slow, .hero-word, .hero-word--accent,
-  .hero-kicker-dot, .hero-photo__zoom, .hero-typing {
-    animation: none !important;
-  }
-  .hero-word, .hero-word--accent {
-    color: #ffffff !important;
-    background: none !important;
-    -webkit-background-clip: unset !important;
-    filter: none !important;
-  }
-  .hero-word--accent {
-    color: #3b82f6 !important;
-  }
-  .hero-typing {
-    width: auto !important;
-    border-right: none !important;
-  }
-  .hero-photo__zoom {
-    transform: scale(1) !important;
-  }
-  /* "Entrance" animations stay visible but are sped up drastically, not removed entirely */
-  .reveal, .hero-in, .hero-photo, .hero-pop, .hero-underline {
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-    transform: none !important;
-  }
-}
-</style>
