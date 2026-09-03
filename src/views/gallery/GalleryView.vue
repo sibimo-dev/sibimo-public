@@ -93,6 +93,7 @@ const events = [
     title: 'Rapat Koordinasi RT/RW Se-Kalurahan',
     description:
       'Koordinasi rutin seluruh ketua RT dan RW se-Kalurahan Bimomartani membahas pendataan warga, keamanan lingkungan, dan persiapan agenda kalurahan mendatang.',
+    image: '/images/gallery/rapat koordinasi.jpeg',
   },
   {
     id: 7,
@@ -233,7 +234,7 @@ function styleFor(slug) {
     <div class="fade-in-up">
       <div class="inline-flex items-center gap-2">
         <span class="header-kicker-dot h-2 w-2 rounded-full bg-sky-500" />
-        <span class="text-xs font-bold uppercase tracking-[0.25em] text-sky-600">Agenda</span>
+        <span class="text-xs font-bold uppercase tracking-[0.25em] text-sky-600">Jelajahi</span>
       </div>
       <h1 class="mt-2 text-2xl md:text-3xl font-bold text-heading">
         Galeri <span class="heading-accent">Bimomartani</span>
