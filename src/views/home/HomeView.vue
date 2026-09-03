@@ -710,14 +710,15 @@ onBeforeUnmount(() => {
         <div class="pointer-events-none absolute -right-16 -top-16 w-56 h-56 rounded-full bg-sky-400/15 blur-2xl" />
         <div class="pointer-events-none absolute -left-10 bottom-[-3rem] w-48 h-48 rounded-full bg-violet-400/15 blur-2xl" />
 
+        
         <div
-          class="relative shrink-0 w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center overflow-hidden"
+          class="relative shrink-0 w-50 aspect-[5/6] sm:w-72 lg:w-80 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center overflow-hidden"
         >
           <img
             v-if="pamongFotoSrc(lurah)"
             :src="pamongFotoSrc(lurah)"
             :alt="lurah.nama"
-            class="w-full h-full object-cover"
+            class="w-full h-full object-cover object-[center_75%]"
           />
           <div v-else class="flex flex-col items-center justify-center gap-2">
             <i class="pi pi-user text-4xl sm:text-5xl text-white/50" />
@@ -737,6 +738,22 @@ onBeforeUnmount(() => {
           <p class="mt-3 text-[13.5px] sm:text-[15px] text-white/75 leading-relaxed max-w-[520px]">
             {{ lurah.desc }}
           </p>
+
+          <!-- Info tambahan: lokasi & jabatan sebagai pill, tempat yang
+               sama bisa dipakai nanti untuk kontak / tautan sosial media
+               Lurah bila datanya sudah tersedia. -->
+          <div class="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
+            <Tag
+              icon="pi pi-map-marker"
+              value="Kalurahan Bimomartani"
+              class="!rounded-full !border-none !bg-white/10 !text-[11px] !font-semibold !text-white"
+            />
+            <Tag
+              icon="pi pi-verified"
+              value="Lurah"
+              class="!rounded-full !border-none !bg-white/10 !text-[11px] !font-semibold !text-white"
+            />
+          </div>
         </div>
       </div>
 
@@ -764,13 +781,16 @@ onBeforeUnmount(() => {
           <div
             v-for="(item, i) in pamongList"
             :key="item.nama"
-            class="relative snap-start shrink-0 w-[220px] sm:w-[248px] rounded-2xl border bg-surface p-4 flex flex-col hover:shadow-md transition-all overflow-hidden"
+            class="relative snap-start shrink-0 w-50 sm:w-54 rounded-2xl border bg-surface p-4 flex flex-col hover:shadow-md transition-all overflow-hidden"
             :class="colorAt(i).border"
           >
             <span class="absolute inset-x-0 top-0 h-1" :class="colorAt(i).topBar" />
 
+            <!-- Foto pamong: ukuran & rasio disamakan dengan kartu Dukuh
+                 di halaman Profil (aspect-square) — object-cover supaya
+                 penuh tanpa ruang kosong. -->
             <div
-              class="w-full aspect-[4/3] rounded-xl flex items-center justify-center overflow-hidden mb-3.5"
+              class="w-full aspect-square rounded-xl flex items-center justify-center overflow-hidden mb-3.5"
               :class="[colorAt(i).iconBg, colorAt(i).iconText]"
             >
               <img
