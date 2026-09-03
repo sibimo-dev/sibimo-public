@@ -33,7 +33,7 @@ const related = computed(() =>
         class="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-600"
       >
         <i class="pi pi-arrow-left text-xs" />
-        Kembali ke Potensi Desa
+        Kembali ke Potensi Bimomartani
       </RouterLink>
     </div>
 
@@ -45,7 +45,7 @@ const related = computed(() =>
         class="fade-in-up inline-flex items-center gap-2 text-sm font-semibold text-muted transition-colors hover:text-primary-500"
       >
         <i class="pi pi-arrow-left text-xs" />
-        Kembali ke Potensi Desa
+        Kembali ke Potensi Bimomartani
       </RouterLink>
 
       <!-- hero image -->
@@ -53,13 +53,15 @@ const related = computed(() =>
         class="fade-in-up relative mt-4 flex h-56 w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-surface-hover to-border-default md:h-80"
         style="animation-delay: 60ms"
       >
-        <i class="pi pi-image text-5xl text-muted/40" />
-        <span
-          class="absolute top-4 right-4 flex items-center gap-1.5 rounded-full bg-surface/90 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-heading shadow-sm backdrop-blur-sm"
-        >
-          <i :class="categoryIcon(item.category)" class="text-[11px] text-primary-500" />
-          {{ categoryLabel(item.category) }}
-        </span>
+        <img
+          v-if="item.image"
+          :src="item.image"
+          :alt="item.name"
+          class="h-full w-full object-cover"
+          style="object-position: center 30%"
+        />
+        <i v-else class="pi pi-image text-5xl text-muted/40" />
+        ...
       </div>
 
       <div class="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_320px]">

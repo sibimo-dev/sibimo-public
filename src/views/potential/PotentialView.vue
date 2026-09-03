@@ -150,8 +150,16 @@ const allTabActive = 'border-transparent bg-gradient-to-r from-primary-500 via-v
             class="shimmer-wrap relative flex h-44 w-full items-center justify-center overflow-hidden bg-gradient-to-br transition-transform duration-500 group-hover:scale-105"
             :class="styleFor(item.category).imageGrad"
           >
-            <i class="pi pi-image text-3xl opacity-40" :class="styleFor(item.category).iconColor" />
-            <span class="shimmer-sweep absolute inset-0 bg-gradient-to-r from-transparent to-transparent" :class="styleFor(item.category).shimmer" />
+            <img
+              v-if="item.image"
+              :src="item.image"
+              :alt="item.name"
+              class="h-full w-full object-cover"
+            />
+            <template v-else>
+              <i class="pi pi-image text-3xl opacity-40" :class="styleFor(item.category).iconColor" />
+              <span class="shimmer-sweep absolute inset-0 bg-gradient-to-r from-transparent to-transparent" :class="styleFor(item.category).shimmer" />
+            </template>
           </div>
           <span
             class="absolute top-3 right-3 flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide shadow-sm backdrop-blur-sm"
