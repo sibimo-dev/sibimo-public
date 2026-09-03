@@ -8,14 +8,15 @@ export const potentialCategories = [
 
 export const potentials = [
   {
-    slug: 'kopi-luwak-bimomartani',
+    slug: 'batik-permata-ukmk-bimomartani',
     category: 'umkm',
-    name: 'Kopi Luwak Bimomartani',
+    name: 'Batik Permata UKMK Bimomartani',
+    image: '/images/gallery/batik permata.jpg',
     shortDesc:
-      'Kopi luwak asli hasil fermentasi alami dengan cita rasa premium, diproduksi oleh kelompok UMKM setempat.',
+      'Salah satu produk unggulan UMKM dikalurahan Bimomartani adalah Batik Permata dibawah naungan kelompok UMKM Desa Prima.',
     longDesc:
-      'Kopi Luwak Bimomartani diproduksi secara tradisional oleh kelompok UMKM warga dusun setempat, memanfaatkan biji kopi robusta pilihan yang difermentasi secara alami. Proses sangrai dilakukan manual untuk menjaga cita rasa khas dan aroma premium yang menjadi ciri khas produk ini. Selain dijual dalam bentuk biji dan bubuk, produk ini juga tersedia dalam kemasan siap seduh yang cocok dijadikan oleh-oleh khas Bimomartani.',
-    location: 'Padukuhan Karanggeneng, Bimomartani',
+      'Adapun beberapa produk unggulan merupakan ciri khas Batik Parijoto Sleman DIY. Bagi custumer yang berminat produk Batik Parijoto buatan Batik Permata dapat langsung datang ke Padukuhan Sorasan RT 04/ RW 25, Bimomartani, Ngemplak, Sleman.',
+    location: 'Padukuhan Sorasan, Bimomartani',
     contact: '0812-xxxx-xxxx (Ibu Siti, Ketua Kelompok UMKM)',
     extra: {
       'Harga Mulai': 'Rp45.000 / 100gr',
@@ -24,18 +25,19 @@ export const potentials = [
     },
   },
   {
-    slug: 'sawah-organik-makmur',
+    slug: 'penanaman-kelapa-genjah',
     category: 'pertanian',
-    name: 'Sawah Organik Makmur',
+    name: 'Penanaman Kelapa Genjah Sebagai Alternatif Tanaman Lahan Kering Di Bimomartani',
+    image: '/images/gallery/penanaman kelapa genjah.jpeg',
     shortDesc:
-      'Hamparan sawah organik yang dikelola dengan sistem pengairan tradisional, menghasilkan beras berkualitas.',
+      'Kegiatan penanaman dan serah terima bantuan Bibit Kelapa Genjah dari Kemetrian Pertanian dan Dinas Pertanian Kabupaten Sleman kepada Gapoktan “Bimo Makmur” Kalurahan Bimomartani.',
     longDesc:
-      'Sawah Organik Makmur dikelola oleh Kelompok Tani Makmur dengan menerapkan sistem pertanian organik tanpa pupuk kimia, memanfaatkan sistem pengairan tradisional dari saluran irigasi desa. Hasil panen berupa beras organik premium yang telah dipasarkan hingga ke luar kapanewon. Kelompok tani ini juga aktif mengadakan pelatihan bertani organik bagi generasi muda desa.',
-    location: 'Padukuhan Jetis, Bimomartani',
+      'Pada hari ini Selasa 07 Oktober 2025 dilakukan kegiatan penanaman dan serah terima bantuan Bibit Kelapa Genjah dari Kemetrian Pertanian dan Dinas Pertanian Kabupaten Sleman kepada Gapoktan “Bimo Makmur” Kalurahan Bimomartani di Komplek Embung Bimomartani. Rencananya penanaman bibit kelapa genjah ini akan tersebar seluas 10 hektar di wilayah Kalurahan Bimomartani. Turut hadir dalam kegiatan tersebut Wakil Bupati Sleman Bp Danang Maharsa, S.E beserta Dinas Pertanian Kabupaten sleman, Panewu Ngemplak, Polsek Ngemplak, Koramil Ngemplak, seluruh Perangkat Kalurahan Bimomartani, dan Anggota Gapoktan “Bimo Makmur”. Dengan kegiatan tersebut harapannya Bimomartani dapat menjadi lumbung/sentra hasil pertanian kelapa genjah untuk wilayah Kapanewon Ngemplak.',
+    location: 'Komplek Embung Bimomartani, Bimomartani',
     contact: 'Kelompok Tani Makmur — Bapak Wagiyo (Ketua)',
     extra: {
       'Luas Lahan': '±12 Ha',
-      Komoditas: 'Padi Organik',
+      Komoditas: 'Buah Segar, Kelapa Kopyor, Bibit Pohon',
       'Musim Panen': '3x per tahun',
     },
   },
@@ -43,6 +45,7 @@ export const potentials = [
     slug: 'embung-bimomartani',
     category: 'pariwisata',
     name: 'Embung Bimomartani',
+    image: '/images/gallery/embung bimomartani.jpg',
     shortDesc:
       'Destinasi wisata air buatan yang menawarkan pemandangan asri, spot memancing, dan area rekreasi.',
     longDesc:
