@@ -9,12 +9,12 @@ const socialLinks = [
 ];
 
 const footerLinks = [
-  { label: "Profil Desa", to: { name: "profile" } },
+  { label: "Profil Kalurahan", to: { name: "profile" } },
   { label: "Layanan Surat", to: { name: "services" } },
   { label: "Aduan Masyarakat", to: { name: "complaints" } },
-  { label: "Potensi Desa", to: { name: "potential" } },
-  { label: "Gallery Desa", to: { name: "gallery" } },
-  { label: "Agenda Desa", to: { name: "events" } },
+  { label: "Potensi Bimomartani", to: { name: "potential" } },
+  { label: "Galeri Kalurahan", to: { name: "gallery" } },
+  { label: "Agenda Kalurahan", to: { name: "events" } },
 ];
 
 const mapEmbedSrc =
