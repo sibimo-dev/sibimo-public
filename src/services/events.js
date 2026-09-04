@@ -1,97 +1,85 @@
+import api from "./api";
 
-
-export const agendaMonths = [
-  {
-    key: "2026-04",
-    monthLabel: "April",
-    year: 2026,
-    dayHighlight: "01",
-    title: "Agenda April 2026",
-    location: "Kalurahan Bimomartani",
-    excerpt:
-      "Pemilihan terbuka toko program BSPS, pelatihan pertanian organik untuk kelompok tani, rapat koordinasi kader IMP, serta jadwal posyandu dan rapat evaluasi BPD bulanan.",
-    items: [
-      { no: 1, day: "Rabu", date: "01 Apr 2026", time: "09.00", event: "Pelatihan Pertanian Organik", place: "Aula Serbaguna", attendee: "Kelompok Tani" },
-      { no: 2, day: "Senin", date: "06 Apr 2026", time: "10.00", event: "Pemilihan Terbuka Toko Program BSPS", place: "Ruang Rapat Kalurahan", attendee: "Calon Penerima BSPS" },
-      { no: 3, day: "Rabu", date: "08 Apr 2026", time: "08.00", event: "Posyandu Balita & Lansia", place: "Puskesmas Pembantu", attendee: "Kader Kesehatan" },
-      { no: 4, day: "Kamis", date: "16 Apr 2026", time: "09.00", event: "Rapat Koordinasi Kader IMP", place: "Balai Kalurahan", attendee: "Kader IMP" },
-      { no: 5, day: "Senin", date: "20 Apr 2026", time: "13.00", event: "Rapat Evaluasi BPD Bulanan", place: "Ruang Rapat BPD", attendee: "Anggota BPD" },
-    ],
-  },
-  {
-    key: "2026-05",
-    monthLabel: "Mei",
-    year: 2026,
-    dayHighlight: "01",
-    title: "Agenda Mei 2026",
-    location: "Kalurahan Bimomartani",
-    excerpt:
-      "Musyawarah dusun persiapan Musrenbangdes, BIMTEK pembentukan Satgas Anti Narkoba, jemput bola PBB-P2 tahap III, serta jadwal posyandu dan rapat evaluasi BPD bulanan.",
-    items: [
-      { no: 1, day: "Jumat", date: "01 Mei 2026", time: "08.00", event: "Musyawarah Dusun Persiapan Musrenbangdes", place: "Balai Dusun", attendee: "Tokoh Masyarakat" },
-      { no: 2, day: "Selasa", date: "05 Mei 2026", time: "09.00", event: "BIMTEK Pembentukan Satgas Anti Narkoba", place: "Ruang Rapat Kalurahan", attendee: "Satgas & Kader Dusun" },
-      { no: 3, day: "Senin", date: "11 Mei 2026", time: "08.00", event: "Jemput Bola PBB-P2 Tahap III (Hari Pertama)", place: "Padukuhan Klakah & Tampungan", attendee: "Wajib Pajak Setempat" },
-      { no: 4, day: "Rabu", date: "13 Mei 2026", time: "08.00", event: "Posyandu Balita & Lansia", place: "Puskesmas Pembantu", attendee: "Kader Kesehatan" },
-      { no: 5, day: "Senin", date: "18 Mei 2026", time: "13.00", event: "Rapat Evaluasi BPD Bulanan", place: "Ruang Rapat BPD", attendee: "Anggota BPD" },
-    ],
-  },
-  {
-    key: "2026-06",
-    monthLabel: "Juni",
-    year: 2026,
-    dayHighlight: "06",
-    title: "Agenda Juni 2026",
-    location: "Kalurahan Bimomartani",
-    excerpt:
-      "Senam bersama pamong kalurahan, gotong royong pembersihan saluran irigasi, pelatihan UMKM pengolahan hasil panen, hingga pagelaran wayang kulit merti dusun.",
-    items: [
-      { no: 1, day: "Senin", date: "01 Jun 2026", time: "06.30", event: "Senam Bersama Pamong Kalurahan", place: "Halaman Balai Kalurahan", attendee: "Seluruh Pamong" },
-      { no: 2, day: "Minggu", date: "07 Jun 2026", time: "07.00", event: "Gotong Royong Pembersihan Saluran Irigasi", place: "Sepanjang Saluran Dusun", attendee: "Seluruh Warga" },
-      { no: 3, day: "Rabu", date: "10 Jun 2026", time: "09.00", event: "Pelatihan UMKM Pengolahan Hasil Panen", place: "Aula Serbaguna", attendee: "Kelompok PKK" },
-      { no: 4, day: "Rabu", date: "17 Jun 2026", time: "08.00", event: "Posyandu Balita & Lansia", place: "Puskesmas Pembantu", attendee: "Kader Kesehatan" },
-      { no: 5, day: "Senin", date: "22 Jun 2026", time: "13.00", event: "Rapat Evaluasi BPD Bulanan", place: "Ruang Rapat BPD", attendee: "Anggota BPD" },
-      { no: 6, day: "Sabtu", date: "27 Jun 2026", time: "19.30", event: "Pagelaran Wayang Kulit Merti Dusun", place: "Lapangan Dusun", attendee: "Seluruh Warga" },
-    ],
-  },
-  {
-    key: "2026-07",
-    monthLabel: "Juli",
-    year: 2026,
-    dayHighlight: "07",
-    title: "Agenda Juli 2026",
-    location: "Kalurahan Bimomartani",
-    excerpt:
-      "Musyawarah Perencanaan Pembangunan Desa (Musrenbangdes) semester II, evaluasi program kerja BUMDes, sosialisasi dana kalurahan, serta rapat koordinasi kader sehat.",
-    items: [
-      { no: 1, day: "Rabu", date: "01 Jul 2026", time: "19.30", event: "Musrenbangdes Semester II", place: "Balai Kalurahan Lantai 2", attendee: "Perangkat & BPD" },
-      { no: 2, day: "Senin", date: "06 Jul 2026", time: "09.00", event: "Evaluasi Program Kerja BUMDes", place: "Kantor BUMDes", attendee: "Pengurus BUMDes" },
-      { no: 3, day: "Rabu", date: "08 Jul 2026", time: "08.00", event: "Posyandu Balita & Lansia", place: "Puskesmas Pembantu", attendee: "Kader Kesehatan" },
-      { no: 4, day: "Kamis", date: "16 Jul 2026", time: "10.00", event: "Sosialisasi Dana Desa Semester II", place: "Aula Serbaguna", attendee: "Seluruh Warga" },
-      { no: 5, day: "Senin", date: "20 Jul 2026", time: "13.00", event: "Rapat Evaluasi BPD Bulanan", place: "Ruang Rapat BPD", attendee: "Anggota BPD" },
-      { no: 6, day: "Jumat", date: "24 Jul 2026", time: "09.00", event: "Rapat Koordinasi Kader Sehat", place: "Balai Kalurahan", attendee: "Kader Kesehatan Dusun" },
-    ],
-  },
-  {
-    key: "2026-08",
-    monthLabel: "Agustus",
-    year: 2026,
-    dayHighlight: "08",
-    title: "Agenda Agustus 2026",
-    location: "Kalurahan Bimomartani",
-    excerpt:
-      "Rangkaian kegiatan peringatan Hari Kemerdekaan RI ke-81, pemantauan penyaluran bantuan CPP, perlombaan antar dusun, malam tirakatan, dan upacara bendera di lapangan desa.",
-    items: [
-      { no: 1, day: "Sabtu", date: "01 Agu 2026", time: "07.00", event: "Rapat Persiapan HUT RI ke-81", place: "Balai Desa", attendee: "Panitia HUT RI" },
-      { no: 2, day: "Senin", date: "03 Agu 2026", time: "09.00", event: "Pemantauan Penyaluran Bantuan CPP", place: "Kantor Pos Cabang Terdekat", attendee: "Penerima Bantuan CPP" },
-      { no: 3, day: "Senin", date: "10 Agu 2026", time: "15.00", event: "Lomba Agustusan Antar Dusun", place: "Lapangan Desa Utama", attendee: "Seluruh Warga" },
-      { no: 4, day: "Rabu", date: "12 Agu 2026", time: "08.00", event: "Posyandu Balita & Lansia", place: "Puskesmas Pembantu", attendee: "Kader Kesehatan" },
-      { no: 5, day: "Jumat", date: "14 Agu 2026", time: "19.30", event: "Malam Tirakatan", place: "Halaman Balai Desa", attendee: "Seluruh Warga" },
-      { no: 6, day: "Sabtu", date: "15 Agu 2026", time: "07.00", event: "Upacara Bendera HUT RI ke-81", place: "Lapangan Desa Utama", attendee: "Seluruh Warga & Perangkat Desa" },
-      { no: 7, day: "Rabu", date: "19 Agu 2026", time: "13.00", event: "Rapat Evaluasi BPD Bulanan", place: "Ruang Rapat BPD", attendee: "Anggota BPD" },
-    ],
-  },
+const DAY_NAMES = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const MONTH_NAMES = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ];
 
+function parseDateSafe(dateString) {
+  if (!dateString) return new Date();
+  const datePart = dateString.split("T")[0]; // buang bagian jam kalau ada (mis. "2026-09-06T00:00:00.000000Z")
+  const [year, month, day] = datePart.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function formatTime(t) {
+  if (!t) return "";
+  return t.slice(0, 5).replace(":", "."); // "09:00:00" -> "09.00"
+}
+
+function mapAgendaItem(agenda, index) {
+  const date = parseDateSafe(agenda.event_date);
+  return {
+    no: index + 1,
+    day: DAY_NAMES[date.getDay()],
+    date: date.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }),
+    time: agenda.end_time ? `${formatTime(agenda.start_time)} - ${formatTime(agenda.end_time)}` : formatTime(agenda.start_time),
+    event: agenda.title,
+    place: agenda.location || "-",
+    attendee: agenda.attendee || "Seluruh Warga",
+    _eventDate: agenda.event_date,
+  };
+}
+
+// kelompokkan list flat dari backend jadi struktur per-bulan
+// yang sama persis dengan bentuk agendaMonths dummy sebelumnya
+function groupByMonth(agendas) {
+  const sorted = [...agendas].sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+
+  const groups = new Map();
+
+  sorted.forEach((agenda) => {
+    const d = parseDateSafe(agenda.event_date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        monthLabel: MONTH_NAMES[d.getMonth()],
+        year: d.getFullYear(),
+        dayHighlight: String(d.getDate()).padStart(2, "0"),
+        title: `Agenda ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`,
+        location: "Kalurahan Bimomartani",
+        excerpt: "",
+        items: [],
+      });
+    }
+    groups.get(key).items.push(agenda);
+  });
+
+  return Array.from(groups.values()).map((group) => {
+    const itemTitles = group.items.slice(0, 3).map((a) => a.title).join(", ");
+    return {
+      ...group,
+      excerpt: itemTitles ? `${itemTitles}, dan agenda lainnya.` : "Belum ada agenda pada bulan ini.",
+      items: group.items.map(mapAgendaItem),
+    };
+  });
+}
+
+let cache = null;
+
+export async function fetchAgendaMonths() {
+  const res = await api.get("/agendas");
+  cache = groupByMonth(res.data.data);
+  return cache;
+}
+
+export function getAgendaMonthsSync() {
+  return cache || [];
+}
+
 export function getMonthByKey(key) {
-  return agendaMonths.find((m) => m.key === key);
+  return (cache || []).find((m) => m.key === key);
 }

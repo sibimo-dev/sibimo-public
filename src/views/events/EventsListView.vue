@@ -1,13 +1,25 @@
 <script setup>
 
-import { computed, ref } from "vue";
+import { computed, ref, onMounted} from "vue";
 import { RouterLink } from "vue-router";
 import Button from "primevue/button";
-import { agendaMonths } from "@/services/events.js";
+import { fetchAgendaMonths } from "@/services/events.js";
 
 
-const timelineMonths = computed(() => [...agendaMonths].reverse());
+const agendaMonths = ref([]);
+const loading = ref(true);
 
+onMounted(async () => {
+  try {
+    agendaMonths.value = await fetchAgendaMonths();
+  } catch (err) {
+    console.error("Gagal memuat agenda:", err);
+  } finally {
+    loading.value = false;
+  }
+});
+
+const timelineMonths = computed(() => [...agendaMonths.value].reverse());
 const visibleCount = ref(3);
 const visibleTimelineMonths = computed(() => timelineMonths.value.slice(0, visibleCount.value));
 const hasMoreTimeline = computed(() => visibleCount.value < timelineMonths.value.length);
@@ -39,6 +51,7 @@ function loadMore() {
 
     <!-- ============ LINIMASA ============ -->
     <section v-reveal class="mt-8">
+      <div v-if="loading" class="py-16 text-center text-muted">Memuat agenda...</div>
       <div>
         <div v-for="(item, idx) in visibleTimelineMonths" :key="item.key" class="flex gap-3 sm:gap-4">
           <!-- rel: bulatan tanggal + garis linimasa -->

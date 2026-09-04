@@ -1,7 +1,6 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { RouterLink } from "vue-router";
-
 import InputText from "primevue/inputtext";
 import IconField from "primevue/iconfield";
 import InputIcon from "primevue/inputicon";
@@ -9,14 +8,24 @@ import SelectButton from "primevue/selectbutton";
 import Paginator from "primevue/paginator";
 import Tag from "primevue/tag";
 
-import { getAllNews, newsCategories } from "@/services/news.js";
+import { fetchAllNews, newsCategories } from "@/services/news.js";
 
-const allNews = getAllNews();
+const allNews = ref([]);
+const loading = ref(true);
 
-const pinnedNews = computed(() => allNews.find((item) => item.isPinned) || null);
+onMounted(async () => {
+  try {
+    allNews.value = await fetchAllNews();
+  } catch (err) {
+    console.error("Gagal memuat berita:", err);
+  } finally {
+    loading.value = false;
+  }
+});
 
+const pinnedNews = computed(() => allNews.value.find((item) => item.isPinned) || null);
 const latestNews = computed(() =>
-  [...allNews].sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO)).slice(0, 3)
+  [...allNews.value].sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO)).slice(0, 3)
 );
 
 const ALL_CATEGORY_LABEL = "Semua Kategori";
@@ -34,7 +43,7 @@ const pageSize = 6;
 const currentPage = ref(1);
 
 const filteredSorted = computed(() => {
-  let items = [...allNews];
+  let items = [...allNews.value];
 
   if (activeCategory.value !== ALL_CATEGORY_LABEL) {
     items = items.filter((item) => item.category === activeCategory.value);
@@ -148,6 +157,7 @@ function getCategoryStyle(category) {
 </script>
 
 <template>
+  <div v-if="loading" class="py-20 text-center text-muted">Memuat berita...</div>
   <div class="relative flex flex-col gap-8 overflow-hidden py-6 lg:py-8">
     <!-- Ambient glow, gantinya blob custom keyframes -->
     <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 animate-pulse rounded-full bg-sky-400/10 blur-3xl" />

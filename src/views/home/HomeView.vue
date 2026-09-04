@@ -1,10 +1,12 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from "vue";
+import { fetchAllNews } from "@/services/news.js";
 import { RouterLink, useRouter } from "vue-router";
 import Tag from "primevue/tag";
 import HeroCarousel from "@/components/shared/HeroCarousel.vue";
 
 const router = useRouter();
+const newsList = ref([]);
 
 /* ============ HERO SEARCH ============ */
 const searchQuery = ref("");
@@ -122,12 +124,13 @@ function colorAt(i) {
 /* Kategori berita -> warna tetap (bukan bergilir), biar makna warnanya
    konsisten tiap kali kategori yang sama muncul */
 const newsCategoryColor = {
-  Kesehatan: colorPalette[0], // sky
-  Sosial: colorPalette[1], // rose
-  Pembangunan: colorPalette[2], // amber
-  Budaya: colorPalette[3], // violet
-  Pemerintahan: colorPalette[5], // indigo
+  Kesehatan: colorPalette[0],
+  Sosial: colorPalette[1],
+  Pembangunan: colorPalette[2],
+  Budaya: colorPalette[3],
+  Pemerintahan: colorPalette[5],
 };
+
 function colorForNewsCategory(category) {
   return newsCategoryColor[category] || colorPalette[0];
 }
@@ -165,27 +168,6 @@ const quickAccess = [
     icon: "pi-building-columns",
     title: "BUMDes",
     desc: "Badan usaha milik desa untuk kesejahteraan warga.",
-  },
-];
-
-const newsDummy = [
-  {
-    slug: "pembinaan-kader-gizi",
-    category: "Kesehatan",
-    date: "7 Agu 2026",
-    title: "Pembinaan Kader Gizi",
-    excerpt:
-      "Jumat, 7 Agustus 2026 pukul 08.30 WIB, Pemerintah Kalurahan Bimomartani menyelenggarakan kegiatan Pembinaan Kader Gizi di Pendopo Kalurahan Bimomartani. Kegiatan diikuti oleh 30 kader gizi yang berasal dari 12 padukuhan di wilayah Kalurahan Bimomartani",
-    image: "/images/news/berita1.jpeg",
-  },
-  {
-    slug: "pemberian-pmt-bumil-kek-balita-gizi-buruk",
-    category: "Kesehatan",
-    date: "3 Agu 2026",
-    title: "Pemberian PMT Bumil KEK dan Balita Gizi Buruk",
-    excerpt:
-      "Bimomartani, 3 Agustus 2026 – Pemerintah Kalurahan Bimomartani melaksanakan kegiatan Pemberian Makanan Tambahan (PMT) bagi ibu hamil dengan Kekurangan Energi Kronis (KEK) dan balita gizi buruk pada Senin, 3 Agustus 2026, pukul 10.00 WIB, bertempat di Pendopo Kalurahan Bimomartani. ",
-    image: "/images/news/berita2.jpeg",
   },
 ];
 
@@ -414,6 +396,15 @@ function resumeOrgAutoplay() {
   orgAutoplayPaused = false;
 }
 
+onMounted(async () => {
+  try {
+    const all = await fetchAllNews();
+    newsList.value = all.slice(0, 2); // Beranda cuma nampilin 2 berita teratas
+  } catch (err) {
+    console.error("Gagal memuat berita di beranda:", err);
+  }
+});
+
 onMounted(() => {
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (!prefersReducedMotion) {
@@ -529,7 +520,7 @@ onBeforeUnmount(() => {
 
         <div class="grid sm:grid-cols-2 gap-4 mt-4 flex-1">
           <RouterLink
-            v-for="item in newsDummy"
+            v-for="item in newsList"
             :key="item.slug"
             :to="{ name: 'news-detail', params: { slug: item.slug } }"
             class="relative flex flex-col h-full rounded-2xl border bg-surface overflow-hidden hover:shadow-md transition-all"
