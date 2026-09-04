@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { RouterLink } from "vue-router";
 import Tag from "primevue/tag";
 import Button from "primevue/button";
@@ -9,8 +9,19 @@ const props = defineProps({
   slug: { type: String, required: true },
 });
 
-const article = computed(() => getNewsBySlug(props.slug));
-const relatedNews = computed(() => getRelatedNews(article.value, 3));
+const article = ref(null);
+const relatedNews = ref([]);
+const loading = ref(true);
+
+async function load() {
+  loading.value = true;
+  article.value = await getNewsBySlug(props.slug);
+  relatedNews.value = await getRelatedNews(article.value, 3);
+  loading.value = false;
+}
+
+onMounted(load);
+watch(() => props.slug, load);
 
 const shareLinks = computed(() => {
   const url = typeof window !== "undefined" ? window.location.href : "";
@@ -120,7 +131,7 @@ function getCategoryStyle(category) {
       </div>
     </Transition>
 
-    <template v-if="article">
+    <template v-if="!loading && article">
       <!-- Ambient glow warna sesuai kategori artikel -->
       <div
         class="pointer-events-none absolute -top-10 left-0 -z-10 h-72 w-full animate-pulse bg-gradient-to-b blur-3xl"
