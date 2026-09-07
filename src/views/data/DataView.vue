@@ -1,32 +1,21 @@
 <script setup>
 
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, reactive } from "vue";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import ColumnGroup from "primevue/columngroup";
 import Row from "primevue/row";
 import Chart from "primevue/chart";
 import SelectButton from "primevue/selectbutton";
+import {
+  getCitizenStatistics,
+  readCitizenStatisticsCache,
+  writeCitizenStatisticsCache,
+} from "../../services/citizen";
 
+const grandTotal = ref(0);
 
-const GRAND_TOTAL = 3808 + 3833; // 7.641
-const GENDER_RATIO_MALE = 3808 / GRAND_TOTAL;
-
-
-function splitByWeights(weights, total) {
-  const sumW = weights.reduce((a, b) => a + b, 0);
-  const raw = weights.map((w) => (w / sumW) * total);
-  const floors = raw.map(Math.floor);
-  let remainder = total - floors.reduce((a, b) => a + b, 0);
-  const order = raw
-    .map((r, i) => ({ i, frac: r - Math.floor(r) }))
-    .sort((a, b) => b.frac - a.frac);
-  const result = [...floors];
-  for (let k = 0; k < remainder; k++) result[order[k].i]++;
-  return result;
-}
-
-const categories = [
+const categories = reactive([
   {
     key: "age",
     label: "Kelompok Umur",
@@ -35,7 +24,7 @@ const categories = [
       "0–4", "5–9", "10–14", "15–19", "20–24", "25–29", "30–34", "35–39",
       "40–44", "45–49", "50–54", "55–59", "60–64", "65–69", "70–74", "75+",
     ],
-    weights: [7.8, 7.5, 7.0, 6.8, 7.4, 8.2, 8.6, 8.4, 7.9, 7.2, 6.5, 5.6, 4.6, 3.2, 2.2, 3.1],
+    rows: [],
   },
   {
     key: "education",
@@ -46,7 +35,7 @@ const categories = [
       "SLTP/Sederajat", "SLTA/Sederajat", "Diploma I/II", "Akademi/Diploma III",
       "Diploma IV/S1", "S2", "S3",
     ],
-    weights: [11, 9, 17, 19, 29, 2.5, 3.5, 11.5, 2, 0.5],
+    rows: [],
   },
   {
     key: "occupation",
@@ -58,38 +47,30 @@ const categories = [
       "Petani/Perkebunan", "Pensiunan", "PNS", "Karyawan Honorer", "POLRI",
       "TNI", "Lainnya",
     ],
-    weights: [17, 17, 21, 16, 10, 4.3, 1.8, 1.3, 2.1, 2.1, 0.5, 0.4, 0.4, 5.1],
+    rows: [],
   },
   {
     key: "religion",
     label: "Agama",
     icon: "pi-book",
     labels: ["Islam", "Kristen", "Katolik", "Hindu", "Buddha", "Konghucu", "Lainnya"],
-    weights: [92, 3.5, 3, 0.8, 0.4, 0.2, 0.1],
+    rows: [],
   },
   {
     key: "gender",
     label: "Jenis Kelamin",
     icon: "pi-user",
     labels: ["Laki-laki", "Perempuan"],
-    // Kategori ini yang jadi sumber acuan total & rasio L/P di atas.
-    fixed: [3808, 3833],
-  },
-  {
-    key: "blood-type",
-    label: "Golongan Darah",
-    icon: "pi-heart",
-    labels: ["A", "B", "AB", "O", "Tidak Tahu"],
-    weights: [24, 28, 8, 34, 6],
+    rows: [],
   },
   {
     key: "region",
     label: "Wilayah Administratif",
     icon: "pi-map",
     labels: ["Dusun I", "Dusun II", "Dusun III", "Dusun IV", "Dusun V", "Dusun VI", "Dusun VII", "Dusun VIII"],
-    weights: [14, 11, 13, 10, 12, 9, 15, 16],
+    rows: [],
   },
-];
+]);
 
 /* Per-kategori identitas warna — pola sama seperti categoryStyles di Gallery */
 const categoryStyles = {
@@ -133,14 +114,6 @@ const categoryStyles = {
     badge: "bg-rose-50 text-rose-700",
     topBar: "bg-gradient-to-r from-rose-400 to-rose-600",
   },
-  "blood-type": {
-    sidebarActive: "bg-red-600 text-white shadow-red-600/25",
-    sidebarCount: "bg-white/15 text-white",
-    iconInactive: "text-red-600",
-    dot: "bg-red-500",
-    badge: "bg-red-50 text-red-700",
-    topBar: "bg-gradient-to-r from-red-400 to-red-600",
-  },
   region: {
     sidebarActive: "bg-indigo-600 text-white shadow-indigo-600/25",
     sidebarCount: "bg-white/15 text-white",
@@ -162,7 +135,28 @@ function styleFor(key) {
   return categoryStyles[key] || defaultCategoryStyle;
 }
 
-const activeCategory = ref("gender");
+const ACTIVE_CATEGORY_KEY = "sibimo-public-data-active-category";
+const categoryKeys = new Set(categories.map((category) => category.key));
+
+function readActiveCategory() {
+  try {
+    const saved = sessionStorage.getItem(ACTIVE_CATEGORY_KEY);
+    return saved && categoryKeys.has(saved) ? saved : "age";
+  } catch {
+    return "age";
+  }
+}
+
+const activeCategory = ref(readActiveCategory());
+function selectCategory(key) {
+  activeCategory.value = key;
+  try {
+    sessionStorage.setItem(ACTIVE_CATEGORY_KEY, key);
+  } catch {
+    // The selected tab still works when session storage is unavailable.
+  }
+}
+
 const activeCategoryData = computed(
   () => categories.find((c) => c.key === activeCategory.value) ?? categories[0],
 );
@@ -174,19 +168,21 @@ const chartTypeOptions = [
 ];
 const chartType = ref("pie");
 
-const formatNumber = (n) => n.toLocaleString("id-ID");
-const formatPct = (n) => ((n / GRAND_TOTAL) * 100).toFixed(2).replace(".", ",");
+const formatNumber = (n) => Number(n || 0).toLocaleString("id-ID");
+const formatPct = (n) => (
+  grandTotal.value ? ((Number(n || 0) / grandTotal.value) * 100).toFixed(2).replace(".", ",") : "0,00"
+);
 
 // Baris tabel + chart untuk kategori yang sedang aktif.
 const activeRows = computed(() => {
   const cat = activeCategoryData.value;
-  const totals = cat.fixed ?? splitByWeights(cat.weights, GRAND_TOTAL);
+  const sourceRows = Array.isArray(cat.rows) ? cat.rows : [];
 
   return cat.labels.map((label, i) => {
-    const total = totals[i];
-
-    const male = cat.key === "gender" ? (i === 0 ? total : 0) : Math.round(total * GENDER_RATIO_MALE);
-    const female = cat.key === "gender" ? (i === 1 ? total : 0) : total - male;
+    const source = sourceRows[i] ?? sourceRows.find((row) => row.group === label) ?? {};
+    const total = Number(source.total ?? source.population ?? 0);
+    const male = Number(source.male ?? source.male_count ?? 0);
+    const female = Number(source.female ?? source.female_count ?? Math.max(0, total - male));
 
     return {
       no: i + 1,
@@ -214,14 +210,12 @@ const footerTotals = computed(() => {
   };
 });
 
-
-const kkCount = 2412; // dummy — rata-rata ~3,17 jiwa/KK
-const summaryCards = [
-  { label: "Total Penduduk", icon: "pi-users", value: formatNumber(GRAND_TOTAL), color: "indigo" },
-  { label: "Kepala Keluarga", icon: "pi-home", value: formatNumber(kkCount), color: "violet" },
-  { label: "Laki-laki", icon: "pi-user", value: formatNumber(3808), color: "sky" },
-  { label: "Perempuan", icon: "pi-user", value: formatNumber(3833), color: "rose" },
-];
+const summaryCards = reactive([
+  { label: "Total Penduduk", icon: "pi-users", value: "0", color: "indigo" },
+  { label: "Kepala Keluarga", icon: "pi-home", value: "0", color: "violet" },
+  { label: "Laki-laki", icon: "pi-user", value: "0", color: "sky" },
+  { label: "Perempuan", icon: "pi-user", value: "0", color: "rose" },
+]);
 const summaryCardIconClass = {
   indigo: "bg-indigo-50 text-indigo-700",
   violet: "bg-violet-50 text-violet-700",
@@ -254,6 +248,19 @@ const chartData = computed(() => {
   const labels = rows.map((r) => r.group);
   const data = rows.map((r) => r.total);
   const colors = labels.map((_, i) => PALETTE[i % PALETTE.length]);
+  const hasData = data.some((value) => value > 0);
+
+  if (!hasData) {
+    return {
+      labels: ["Belum ada data"],
+      datasets: [{
+        data: [1],
+        backgroundColor: ["#d1d5db"],
+        borderColor: "#fff",
+        borderWidth: 2,
+      }],
+    };
+  }
 
   if (chartType.value === "pie") {
     return { labels, datasets: [{ data, backgroundColor: colors, borderColor: "#fff", borderWidth: 2 }] };
@@ -266,9 +273,13 @@ const chartData = computed(() => {
 
 const chartOptions = computed(() => {
   const isPie = chartType.value === "pie";
+  const hasData = activeRows.value.some((row) => row.total > 0);
   const tooltipLabel = (ctx) => {
+    if (!hasData) return "Belum ada data";
     const value = isPie ? ctx.parsed : ctx.parsed.x;
-    const pct = ((value / GRAND_TOTAL) * 100).toFixed(1).replace(".", ",");
+    const pct = grandTotal.value
+      ? ((value / grandTotal.value) * 100).toFixed(1).replace(".", ",")
+      : "0,0";
     return `${ctx.label}: ${value.toLocaleString("id-ID")} jiwa (${pct}%)`;
   };
 
@@ -297,6 +308,48 @@ const chartHeight = computed(() => {
   if (chartType.value === "pie") return 380;
   return Math.max(260, activeRows.value.length * 34);
 });
+
+function applyCategoryRows(key, rows) {
+  const category = categories.find((item) => item.key === key);
+  if (!category || !Array.isArray(rows)) return;
+  category.rows = rows.map((row) => ({
+    group: row.group ?? row.name ?? "Tidak diketahui",
+    total: Number(row.total ?? row.population ?? 0),
+    male: Number(row.male ?? row.male_count ?? 0),
+    female: Number(row.female ?? row.female_count ?? 0),
+  }));
+  if (category.rows.length) category.labels = category.rows.map((row) => row.group);
+}
+
+function applyCitizenStatistics(statistics) {
+  const summary = statistics?.summary ?? {};
+  grandTotal.value = Number(summary.total_population ?? 0);
+  summaryCards[0].value = formatNumber(grandTotal.value);
+  summaryCards[1].value = formatNumber(summary.kk_count ?? 0);
+  summaryCards[2].value = formatNumber(summary.male_count ?? 0);
+  summaryCards[3].value = formatNumber(summary.female_count ?? 0);
+
+  const sourceCategories = statistics?.categories ?? {};
+  applyCategoryRows("age", sourceCategories.age);
+  applyCategoryRows("education", sourceCategories.education);
+  applyCategoryRows("occupation", sourceCategories.occupation);
+  applyCategoryRows("religion", sourceCategories.religion);
+  applyCategoryRows("gender", sourceCategories.gender);
+  applyCategoryRows("region", statistics?.regions);
+}
+
+onMounted(async () => {
+  const cached = readCitizenStatisticsCache();
+  if (cached) applyCitizenStatistics(cached);
+
+  try {
+    const statistics = await getCitizenStatistics();
+    applyCitizenStatistics(statistics);
+    writeCitizenStatisticsCache(statistics);
+  } catch (error) {
+    console.error("Gagal memuat statistik kependudukan", error);
+  }
+});
 </script>
 
 <template>
@@ -317,7 +370,7 @@ const chartHeight = computed(() => {
       </h1>
       <p class="mt-2 max-w-2xl text-sm text-muted leading-relaxed">
         Data agregat kependudukan Kalurahan Bimomartani berdasarkan kelompok umur, pendidikan,
-        pekerjaan, agama, jenis kelamin, golongan darah, dan wilayah administratif.
+        pekerjaan, agama, jenis kelamin, dan wilayah administratif.
       </p>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-6 lg:gap-8">
@@ -329,7 +382,7 @@ const chartHeight = computed(() => {
         <button
           v-for="cat in categories"
           :key="cat.key"
-          @click="activeCategory = cat.key"
+          @click="selectCategory(cat.key)"
           class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 active:scale-[0.97]"
           :class="
             activeCategory === cat.key
@@ -407,7 +460,7 @@ const chartHeight = computed(() => {
           </div>
 
           <p class="text-[11px] text-muted mt-4 text-center">
-            Arahkan kursor ke grafik untuk melihat jumlah & persentase. Data masih dummy sementara.
+            Arahkan kursor ke grafik untuk melihat jumlah & persentase. Data diperbarui dari data warga aktif.
           </p>
         </section>
 
