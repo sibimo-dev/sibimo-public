@@ -108,6 +108,7 @@ const router = createRouter({
   routes,
   
   scrollBehavior(to, from, savedPosition) {
+    if (to.name === "profile") return { top: 0, left: 0 };
     if (savedPosition) return savedPosition;
     if (to.hash) return { el: to.hash, top: 80, behavior: "smooth" };
     return { top: 0 };

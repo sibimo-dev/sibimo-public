@@ -14,6 +14,15 @@ import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
 import ProgressSpinner from 'primevue/progressspinner'
 import Image from 'primevue/image'
+import {
+  getHistories,
+  getVisionMissions,
+  getOrganizationalStructures,
+  getRegions,
+  profileMediaUrl,
+  readProfileCache,
+  writeProfileCache,
+} from '@/services/profile'
 
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -22,37 +31,30 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 })
 
-function makePhotoResolver(globResult) {
-  const map = Object.fromEntries(
-    Object.entries(globResult).map(([path, url]) => [path.split('/').pop(), url])
-  )
-  return function resolve(filename) {
-    return filename ? map[filename] || null : null
-  }
-}
-
-const orgPhotoModules = import.meta.glob(
-  '@/assets/struktur-organisasi/*.{jpg,jpeg,png}',
-  { eager: true, import: 'default' }
-)
-const sejarahPhotoModules = import.meta.glob(
-  '@/assets/sejarah/*.{jpg,jpeg,png}',
-  { eager: true, import: 'default' }
-)
-
-const photoUrl = makePhotoResolver(orgPhotoModules)
-const sejarahPhotoUrl = makePhotoResolver(sejarahPhotoModules)
-
-const historyPhotos = {
-  balaiDesa: 'Kalurahan.jpg',
-  kegiatanWarga: 'kegiatan.jpeg',
-}
-
-
 const heroImageLoaded = ref(false)
 const mounted = ref(false)
 
 const heroTitleWords = 'Profil Kalurahan Bimomartani'.split(' ')
+
+const history = ref(null)
+const visionMission = ref(null)
+const orgStructureData = ref([])
+const regions = ref([])
+const profileLoading = ref(true)
+const profileError = ref('')
+
+const historyPoints = computed(() => (
+  Array.isArray(history.value?.points) ? history.value.points.filter(Boolean) : []
+))
+const historyPhotos = computed(() => (
+  Array.isArray(history.value?.photos) ? history.value.photos : []
+))
+const missionsData = computed(() => (
+  Array.isArray(visionMission.value?.missions) ? visionMission.value.missions.filter(Boolean) : []
+))
+const orgStructure = computed(() => (
+  Array.isArray(orgStructureData.value?.levels) ? orgStructureData.value.levels : []
+))
 
 const heroOffset = ref(0)
 let rafId = null
@@ -109,95 +111,34 @@ function orgAccentFor(i) {
   return orgCardAccents[i % orgCardAccents.length]
 }
 
-const missions = [
-  'Meningkatkan kualitas pelayanan publik berbasis teknologi informasi.',
-  'Mengembangkan potensi ekonomi lokal melalui pemberdayaan UMKM dan BUMDes.',
-  'Melestarikan nilai-nilai budaya dan kearifan lokal masyarakat.',
-  'Membangun infrastruktur desa yang memadai dan berwawasan lingkungan.',
-]
-
-
-function initials(name) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w.charAt(0).toUpperCase())
-    .join('')
-}
-
-function person(name, title, desc, photo = '') {
-  return { name, title, desc, photo, initials: initials(name) }
-}
-
-const orgStructure = [
-  {
-    level: 'Lurah',
-    pimpinan: true,
-    people: [
-      person(
-        'Tutik Wahyuningsih, S.Sos., M.AP',
-        'Lurah',
-        'Memimpin penyelenggaraan pemerintahan Kalurahan Bimomartani.',
-        'Tutik Wahyuningsih.jpeg'
-      ),
-    ],
-  },
-  {
-    level: 'Sekretariat & Keuangan',
-    people: [
-      person('Yudi Priyo Utomo, SE', 'Carik', 'Memimpin sekretariat & mengoordinasikan seluruh urusan administrasi kalurahan.', 'Yudi Priyo Utomo.jpeg'),
-      person('Nanda Mutiara Dewi, S.Psi', 'Kaur Danarta', 'Mengelola administrasi dan pelaporan keuangan kalurahan.', 'Nanda Mutiara Dewi.jpeg'),
-      person('Rasyifa Anom Sudaryono, Amd.Kes', 'Kaur Tata Laksana', 'Mengelola tata naskah dan pelayanan administrasi umum.', ''),
-      person('Hanang Tri Nugroho, S.Kom', 'Kaur Pangripta', 'Menyusun perencanaan dan pelaporan pembangunan kalurahan.', 'Hanang Tri Nugroho.jpeg'),
-    ],
-  },
-  {
-    level: 'Kepala Seksi',
-    people: [
-      person('Sutriyana, S.Ag', 'Kamituwa', 'Mengoordinasikan kesejahteraan dan pemberdayaan masyarakat.', 'Sutriyana.jpeg'),
-      person('Yordan Ardi Tamara, S.Kom', 'Ulu-Ulu', 'Mengelola tata guna lahan, irigasi, dan sektor pertanian.', 'Yordan Ardi Tamara.jpeg'),
-      person('Rifai Nurmansah, S.Pd., M.Pd', 'Jagabaya', 'Menjaga ketenteraman, ketertiban, dan keamanan wilayah.', 'Rifai Nurmansah.jpeg'),
-    ],
-  },
-  {
-    level: 'Dukuh (Kepala Padukuhan)',
-    slider: true,
-    people: [
-      person('Jaka Widada', 'Dukuh I Krebet', 'Kepala wilayah Padukuhan Krebet.', 'Jaka Widada.jpeg'),
-      person('Angga Wahyu Indra Irawan, S.Pd', 'Dukuh II Rogobangsan', 'Kepala wilayah Padukuhan Rogobangsan.', 'Angga Wahyu Indra Irawan.jpeg'),
-      person('Umi Solikah', 'Dukuh III Kalibulus', 'Kepala wilayah Padukuhan Kalibulus.', 'Umi Solikah.jpeg'),
-      person('Kaharudin', 'Dukuh IV Macanan', 'Kepala wilayah Padukuhan Macanan.', 'Kaharudin.jpeg'),
-      person('Mucharom', 'Dukuh V Cokrogaten', 'Kepala wilayah Padukuhan Cokrogaten.', 'Mucharom.jpeg'),
-      person('TH Dwi Wahyu P, Amd', 'Dukuh VI Purwobinangun', 'Kepala wilayah Padukuhan Purwobinangun.', ''),
-      person('Sukirman', 'Dukuh VII Pondok Suruh', 'Kepala wilayah Padukuhan Pondok Suruh.', ''),
-      person('Sunarya', 'Dukuh VIII Balong', 'Kepala wilayah Padukuhan Balong.', 'Sunarya.jpeg'),
-      person('Suharyono', 'Dukuh IX Kragilan', 'Kepala wilayah Padukuhan Kragilan.', 'Suharyono.jpeg'),
-      person('Basuki Wibawa', 'Dukuh X Banjarharjo', 'Kepala wilayah Padukuhan Banjarharjo.', 'Basuki Wibawa.jpeg'),
-      person('Drs. Jazim Thoyibi', 'Dukuh XI Sorasan', 'Kepala wilayah Padukuhan Sorasan.', 'Jazim Thoyibi.jpeg'),
-      person('Purnomo', 'Dukuh XII Koroulon Kidul', 'Kepala wilayah Padukuhan Koroulon Kidul.', ''),
-    ],
-  },
-  {
-    level: 'Staff Pamong Kalurahan',
-    slider: true,
-    people: [
-      person('Ratna Kurnia Dewi', 'Staff Pamong Kalurahan', 'Membantu administrasi keuangan kalurahan.', 'Ratna Kurnia Dewi.jpg'),
-      person('Khoirunisa Nurhidaya', 'Staff Pamong Kalurahan', 'Membantu administrasi perkantoran kalurahan.', 'Khoirunisa Nurhidaya.jpg'),
-      person('Mega Dwi Jayanti', 'Staff Pamong Kalurahan', 'Membantu pelayanan kesehatan dan sosial masyarakat.', 'Mega Dwi Jayanti.jpg'),
-      person('Sigit Raharjo', 'Staff Pamong Kalurahan', 'Membantu pelaksanaan tugas kepamongan kalurahan.', 'Sigit Raharjo.jpeg'),
-      person('Linggar Yudha', 'Staff Pamong Kalurahan', 'Membantu administrasi dan kearsipan kalurahan.', 'Linggar Yudha.jpg'),
-      person('Riyanto', 'Staff Pamong Kalurahan', 'Membantu pelaksanaan tugas kepamongan kalurahan.', 'Riyanto.jpg'),
-    ],
-  },
-]
-
 const stats = reactive([
-  { icon: 'pi pi-users', label: 'Total Penduduk', target: 4521, value: 0, suffix: '' },
-  { icon: 'pi pi-home', label: 'Kepala Keluarga', target: 1120, value: 0, suffix: '' },
+  { icon: 'pi pi-users', label: 'Total Penduduk', target: 0, value: 0, suffix: '' },
+  { icon: 'pi pi-home', label: 'Kepala Keluarga', target: 0, value: 0, suffix: '' },
   { icon: 'pi pi-map', label: 'Luas Wilayah', target: 245, value: 0, suffix: ' Ha' },
-  { icon: 'pi pi-sitemap', label: 'Jumlah RT/RW', target: 24, value: 0, suffix: ' / 6' },
+  { icon: 'pi pi-sitemap', label: 'Jumlah RT/RW', target: 0, value: 0, suffix: ' / 0' },
 ])
+
+let statsVisible = false
+
+function applyRegionStats(regionList) {
+  const totals = (Array.isArray(regionList) ? regionList : []).reduce(
+    (result, region) => ({
+      population: result.population + Number(region?.population ?? 0),
+      kk: result.kk + Number(region?.kk_count ?? 0),
+      rt: result.rt + Number(region?.rt_count ?? 0),
+      rw: result.rw + Number(region?.rw_count ?? 0),
+    }),
+    { population: 0, kk: 0, rt: 0, rw: 0 },
+  )
+
+  stats[0].target = totals.population
+  stats[1].target = totals.kk
+  stats[3].target = totals.rt
+  stats[3].suffix = ` / ${totals.rw}`
+  stats.forEach((stat) => { stat.value = 0 })
+  statsAnimated = false
+  if (statsVisible) animateStats()
+}
 
 let statsAnimated = false
 function animateStats() {
@@ -217,10 +158,66 @@ function animateStats() {
   })
 }
 
+async function loadProfile() {
+  profileLoading.value = true
+  const failedParts = []
+
+  const cached = readProfileCache()
+  if (cached) {
+    history.value = cached.history ?? null
+    visionMission.value = cached.visionMission ?? null
+    orgStructureData.value = cached.orgStructure ?? null
+    regions.value = cached.regions ?? []
+    applyRegionStats(regions.value)
+    nextTick(observeRevealElements)
+  }
+
+  const request = (promise, key, onData, cacheKey) => promise
+    .then((data) => {
+      onData(data)
+      writeProfileCache({ [cacheKey]: data })
+      nextTick(observeRevealElements)
+    })
+    .catch(() => {
+      failedParts.push(key)
+    })
+
+  await Promise.all([
+    request(getHistories(), 'sejarah', (data) => { history.value = data }, 'history'),
+    request(getVisionMissions(), 'visi-misi', (data) => { visionMission.value = data }, 'visionMission'),
+    request(getOrganizationalStructures(), 'struktur organisasi', (data) => {
+      orgStructureData.value = data?.[0] ?? null
+    }, 'orgStructure'),
+    request(getRegions(), 'wilayah', (data) => {
+      regions.value = data ?? []
+      applyRegionStats(regions.value)
+    }, 'regions'),
+  ])
+
+  profileError.value = failedParts.length
+    ? `Sebagian data profil belum dapat dimuat: ${failedParts.join(', ')}.`
+    : ''
+  profileLoading.value = false
+  nextTick(observeRevealElements)
+}
+
+onMounted(() => {
+  window.history.scrollRestoration = 'manual'
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  loadProfile()
+})
+
 const REVEAL_HIDDEN = ['opacity-0', 'translate-y-4']
 const REVEAL_VISIBLE = ['opacity-100', 'translate-y-0']
 
 let observer
+
+function observeRevealElements() {
+  if (!observer) return
+  document
+    .querySelectorAll('.js-reveal, [data-section], [data-trigger]')
+    .forEach((el) => observer.observe(el))
+}
 
 onMounted(() => {
   requestAnimationFrame(() => {
@@ -233,7 +230,10 @@ onMounted(() => {
         if (entry.isIntersecting) {
           entry.target.classList.remove(...REVEAL_HIDDEN)
           entry.target.classList.add(...REVEAL_VISIBLE)
-          if (entry.target.dataset.trigger === 'stats') animateStats()
+          if (entry.target.dataset.trigger === 'stats') {
+            statsVisible = true
+            animateStats()
+          }
           if (entry.target.dataset.trigger === 'map') initMap()
           if (entry.target.dataset.section) activeSection.value = entry.target.dataset.section
         }
@@ -242,11 +242,7 @@ onMounted(() => {
     { threshold: 0.2, rootMargin: '-80px 0px -10% 0px' }
   )
 
-  nextTick(() => {
-    document
-      .querySelectorAll('.js-reveal, [data-section], [data-trigger]')
-      .forEach((el) => observer.observe(el))
-  })
+  nextTick(observeRevealElements)
 
   window.addEventListener('scroll', onHeroScroll, { passive: true })
 })
@@ -254,6 +250,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   observer?.disconnect()
   leafletMap?.remove()
+  window.history.scrollRestoration = 'auto'
   window.removeEventListener('scroll', onHeroScroll)
   if (rafId) cancelAnimationFrame(rafId)
 })
@@ -465,42 +462,26 @@ async function initMap() {
     <section id="history" data-section="history" class="relative overflow-hidden bg-gradient-to-b from-amber-50 to-white px-6 py-20">
       <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(#fcd34d_1px,transparent_1px)] bg-[length:20px_20px] opacity-25" />
       <span class="pointer-events-none absolute -right-4 top-6 select-none text-[9rem] font-extrabold leading-none text-amber-500 opacity-[0.08]">
-        1946
+        {{ history?.year_founded ?? '—' }}
       </span>
 
       <div class="relative mx-auto max-w-4xl">
         <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex items-center gap-3">
           <span class="h-px w-8 bg-amber-500" />
-          <span class="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-amber-700">Sejak 1946</span>
+          <span class="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-amber-700">
+            Sejak {{ history?.year_founded ?? '—' }}
+          </span>
         </div>
         <h2 class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-2 text-2xl font-semibold text-slate-900">
-          Sejarah Kalurahan Bimomartani
+          {{ history?.title ?? 'Sejarah Kalurahan Bimomartani' }}
         </h2>
 
         <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-6 space-y-5 border-l-2 border-amber-200 pl-6 text-slate-600 leading-relaxed">
-          <p class="relative">
+          <p v-for="(point, index) in historyPoints" :key="`${index}-${point}`" class="relative">
             <span class="absolute -left-[2.05rem] top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-[0_0_0_2px_#f59e0b]" />
-            Nama Kalurahan Bimomartani terbentuk pada tanggal 29 April 1946 yang merupakan
-            gabungan dari tiga kalurahan yaitu kalurahan Jatisari, Cokrosari dan Opaksari.
+            {{ point }}
           </p>
-          <p class="relative">
-            <span class="absolute -left-[2.05rem] top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-[0_0_0_2px_#f59e0b]" />
-            Awal terbentuknya Kalurahan Bimomartani, kalurahan ini baru dipimpin oleh empat
-            orang lurah. Sedangkan struktur organisasi dan tata kerja pemerintah kalurahan
-            (SOTK) terbaru saat ini sesuai dengan Peraturan Bupati Sleman Nomor 46 Tahun 2016
-            tentang Pedoman SOTK dan Peraturan Kalurahan Bimomartani Nomor 1 Tahun 2020
-            tentang Susunan Organisasi dan Tata Kerja Tahun 2020.
-          </p>
-          <p class="relative">
-            <span class="absolute -left-[2.05rem] top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-[0_0_0_2px_#f59e0b]" />
-            Pemerintah Kalurahan Bimomartani terdiri dari Lurah dan Perangkat Kalurahan.
-            Perangkat Kalurahan terdiri dari Sekretaris Kalurahan, Pelaksana Teknis, dan
-            Pelaksana Kewilayahan. Sekretaris Kalurahan dipimpin oleh Carik yang berada di
-            bawah dan bertanggungjawab kepada Lurah. Sekretaris Kalurahan terdiri dari Urusan
-            Tata Usaha Umum, Urusan Keuangan, dan Urusan Perencanaan. Urusan dalam hal ini
-            dipimpin oleh Kepala Urusan yang berada dibawah dan bertanggungjawab kepada Lurah
-            melalui Carik. Pelaksana Kewilayahan Kalurahan Bimomartani terdiri dari 12 Padukuhan.
-          </p>
+          <p v-if="!historyPoints.length" class="text-sm text-slate-400">Data sejarah belum tersedia.</p>
         </div>
 
         <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -510,8 +491,8 @@ async function initMap() {
           >
             <template #content>
               <Image
-                v-if="sejarahPhotoUrl(historyPhotos.balaiDesa)"
-                :src="sejarahPhotoUrl(historyPhotos.balaiDesa)"
+                v-if="profileMediaUrl(historyPhotos[0])"
+                :src="profileMediaUrl(historyPhotos[0])"
                 alt="Foto Balai Desa"
                 :pt="{ image: { class: 'h-40 w-full object-cover' } }"
               />
@@ -526,8 +507,8 @@ async function initMap() {
           >
             <template #content>
               <Image
-                v-if="sejarahPhotoUrl(historyPhotos.kegiatanWarga)"
-                :src="sejarahPhotoUrl(historyPhotos.kegiatanWarga)"
+                v-if="profileMediaUrl(historyPhotos[1])"
+                :src="profileMediaUrl(historyPhotos[1])"
                 alt="Foto Kegiatan Warga"
                 :pt="{ image: { class: 'h-40 w-full object-cover' } }"
               />
@@ -556,8 +537,7 @@ async function initMap() {
             </span>
             <h2 class="mt-1 text-2xl font-semibold text-slate-900">Visi</h2>
             <p class="mx-auto mt-3 text-slate-600">
-              "Mewujudkan Kalurahan Bimomartani yang Mandiri, Sejahtera, dan Berbudaya melalui
-              Tata Kelola Pemerintahan yang Transparan dan Pembangunan Berkelanjutan."
+              {{ visionMission?.vision || 'Data visi belum tersedia.' }}
             </p>
           </template>
         </Card>
@@ -572,7 +552,7 @@ async function initMap() {
 
         <div class="mt-6 space-y-3 text-left">
           <Card
-            v-for="(item, i) in missions"
+            v-for="(item, i) in missionsData"
             :key="i"
             class="js-reveal opacity-0 translate-y-4 transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 !rounded-xl !border !border-slate-100 !border-l-4 bg-gradient-to-r !to-white hover:-translate-y-0.5 hover:shadow-lg"
             :class="[accentFor(i).border, accentFor(i).soft]"
@@ -591,6 +571,7 @@ async function initMap() {
               </div>
             </template>
           </Card>
+          <p v-if="!missionsData.length" class="text-sm text-slate-400">Data misi belum tersedia.</p>
         </div>
       </div>
     </section>
@@ -605,10 +586,11 @@ async function initMap() {
           <span class="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-blue-700">Tata Kelola</span>
         </div>
         <h2 class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-2 text-2xl font-semibold text-slate-900">
-          Struktur Organisasi Pemerintah Desa
+          Struktur Organisasi Pemerintah Kalurahan
         </h2>
 
         <div class="mt-10">
+          <p v-if="!orgStructure.length" class="text-sm text-slate-400">Data struktur organisasi belum tersedia.</p>
           <div v-for="(level, li) in orgStructure" :key="level.level" :class="li > 0 ? 'mt-10' : ''">
             <div v-if="li > 0" class="relative mx-auto mb-8 h-8 w-px bg-blue-300">
               <span class="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-blue-500" />
@@ -630,8 +612,8 @@ async function initMap() {
                 <template #content>
                   <div class="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-center sm:text-left">
                     <Avatar
-                      v-if="photoUrl(p.photo)"
-                      :image="photoUrl(p.photo)"
+                      v-if="profileMediaUrl(p.photo)"
+                      :image="profileMediaUrl(p.photo)"
                       shape="square"
                       size="xlarge"
                       class="mx-auto !aspect-square !h-auto !w-48 sm:!mx-0 sm:!w-56 flex-none !overflow-hidden !rounded-xl"
@@ -665,8 +647,8 @@ async function initMap() {
                 :class="orgAccentFor(pi).cardBorder"
               >
                 <Avatar
-                  v-if="photoUrl(p.photo)"
-                  :image="photoUrl(p.photo)"
+                  v-if="profileMediaUrl(p.photo)"
+                  :image="profileMediaUrl(p.photo)"
                   shape="square"
                   size="xlarge"
                   class="!aspect-square !h-auto !w-full !flex-none !overflow-hidden !rounded-none"
@@ -699,8 +681,8 @@ async function initMap() {
                 :class="orgAccentFor(pi).cardBorder"
               >
                 <Avatar
-                  v-if="photoUrl(p.photo)"
-                  :image="photoUrl(p.photo)"
+                  v-if="profileMediaUrl(p.photo)"
+                  :image="profileMediaUrl(p.photo)"
                   shape="square"
                   size="xlarge"
                   class="!aspect-square !h-auto !w-full !flex-none !overflow-hidden !rounded-none"
