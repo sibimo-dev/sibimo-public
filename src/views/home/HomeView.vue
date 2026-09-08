@@ -1,12 +1,23 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from "vue";
-import { fetchAllNews } from "@/services/news.js";
+import {
+  fetchHomeData,
+  readHomeCache,
+  writeHomeCache,
+} from "@/services/home.service";
 import { RouterLink, useRouter } from "vue-router";
 import Tag from "primevue/tag";
 import HeroCarousel from "@/components/shared/HeroCarousel.vue";
 
 const router = useRouter();
 const newsList = ref([]);
+const agendaList = ref([]);
+const potentialList = ref([]);
+const galleryList = ref([]);
+const complaintsList = ref([]);
+const lurah = ref(null);
+const pamongList = ref([]);
+const homeLoading = ref(true);
 
 /* ============ HERO SEARCH ============ */
 const searchQuery = ref("");
@@ -183,120 +194,7 @@ function truncateExcerpt(text, maxLength = 100) {
   return cut.slice(0, lastSpace > 0 ? lastSpace : maxLength).trim() + "…";
 }
 
-// Dijaga hanya 3 item agar tinggi card Agenda tidak melebihi card Berita di sebelahnya
-const agendaDummy = [
-  { day: "15", month: "OKT", title: "Penyaluran BLT Tahap III", time: "08:00 - Selesai" },
-  { day: "20", month: "OKT", title: "Kerja Bakti Rutin Lingkungan", time: "07:00 - 10:00" },
-  { day: "24", month: "OKT", title: "Sosialisasi GENRE", time: "08:00 - 10:00" },
-  { day: "30", month: "OKT", title: "Pelatihan UMKM", time: "09:00 - 12:00" },
-  { day: "05", month: "NOV", title: "Musyawarah Desa", time: "13:00 - 15:00" },
-];
-
-const complaintsDummy = [
-  {
-    initials: "AB",
-    title: "Jalan Rusak di RT 04",
-    reporter: "Andi B.",
-    date: "12 Okt 2026",
-    status: "Sudah Ditangani",
-    severity: "success",
-  },
-  {
-    initials: "SW",
-    title: "Sampah Menumpuk di Selokan",
-    reporter: "Siti W.",
-    date: "11 Okt 2026",
-    status: "Sedang Ditinjau",
-    severity: "warn",
-  },
-  {
-    initials: "BD",
-    title: "Lampu Jalan Mati di Perempatan",
-    reporter: "Budi D.",
-    date: "10 Okt 2026",
-    status: "Diproses",
-    severity: "info",
-  },
-];
-
-const potentialDummy = [
-  {
-    icon: "pi-shopping-bag",
-    title: "UMKM",
-    desc: "Pusat kerajinan dan makanan khas lokal",
-    ring: "ring-amber-200",
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-  },
-  {
-    icon: "pi-sun",
-    title: "Pertanian",
-    desc: "Hasil bumi unggulan padi dan palawija",
-    ring: "ring-emerald-200",
-    bg: "bg-emerald-50",
-    text: "text-emerald-700",
-  },
-  {
-    icon: "pi-map",
-    title: "Pariwisata",
-    desc: "Destinasi wisata alam dan budaya khas desa",
-    ring: "ring-sky-200",
-    bg: "bg-sky-50",
-    text: "text-sky-700",
-  },
-  {
-    icon: "pi-building-columns",
-    title: "BUMDES",
-    desc: "Badan usaha milik desa untuk kesejahteraan warga",
-    ring: "ring-indigo-200",
-    bg: "bg-indigo-50",
-    text: "text-indigo-700",
-  },
-];
-
-const galleryDummy = [
-    { image: "/images/gallery/pmt-padukuhan-1.jpeg", caption: "Pemberian PMT dan Bantuan Alat Kesehatan" },
-  { image: "/images/gallery/pembinaan-kader-1.jpeg", caption: "Pembinaan Kader Gizi" },
-  { image: "/images/gallery/musrenbangkal-1.jpeg", caption: "Musyawarah Perencanaan Pembangunan Kalurahan" },
-  { image: "/images/gallery/pembinaan-kader-2.jpeg", caption: "Pembinaan Kader Gizi" },
-  { image: "/images/gallery/musrenbangkal-2.jpeg", caption: "Musyawarah Perencanaan Pembangunan Kalurahan" },
-  { image: "/images/gallery/pmt-padukuhan-2.jpeg", caption: "Pemberian PMT dan Bantuan Alat Kesehatan" },
-];
-
-/* ============ STRUKTUR ORGANISASI ============ */
-const lurah = {
-  nama: "Tutik Wahyuningsih, S.Sos., M.AP",
-  jabatan: "Lurah Kalurahan Bimomartani",
-  desc: "Memimpin penyelenggaraan pemerintahan, pembangunan, dan kemasyarakatan di Kalurahan Bimomartani.",
-};
-
-const pamongList = [
-  { nama: "Yudi Priyo Utomo, SE", jabatan: "Carik", desc: "Membantu Lurah dalam bidang tata usaha dan pelayanan administrasi kalurahan." },
-  { nama: "Rifai Nurmansyah, S.Pd., M.Pd", jabatan: "Jagabaya", desc: "Bertanggung jawab atas urusan ketentraman dan ketertiban wilayah kalurahan." },
-  { nama: "Yordan Ardi Tamara, S.Kom", jabatan: "Ulu-Ulu", desc: "Mengelola urusan pengairan dan pertanian di wilayah kalurahan." },
-  { nama: "Sutriyana, S.Ag", jabatan: "Kamituwa", desc: "Mengoordinasikan wilayah kadukuhan dan urusan kemasyarakatan." },
-  { nama: "Nanda Mutiara Dewi, S.Psi", jabatan: "Kaur Danarta", desc: "Mengelola urusan keuangan dan anggaran kalurahan." },
-  { nama: "Rasyifa Anom Sudaryono, Amd.Kes", jabatan: "Kaur Tata Laksana", desc: "Mengelola tata laksana pemerintahan dan administrasi umum." },
-  { nama: "Hanang Tri Nugroho, S.Kom", jabatan: "Kaur Pangripta", desc: "Menyusun perencanaan dan pelaporan pembangunan kalurahan." },
-  { nama: "Jaka Widada", jabatan: "Dukuh I Krebet", desc: "Memimpin wilayah Padukuhan Krebet dan pelayanan warga setempat." },
-  { nama: "Angga Wahyu Indra Irawan, S.Pd", jabatan: "Dukuh II Rogobangsan", desc: "Memimpin wilayah Padukuhan Rogobangsan dan pelayanan warga setempat." },
-  { nama: "Umi Solikah", jabatan: "Dukuh III Kalibulus", desc: "Memimpin wilayah Padukuhan Kalibulus dan pelayanan warga setempat." },
-  { nama: "Kaharudin", jabatan: "Dukuh IV Macanan", desc: "Memimpin wilayah Padukuhan Macanan dan pelayanan warga setempat." },
-  { nama: "Mucharom", jabatan: "Dukuh V Cokrogaten", desc: "Memimpin wilayah Padukuhan Cokrogaten dan pelayanan warga setempat." },
-  { nama: "TH Dwi Wahyu P, Amd", jabatan: "Dukuh VI Purwobinangun", desc: "Memimpin wilayah Padukuhan Purwobinangun dan pelayanan warga setempat." },
-  { nama: "Sukirman", jabatan: "Dukuh VII Pondok Suruh", desc: "Memimpin wilayah Padukuhan Pondok Suruh dan pelayanan warga setempat." },
-  { nama: "Sunaryo", jabatan: "Dukuh VIII Balong", desc: "Memimpin wilayah Padukuhan Balong dan pelayanan warga setempat." },
-  { nama: "Suharyono", jabatan: "Dukuh IX Kragilan", desc: "Memimpin wilayah Padukuhan Kragilan dan pelayanan warga setempat." },
-  { nama: "Basuki Wibowo", jabatan: "Dukuh X Banjarharjo", desc: "Memimpin wilayah Padukuhan Banjarharjo dan pelayanan warga setempat." },
-  { nama: "Drs. Jazim Thoyibi", jabatan: "Dukuh XI Sorasan", desc: "Memimpin wilayah Padukuhan Sorasan dan pelayanan warga setempat." },
-  { nama: "Purnomo", jabatan: "Dukuh XII Koroulon Kidul", desc: "Memimpin wilayah Padukuhan Koroulon Kidul dan pelayanan warga setempat." },
-  { nama: "Ratna Kurnia Dewi", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan." },
-  { nama: "Khoirunnisa Hidaya", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan." },
-  { nama: "Mega Dwi Jayanti", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan." },
-  { nama: "Sigit Raharjo", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan." },
-  { nama: "Linggar Yudha Pranata", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan." },
-  { nama: "Riyanto", jabatan: "Staf Pamong Kalurahan", desc: "Membantu pelaksanaan tugas administrasi dan pelayanan di kalurahan." },
-];
+/* ============ DATA HOME DARI API ============ */
 
 function getInitials(nama) {
   return nama
@@ -309,50 +207,37 @@ function getInitials(nama) {
     .toUpperCase();
 }
 
-/* ============ FOTO PAMONG OTOMATIS DARI ASSETS ============
-   Semua foto sudah ada di src/assets/struktur-organisasi/, jadi tidak
-   perlu diketik satu-satu di pamongList. Path diambil otomatis lewat
-   import.meta.glob, lalu dicocokkan ke `nama` masing-masing pamong. */
-const pamongImages = import.meta.glob("@/assets/struktur-organisasi/*.{jpg,jpeg,png}", {
-  eager: true,
-  import: "default",
-});
-
-function normalize(text) {
-  return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // buang aksen
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, ""); // buang spasi, koma, titik, dst
-}
-
-const normalizedImageMap = {};
-for (const path in pamongImages) {
-  const filename = path.split("/").pop().replace(/\.(jpg|jpeg|png)$/i, "");
-  normalizedImageMap[normalize(filename)] = pamongImages[path];
-}
-
-// nama resmi (dinormalisasi) -> nama file asli, khusus untuk file yang
-// ejaannya berbeda dari nama resmi di pamongList
-const fotoOverride = {
-  [normalize("Rifai Nurmansyah")]: "Rifai Nurmansah",
-  [normalize("Basuki Wibowo")]: "Basuki Wibawa",
-  [normalize("Khoirunnisa Hidaya")]: "Khoirunisa Nurhidaya",
-  [normalize("Sunaryo")]: "Sunarya",
-  [normalize("Linggar Yudha Pranata")]: "Linggar Yudha",
-};
-
 function pamongFotoSrc(item) {
-  const cleanName = item.nama
-    .replace(/^(Drs\.?\s*)/i, "") // buang gelar di depan, mis. "Drs."
-    .replace(/,.*$/, "") // buang gelar setelah koma
-    .trim();
+  return item?.photo || null;
+}
 
-  const key = normalize(cleanName);
-  const overrideFilename = fotoOverride[key];
-  const lookupKey = overrideFilename ? normalize(overrideFilename) : key;
+function applyHomeData(data) {
+  if (Object.prototype.hasOwnProperty.call(data, "news")) newsList.value = data.news ?? [];
+  if (Object.prototype.hasOwnProperty.call(data, "agendas")) agendaList.value = data.agendas ?? [];
+  if (Object.prototype.hasOwnProperty.call(data, "potentials")) potentialList.value = data.potentials ?? [];
+  if (Object.prototype.hasOwnProperty.call(data, "galleries")) galleryList.value = data.galleries ?? [];
+  if (data.organization) {
+    lurah.value = data.organization.lurah ?? null;
+    pamongList.value = data.organization.pamong ?? [];
+  }
+}
 
-  return normalizedImageMap[lookupKey] || null;
+async function loadHome() {
+  const cached = readHomeCache();
+  if (cached) applyHomeData(cached);
+
+  try {
+    const fresh = await fetchHomeData();
+    applyHomeData(fresh.data);
+
+    if (Object.keys(fresh.data).length) {
+      writeHomeCache({ ...(cached || {}), ...fresh.data });
+    }
+  } catch (error) {
+    console.error("Gagal memuat data Home:", error);
+  } finally {
+    homeLoading.value = false;
+  }
 }
 
 const orgTrackRef = ref(null);
@@ -396,13 +281,8 @@ function resumeOrgAutoplay() {
   orgAutoplayPaused = false;
 }
 
-onMounted(async () => {
-  try {
-    const all = await fetchAllNews();
-    newsList.value = all.slice(0, 2); // Beranda cuma nampilin 2 berita teratas
-  } catch (err) {
-    console.error("Gagal memuat berita di beranda:", err);
-  }
+onMounted(() => {
+  void loadHome();
 });
 
 onMounted(() => {
@@ -518,7 +398,7 @@ onBeforeUnmount(() => {
           </RouterLink>
         </div>
 
-        <div class="grid sm:grid-cols-2 gap-4 mt-4 flex-1">
+        <div v-if="newsList.length" class="grid sm:grid-cols-2 gap-4 mt-4 flex-1">
           <RouterLink
             v-for="item in newsList"
             :key="item.slug"
@@ -563,6 +443,10 @@ onBeforeUnmount(() => {
             </div>
           </RouterLink>
         </div>
+        <div v-else class="mt-4 flex-1 rounded-2xl border border-border-default bg-surface p-6 text-center text-muted">
+          <i class="pi pi-inbox text-2xl text-primary-200" />
+          <p class="mt-2 text-[13px]">{{ homeLoading ? "Memuat berita..." : "Belum ada berita." }}</p>
+        </div>
       </div>
 
       <!-- Agenda Desa Terkini: badge tanggal tiap item warnanya bergilir -->
@@ -576,8 +460,8 @@ onBeforeUnmount(() => {
 
         <div class="mt-4 flex-1 flex flex-col gap-3 rounded-2xl bg-gradient-to-br from-primary-900 to-primary-800 p-4">
           <div
-            v-for="(item, i) in agendaDummy"
-            :key="item.title"
+            v-for="(item, i) in agendaList"
+            :key="item.key"
             class="flex items-start gap-3 rounded-xl border border-white/15 bg-white/5 p-3 hover:bg-white/10 transition-colors flex-1"
           >
             <div
@@ -596,6 +480,9 @@ onBeforeUnmount(() => {
                 {{ item.time }}
               </p>
             </div>
+          </div>
+          <div v-if="!agendaList.length" class="rounded-xl border border-white/15 bg-white/5 p-5 text-center text-[13px] text-white/75">
+            {{ homeLoading ? "Memuat agenda..." : "Belum ada agenda mendatang." }}
           </div>
 
           <RouterLink
@@ -618,7 +505,7 @@ onBeforeUnmount(() => {
 
       <div class="rounded-2xl border border-border-default bg-surface divide-y divide-border-default overflow-hidden">
         <div
-          v-for="item in complaintsDummy"
+          v-for="item in complaintsList"
           :key="item.title"
           class="flex items-center gap-3.5 p-4 sm:p-5 border-l-4"
           :class="colorForSeverity(item.severity).border.split(' ')[0]"
@@ -636,6 +523,9 @@ onBeforeUnmount(() => {
           <div class="hidden sm:block text-[12px] text-muted shrink-0">{{ item.date }}</div>
           <Tag :value="item.status" :severity="item.severity" class="!text-[10.5px] !font-bold shrink-0" />
         </div>
+        <div v-if="!complaintsList.length" class="p-6 text-center text-[13px] text-muted">
+          Belum ada aduan yang dapat ditampilkan.
+        </div>
       </div>
     </section>
 
@@ -651,9 +541,9 @@ onBeforeUnmount(() => {
         </RouterLink>
       </div>
 
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+      <div v-if="potentialList.length" class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
         <RouterLink
-          v-for="item in potentialDummy"
+          v-for="item in potentialList"
           :key="item.title"
           :to="{ name: 'potential' }"
           class="group relative overflow-hidden rounded-2xl border border-border-default bg-surface p-4 sm:p-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
@@ -671,6 +561,9 @@ onBeforeUnmount(() => {
           <h3 class="relative font-heading font-extrabold text-[14.5px] sm:text-[15px] text-heading m-0">{{ item.title }}</h3>
           <p class="relative text-[12px] sm:text-[12.5px] text-muted mt-1 leading-snug">{{ item.desc }}</p>
         </RouterLink>
+      </div>
+      <div v-else class="rounded-2xl border border-border-default bg-surface p-6 text-center text-[13px] text-muted">
+        {{ homeLoading ? "Memuat data potensi..." : "Belum ada data potensi." }}
       </div>
     </section>
 
@@ -708,26 +601,26 @@ onBeforeUnmount(() => {
           <img
             v-if="pamongFotoSrc(lurah)"
             :src="pamongFotoSrc(lurah)"
-            :alt="lurah.nama"
+            :alt="lurah?.nama || 'Lurah'"
             class="w-full h-full object-cover object-[center_75%]"
           />
           <div v-else class="flex flex-col items-center justify-center gap-2">
             <i class="pi pi-user text-4xl sm:text-5xl text-white/50" />
             <span class="text-2xl sm:text-3xl font-heading font-extrabold text-white/80">
-              {{ getInitials(lurah.nama) }}
+              {{ getInitials(lurah?.nama || "Lurah") }}
             </span>
           </div>
         </div>
 
         <div class="relative text-center sm:text-left">
           <span class="inline-block text-[11px] font-bold uppercase tracking-wider text-secondary-300 mb-1.5">
-            {{ lurah.jabatan }}
+            {{ lurah?.jabatan || "Data Lurah belum tersedia" }}
           </span>
           <h3 class="font-heading font-extrabold text-xl sm:text-2xl lg:text-[28px] text-white m-0">
-            {{ lurah.nama }}
+            {{ lurah?.nama || "Data Lurah belum tersedia" }}
           </h3>
           <p class="mt-3 text-[13.5px] sm:text-[15px] text-white/75 leading-relaxed max-w-[520px]">
-            {{ lurah.desc }}
+            {{ lurah?.desc || "Data struktur organisasi belum tersedia." }}
           </p>
 
           <!-- Info tambahan: lokasi & jabatan sebagai pill, tempat yang
@@ -808,6 +701,9 @@ onBeforeUnmount(() => {
               {{ item.desc }}
             </p>
           </div>
+          <div v-if="!pamongList.length" class="rounded-2xl border border-border-default bg-surface p-6 text-center text-[13px] text-muted">
+            Data pamong belum tersedia.
+          </div>
         </div>
 
         <button
@@ -833,10 +729,10 @@ onBeforeUnmount(() => {
         </RouterLink>
       </div>
 
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5 auto-rows-[90px] sm:auto-rows-[110px] lg:auto-rows-[240px]">
+      <div v-if="galleryList.length" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5 auto-rows-[90px] sm:auto-rows-[110px] lg:auto-rows-[240px]">
         <RouterLink
-          v-for="(item, i) in galleryDummy"
-          :key="i"
+          v-for="(item, i) in galleryList"
+          :key="item.image || i"
           :to="{ name: 'gallery' }"
           :class="i === 0 ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1'"
           class="group relative rounded-xl sm:rounded-2xl bg-primary-50 border border-border-default flex items-center justify-center overflow-hidden"
@@ -867,6 +763,10 @@ onBeforeUnmount(() => {
             <i class="pi pi-search-plus text-white text-[13px] opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </RouterLink>
+      </div>
+      <div v-else class="rounded-2xl border border-border-default bg-primary-50 p-8 text-center text-[13px] text-muted">
+        <i class="pi pi-images text-2xl text-primary-200" />
+        <p class="mt-2">{{ homeLoading ? "Memuat galeri..." : "Belum ada foto galeri." }}</p>
       </div>
     </section>
   </div>
