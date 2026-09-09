@@ -495,12 +495,17 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-    <!-- ============ ADUAN MASYARAKAT ============
-         Tambahkan border kiri berwarna + avatar berwarna sesuai severity,
-         supaya status aduan langsung kebaca lewat warna, bukan cuma Tag. -->
+    <!-- ============ ADUAN MASYARAKAT ============ -->
     <section v-reveal>
+
       <div class="flex items-end justify-between mb-4">
         <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-heading m-0">Aduan Masyarakat</h2>
+        <RouterLink
+          :to="{ name: 'complaints' }"
+          class="text-[13px] font-bold text-primary-700 hover:text-primary-800 shrink-0 flex items-center gap-1"
+        >
+          Lihat Semua <i class="pi pi-arrow-right text-[10px]" />
+        </RouterLink>
       </div>
 
       <div class="rounded-2xl border border-border-default bg-surface divide-y divide-border-default overflow-hidden">
@@ -523,6 +528,7 @@ onBeforeUnmount(() => {
           <div class="hidden sm:block text-[12px] text-muted shrink-0">{{ item.date }}</div>
           <Tag :value="item.status" :severity="item.severity" class="!text-[10.5px] !font-bold shrink-0" />
         </div>
+
         <div v-if="!complaintsList.length" class="p-6 text-center text-[13px] text-muted">
           Belum ada aduan yang dapat ditampilkan.
         </div>
