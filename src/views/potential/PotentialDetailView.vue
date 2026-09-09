@@ -118,11 +118,17 @@ const related = computed(() =>
             class="related-card group overflow-hidden rounded-2xl border border-border-default bg-surface transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary-500/10"
             :style="{ transitionDelay: `${i * 60}ms` }"
           >
-            <div
-              class="flex h-32 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-surface-hover to-border-default transition-transform duration-500 group-hover:scale-105"
-            >
-              <i class="pi pi-image text-2xl text-muted/50" />
-            </div>
+          <div
+            class="flex h-32 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-surface-hover to-border-default transition-transform duration-500 group-hover:scale-105"
+          >
+            <img
+              v-if="r.image"
+              :src="r.image"
+              :alt="r.name"
+              class="h-full w-full object-cover"
+            />
+            <i v-else class="pi pi-image text-2xl text-muted/50" />
+          </div>
             <div class="p-4">
               <p class="text-sm font-bold text-heading">{{ r.name }}</p>
               <p class="mt-1 text-xs text-muted line-clamp-2">{{ r.shortDesc }}</p>
