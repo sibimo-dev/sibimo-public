@@ -4,10 +4,9 @@ import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
-import { useComplaintsStore } from '@/stores/complaints'
+import { submitComplaint, uploadComplaintAttachment } from '@/services/complaints.js'
 
 const router = useRouter()
-const complaintsStore = useComplaintsStore()
 
 /* ---------------- 1. Complaint category ----------------
    PENTING: value di sini ('Infrastructure', 'Public Service', dst.) SENGAJA
@@ -242,27 +241,34 @@ async function submitReport() {
   if (!canSubmit.value || isSubmitting.value) return
   isSubmitting.value = true
 
-  await new Promise((resolve) => setTimeout(resolve, 900)) // simulasi loading, masih dummy, belum ke API
+  try {
+    const payload = {
+      title: title.value.trim(),
+      description: description.value.trim(),
+      category: selectedCategory.value,
+      reporter_name: fullName.value.trim(),
+      reporter_phone: phoneNumber.value.trim(),
+      location: locationText.value || null,
+      latitude: locationCoordinates.value?.lat ?? null,
+      longitude: locationCoordinates.value?.lng ?? null,
+    }
 
-  complaintsStore.addComplaint({
-    title: title.value.trim(),
-    description: description.value.trim(),
-    category: selectedCategory.value, // sudah value PascalCase, mis. 'Infrastructure'
-    citizen: {
-      full_name: fullName.value.trim(),
-      phone_number: phoneNumber.value.trim(),
-    },
-    location: locationCoordinates.value
-      ? { text: locationText.value, latitude: locationCoordinates.value.lat, longitude: locationCoordinates.value.lng }
-      : (locationText.value ? { text: locationText.value } : null),
-    attachments: uploadedFiles.value,
-  })
+    const complaint = await submitComplaint(payload)
 
-  isSubmitting.value = false
-  isSubmitSuccess.value = true
-  localStorage.removeItem(DRAFT_STORAGE_KEY)
+    // upload lampiran satu-satu setelah complaint utama berhasil dibuat
+    for (const uploaded of uploadedFiles.value) {
+      await uploadComplaintAttachment(complaint.complaint_id, uploaded.file)
+    }
 
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+    isSubmitSuccess.value = true
+    localStorage.removeItem(DRAFT_STORAGE_KEY)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  } catch (err) {
+    console.error('Gagal mengirim aduan:', err)
+    fileError.value = err.response?.data?.message || 'Gagal mengirim laporan, coba lagi.'
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 function goToComplaintList() {

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -10,10 +10,21 @@ import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import { FilterMatchMode } from '@primevue/core/api'
-import { useComplaintsStore } from '@/stores/complaints'
+import { fetchComplaints } from '@/services/complaints.js'
 
 const router = useRouter()
-const complaintsStore = useComplaintsStore()
+const complaints = ref([])
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    complaints.value = await fetchComplaints()
+  } catch (err) {
+    console.error('Gagal memuat aduan:', err)
+  } finally {
+    loading.value = false
+  }
+})
 
 /* ---------------- Kategori & Status ----------------
    PENTING: value di sini SENGAJA disamakan persis dengan yang dipakai
@@ -49,11 +60,9 @@ function formatComplaintDate(iso) {
 function maskPhoneNumber(phone) {
   const digits = (phone || '').replace(/\D/g, '')
   if (!digits) return '-'
-  if (digits.length <= 6) return digits.replace(/./g, '*')
-  const start = digits.slice(0, 4)
-  const end = digits.slice(-3)
-  const middle = '*'.repeat(digits.length - start.length - end.length)
-  return `${start}${middle}${end}`
+  const visibleStart = digits.slice(0, 2) 
+  const stars = '*'.repeat(Math.max(digits.length - 2, 0))
+  return `${visibleStart}${stars}`
 }
 
 // Teks lokasi singkat untuk kolom tabel (di-truncate agar tidak memicu scroll horizontal di desktop).
@@ -94,10 +103,10 @@ function initialsOf(name) {
 }
 
 /* ---------------- Ringkasan statistik ---------------- */
-const totalCount = computed(() => complaintsStore.state.complaints.length)
-const submittedCount = computed(() => complaintsStore.state.complaints.filter((c) => c.status === 'Submitted').length)
-const inProgressCount = computed(() => complaintsStore.state.complaints.filter((c) => c.status === 'In Progress').length)
-const resolvedCount = computed(() => complaintsStore.state.complaints.filter((c) => c.status === 'Resolved').length)
+const totalCount = computed(() => complaints.value.length)
+const submittedCount = computed(() => complaints.value.filter((c) => c.status === 'Submitted').length)
+const inProgressCount = computed(() => complaints.value.filter((c) => c.status === 'In Progress').length)
+const resolvedCount = computed(() => complaints.value.filter((c) => c.status === 'Resolved').length)
 
 const statCards = computed(() => [
   { id: 'total', label: 'Total Aduan', value: totalCount.value, icon: 'pi pi-inbox', accent: 'from-indigo-500 to-violet-600', iconBg: 'bg-indigo-100 text-indigo-600' },
@@ -195,13 +204,14 @@ const tablePt = {
       </Transition>
     </div>
 
-    <Transition appear enter-active-class="transition-all duration-500 ease-out" enter-from-class="opacity-0 translate-y-3 scale-[0.98]" enter-to-class="opacity-100 translate-y-0 scale-100">
+    <div v-if="loading" class="mt-6 py-16 text-center text-slate-400">Memuat data aduan...</div>
+    <Transition v-else appear enter-active-class="transition-all duration-500 ease-out" enter-from-class="opacity-0 translate-y-3 scale-[0.98]" enter-to-class="opacity-100 translate-y-0 scale-100">
       <div class="relative mt-6 overflow-hidden rounded-2xl border border-indigo-100 bg-white shadow-lg shadow-indigo-100/50" style="transition-delay: 200ms">
         <span class="absolute inset-x-0 top-0 z-10 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-500" />
 
         <DataTable
           v-model:filters="filters"
-          :value="complaintsStore.state.complaints"
+          :value="complaints"
           :globalFilterFields="['title', 'citizen.full_name']"
           filterDisplay="menu"
           paginator
