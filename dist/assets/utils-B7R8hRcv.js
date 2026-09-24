@@ -1,1 +1,0 @@
-import{I as e,V as t,s as n}from"./basecomponent-DkSX2u9k.js";function r(){t({variableName:n(`scrollbar.width`).name})}function i(){e({variableName:n(`scrollbar.width`).name})}export{i as n,r as t};

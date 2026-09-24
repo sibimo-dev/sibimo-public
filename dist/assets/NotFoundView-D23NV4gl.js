@@ -1,1 +1,0 @@
-import{O as e,s as t,u as n}from"./runtime-core.esm-bundler-B90NJl9l.js";var r={class:`p-6`},i={__name:`NotFoundView`,setup(i){return(i,a)=>(e(),n(`div`,r,[...a[0]||=[t(`h1`,{class:`text-2xl font-semibold`},`404`,-1),t(`p`,{class:`text-sm mt-1`,style:{color:`var(--color-text-muted)`}},` Placeholder — belum diimplementasikan. `,-1)]]))}};export{i as default};
