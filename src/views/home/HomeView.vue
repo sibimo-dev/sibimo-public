@@ -216,6 +216,7 @@ function applyHomeData(data) {
   if (Object.prototype.hasOwnProperty.call(data, "agendas")) agendaList.value = data.agendas ?? [];
   if (Object.prototype.hasOwnProperty.call(data, "potentials")) potentialList.value = data.potentials ?? [];
   if (Object.prototype.hasOwnProperty.call(data, "galleries")) galleryList.value = data.galleries ?? [];
+  if (Object.prototype.hasOwnProperty.call(data, "complaints")) complaintsList.value = data.complaints ?? [];
   if (data.organization) {
     lurah.value = data.organization.lurah ?? null;
     pamongList.value = data.organization.pamong ?? [];
@@ -506,7 +507,7 @@ onBeforeUnmount(() => {
       <div class="rounded-2xl border border-border-default bg-surface divide-y divide-border-default overflow-hidden">
         <div
           v-for="item in complaintsList"
-          :key="item.title"
+          :key="item.complaint_id ?? item.title"
           class="flex items-center gap-3.5 p-4 sm:p-5 border-l-4"
           :class="colorForSeverity(item.severity).border.split(' ')[0]"
         >

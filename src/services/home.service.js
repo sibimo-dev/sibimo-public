@@ -148,6 +148,52 @@ function normalizeGalleries(items) {
     }))
 }
 
+const COMPLAINT_STATUS_META = {
+  Submitted: { label: 'Diajukan', severity: 'info' },
+  'In Progress': { label: 'Diproses', severity: 'warn' },
+  Resolved: { label: 'Selesai', severity: 'success' },
+  Rejected: { label: 'Ditolak', severity: 'danger' },
+}
+
+function complaintInitials(name) {
+  const initials = String(name || 'Anonim')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+
+  return initials || 'AN'
+}
+
+function normalizeComplaints(items) {
+  return asArray(items)
+    .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at))
+    .slice(0, 5)
+    .map((item) => {
+      const status = COMPLAINT_STATUS_META[item.status] || {
+        label: item.status || 'Diajukan',
+        severity: 'info',
+      }
+
+      return {
+        complaint_id: item.complaint_id,
+        title: item.title || 'Tanpa judul',
+        reporter: item.reporter_name || 'Anonim',
+        initials: complaintInitials(item.reporter_name),
+        date: item.submitted_at
+          ? new Date(item.submitted_at).toLocaleDateString('id-ID', {
+              day: '2-digit', month: 'short', year: 'numeric',
+            })
+          : '',
+        status: status.label,
+        severity: status.severity,
+      }
+    })
+}
+
 function normalizeOrganization(items) {
   const structure = asArray(items)[0]
   const levels = asArray(structure?.levels)
@@ -189,6 +235,7 @@ export async function fetchHomeData() {
     agendas: api.get('/agendas').then((response) => normalizeAgendas(unwrap(response))),
     potentials: api.get('/village-potentials').then((response) => normalizePotentials(unwrap(response))),
     galleries: api.get('/galleries').then((response) => normalizeGalleries(unwrap(response))),
+    complaints: api.get('/public/complaints').then((response) => normalizeComplaints(unwrap(response))),
     organization: api.get('/organizational-structures').then((response) => normalizeOrganization(unwrap(response))),
   }
 
