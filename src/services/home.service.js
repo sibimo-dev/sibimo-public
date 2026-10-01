@@ -1,6 +1,7 @@
 import api from './api'
 
-const HOME_CACHE_KEY = 'sibimo-public-home-v1'
+// v2: URL gambar & bentuk data berubah, jadi cache lama (v1) tidak dipakai lagi.
+const HOME_CACHE_KEY = 'sibimo-public-home-v2'
 
 const DAY_NAMES = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU']
 const MONTH_NAMES = [
@@ -36,20 +37,64 @@ const POTENTIAL_STYLES = {
 }
 
 const backendOrigin = String(api.defaults.baseURL || '').replace(/\/api\/?$/, '')
+const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 
-function unwrap(response) {
-  return response?.data?.data ?? response?.data ?? null
+/* Bentuk respons backend bisa bermacam-macam:
+   [..]  |  { data: [..] }  |  { data: { data: [..] } } (paginate)  |  { items: [..] }
+   Semuanya diratakan jadi array biasa. */
+function unwrapList(response) {
+  const body = response?.data
+  const candidates = [body?.data?.data, body?.data, body?.items, body]
+  return candidates.find(Array.isArray) ?? []
+}
+
+// Struktur organisasi bisa berupa array, atau satu objek yang langsung punya `levels`.
+function unwrapOrganization(response) {
+  const list = unwrapList(response)
+  if (list.length) return list
+  const single = response?.data?.data ?? response?.data
+  return single && typeof single === 'object' && Array.isArray(single.levels) ? [single] : []
 }
 
 function asArray(value) {
   return Array.isArray(value) ? value : []
 }
 
+// Ambil nilai teks pertama yang terisi dari beberapa kemungkinan nama field.
+function pick(item, keys) {
+  for (const key of keys) {
+    const value = item?.[key]
+    if (typeof value === 'string' && value.trim()) return value
+  }
+  return null
+}
+
+/* Mengubah path gambar dari backend jadi alamat lengkap.
+   Aturannya sama dengan mediaUrl() di sibimo-admin:
+   "galleries/a.jpg" | "/storage/galleries/a.jpg" | "storage/galleries/a.jpg"
+   semuanya jadi  <backend>/storage/galleries/a.jpg */
 function mediaUrl(value) {
   if (!value || typeof value !== 'string') return null
-  if (/^https?:\/\//i.test(value)) return value
-  const path = value.startsWith('/') ? value : `/storage/${value}`
-  return `${backendOrigin}${path}`
+  const source = value.trim()
+  if (!source) return null
+
+  if (/^https?:\/\//i.test(source)) {
+    // APP_URL di .env backend sering berbeda dari alamat yang dipakai saat dev
+    // (mis. http://localhost tanpa :8000). Untuk host lokal, pakai alamat backend yang benar.
+    try {
+      const url = new URL(source)
+      if (LOCAL_HOSTS.includes(url.hostname) && url.pathname.startsWith('/storage/')) {
+        return `${backendOrigin}${url.pathname}${url.search}`
+      }
+    } catch {
+      // URL tidak valid: pakai apa adanya
+    }
+    return source
+  }
+
+  if (source.startsWith('/storage/')) return `${backendOrigin}${source}`
+  if (source.startsWith('storage/')) return `${backendOrigin}/${source}`
+  return `${backendOrigin}/storage/${source.replace(/^\/+/, '')}`
 }
 
 function parseDate(value) {
@@ -90,7 +135,7 @@ function normalizeNews(items) {
             day: '2-digit', month: 'short', year: 'numeric',
           })
         : '',
-      image: mediaUrl(item.thumbnail),
+      image: mediaUrl(pick(item, ['thumbnail', 'thumbnail_url', 'image', 'image_url', 'cover'])),
     }))
 }
 
@@ -143,9 +188,55 @@ function normalizeGalleries(items) {
     .sort((a, b) => new Date(b.uploaded_at || b.created_at) - new Date(a.uploaded_at || a.created_at))
     .slice(0, 6)
     .map((item) => ({
-      image: mediaUrl(item.image),
+      image: mediaUrl(pick(item, ['image', 'image_url', 'photo', 'photo_url', 'file_path', 'path', 'url'])),
       caption: item.title || item.description || 'Galeri Kalurahan',
     }))
+}
+
+const COMPLAINT_STATUS_META = {
+  Submitted: { label: 'Diajukan', severity: 'info' },
+  'In Progress': { label: 'Diproses', severity: 'warn' },
+  Resolved: { label: 'Selesai', severity: 'success' },
+  Rejected: { label: 'Ditolak', severity: 'danger' },
+}
+
+function complaintInitials(name) {
+  const initials = String(name || 'Anonim')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+
+  return initials || 'AN'
+}
+
+function normalizeComplaints(items) {
+  return asArray(items)
+    .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at))
+    .slice(0, 5)
+    .map((item) => {
+      const status = COMPLAINT_STATUS_META[item.status] || {
+        label: item.status || 'Diajukan',
+        severity: 'info',
+      }
+
+      return {
+        complaint_id: item.complaint_id,
+        title: item.title || 'Tanpa judul',
+        reporter: item.reporter_name || 'Anonim',
+        initials: complaintInitials(item.reporter_name),
+        date: item.submitted_at
+          ? new Date(item.submitted_at).toLocaleDateString('id-ID', {
+              day: '2-digit', month: 'short', year: 'numeric',
+            })
+          : '',
+        status: status.label,
+        severity: status.severity,
+      }
+    })
 }
 
 function normalizeOrganization(items) {
@@ -155,7 +246,7 @@ function normalizeOrganization(items) {
     nama: person.name || '',
     jabatan: person.title || '',
     desc: person.desc || '',
-    photo: mediaUrl(person.photo),
+    photo: mediaUrl(pick(person, ['photo', 'photo_url', 'image', 'image_url', 'picture'])),
     level: level.level || '',
   })))
   const lurah = people.find((person) => person.level.toLowerCase() === 'lurah') || null
@@ -163,6 +254,18 @@ function normalizeOrganization(items) {
   return {
     lurah,
     pamong: people.filter((person) => person !== lurah),
+  }
+}
+
+/* Aduan untuk beranda. Utamanya /public/complaints; kalau route itu tidak ada (404)
+   di backend, coba /complaints (endpoint daftar aduan yang dipakai service aduan). */
+async function fetchComplaintsResponse() {
+  try {
+    return await api.get('/public/complaints')
+  } catch (error) {
+    if (error?.response?.status !== 404) throw error
+    console.warn('[Home] /public/complaints tidak ditemukan (404), mencoba /complaints.')
+    return api.get('/complaints')
   }
 }
 
@@ -185,11 +288,12 @@ export function writeHomeCache(data) {
 
 export async function fetchHomeData() {
   const requests = {
-    news: api.get('/news').then((response) => normalizeNews(unwrap(response))),
-    agendas: api.get('/agendas').then((response) => normalizeAgendas(unwrap(response))),
-    potentials: api.get('/village-potentials').then((response) => normalizePotentials(unwrap(response))),
-    galleries: api.get('/galleries').then((response) => normalizeGalleries(unwrap(response))),
-    organization: api.get('/organizational-structures').then((response) => normalizeOrganization(unwrap(response))),
+    news: api.get('/news').then((response) => normalizeNews(unwrapList(response))),
+    agendas: api.get('/agendas').then((response) => normalizeAgendas(unwrapList(response))),
+    potentials: api.get('/village-potentials').then((response) => normalizePotentials(unwrapList(response))),
+    galleries: api.get('/galleries').then((response) => normalizeGalleries(unwrapList(response))),
+    complaints: fetchComplaintsResponse().then((response) => normalizeComplaints(unwrapList(response))),
+    organization: api.get('/organizational-structures').then((response) => normalizeOrganization(unwrapOrganization(response))),
   }
 
   const entries = Object.entries(requests)
@@ -200,7 +304,15 @@ export async function fetchHomeData() {
   settled.forEach((result, index) => {
     const key = entries[index][0]
     loaded[key] = result.status === 'fulfilled'
-    if (result.status === 'fulfilled') data[key] = result.value
+
+    if (result.status === 'fulfilled') {
+      data[key] = result.value
+    } else {
+      // Muncul di Console supaya jelas bagian mana yang gagal dan kenapa.
+      const reason = result.reason
+      const status = reason?.response?.status ?? reason?.code ?? 'tanpa respons'
+      console.warn(`[Home] Gagal memuat "${key}" (${status}).`, reason?.config?.url ?? '')
+    }
   })
 
   return { data, loaded }

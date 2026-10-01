@@ -8,6 +8,7 @@ import {
 import { RouterLink, useRouter } from "vue-router";
 import Tag from "primevue/tag";
 import HeroCarousel from "@/components/shared/HeroCarousel.vue";
+import SubmissionCheckForm from "@/components/shared/SubmissionCheckForm.vue";
 
 const router = useRouter();
 const newsList = ref([]);
@@ -32,9 +33,7 @@ function handleSearch() {
     router.push({ name: "complaints" });
   } else if (/wilayah|peta|dusun|rt|rw/.test(q)) {
     router.push({ name: "region" });
-  } else if (/bumdes|usaha desa/.test(q)) {
-    router.push({ name: "bumdes" });
-  } else if (/potensi|umkm|wisata|pariwisata|pertanian/.test(q)) {
+  } else if (/potensi|bumdes|usaha desa|umkm|wisata|pariwisata|pertanian/.test(q)) {
     router.push({ name: "potential" });
   } else if (/agenda|kegiatan|jadwal/.test(q)) {
     router.push({ name: "events" });
@@ -176,10 +175,18 @@ const quickAccess = [
     desc: "Peta dan data administratif dusun, RT, dan RW.",
   },
   {
-    icon: "pi-building-columns",
-    title: "BUMDes",
-    desc: "Badan usaha milik desa untuk kesejahteraan warga.",
+    icon: "pi-star",
+    title: "Potensi",
+    desc: "UMKM, pertanian, dan wisata unggulan kalurahan.",
+    route: { name: "potential" },
   },
+];
+
+/* Langkah singkat untuk kartu Cek Pengajuan */
+const documentSteps = [
+  { icon: "pi-id-card", title: "Masukkan NIK", desc: "16 digit NIK sesuai yang dipakai saat mengajukan surat." },
+  { icon: "pi-ticket", title: "Isi ID Pengajuan", desc: "Kode ada di bukti pengajuan, contoh: REQ-20260930-001." },
+  { icon: "pi-download", title: "Lihat status & unduh", desc: "Cek status surat, lalu pratinjau atau unduh PDF yang sudah disetujui." },
 ];
 
 /* Memotong excerpt di batas kata terdekat + "…" eksplisit, supaya
@@ -216,6 +223,7 @@ function applyHomeData(data) {
   if (Object.prototype.hasOwnProperty.call(data, "agendas")) agendaList.value = data.agendas ?? [];
   if (Object.prototype.hasOwnProperty.call(data, "potentials")) potentialList.value = data.potentials ?? [];
   if (Object.prototype.hasOwnProperty.call(data, "galleries")) galleryList.value = data.galleries ?? [];
+  if (Object.prototype.hasOwnProperty.call(data, "complaints")) complaintsList.value = data.complaints ?? [];
   if (data.organization) {
     lurah.value = data.organization.lurah ?? null;
     pamongList.value = data.organization.pamong ?? [];
@@ -279,6 +287,17 @@ function pauseOrgAutoplay() {
 
 function resumeOrgAutoplay() {
   orgAutoplayPaused = false;
+}
+
+/* Galeri beranda: geser manual (swipe / tombol), tanpa autoplay */
+const galleryTrackRef = ref(null);
+
+function scrollGallery(direction) {
+  const track = galleryTrackRef.value;
+  const firstCard = track?.children?.[0];
+  if (!track || !firstCard) return;
+  const gap = parseFloat(getComputedStyle(track).columnGap || "0");
+  track.scrollBy({ left: direction * (firstCard.getBoundingClientRect().width + gap), behavior: "smooth" });
 }
 
 onMounted(() => {
@@ -378,6 +397,44 @@ onBeforeUnmount(() => {
     <p class="relative text-[12px] sm:text-[12.5px] text-muted mt-1 leading-snug">{{ card.desc }}</p>
   </component>
 </section>
+
+    <!-- ============ CEK PENGAJUAN ============ -->
+    <section v-reveal class="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
+      <!-- Penjelasan fungsi Cek Pengajuan (kanan di desktop) -->
+      <div class="relative lg:order-2">
+        <div class="pointer-events-none absolute -top-10 -left-10 h-40 w-40 rounded-full bg-primary-100/70 blur-2xl"></div>
+        <div class="pointer-events-none absolute -bottom-10 right-0 h-32 w-32 rounded-full bg-primary-50 blur-2xl"></div>
+        <i class="pi pi-file-pdf pointer-events-none absolute -top-4 right-2 text-[88px] text-primary-100 rotate-12 hidden sm:block"></i>
+
+        <div class="relative">
+          <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-50 border border-primary-100 px-3 py-1 text-[11.5px] font-bold text-primary-800">
+            <i class="pi pi-download text-[11px]" />
+            Layanan Digital
+          </span>
+          <h2 class="font-heading font-extrabold text-2xl sm:text-3xl text-heading mt-3 mb-2">Cek Pengajuan Surat</h2>
+          <p class="text-[14px] sm:text-[15px] text-muted leading-relaxed max-w-md">
+            Pantau status pengajuan suratmu, apakah sudah diverifikasi, siap diunduh, atau ditolak, lalu lihat dan unduh PDF-nya tanpa perlu datang ke kantor kalurahan.
+          </p>
+
+          <ol class="mt-6 flex flex-col gap-4 m-0 p-0 list-none">
+            <li v-for="(step, i) in documentSteps" :key="step.title" class="flex items-start gap-3.5">
+              <div class="shrink-0 w-10 h-10 rounded-xl bg-primary-800 text-white flex items-center justify-center shadow-sm">
+                <i :class="step.icon" class="pi text-[15px]" />
+              </div>
+              <div class="min-w-0">
+                <h3 class="font-heading font-bold text-[14px] text-heading m-0">
+                  <span class="text-primary-600 mr-1">{{ i + 1 }}.</span>{{ step.title }}
+                </h3>
+                <p class="text-[12.5px] text-muted mt-0.5 leading-snug">{{ step.desc }}</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Form cek pengajuan (kiri di desktop) -->
+      <SubmissionCheckForm class="w-full lg:order-1 lg:[&>div]:mx-0 lg:[&>div]:mr-auto" />
+    </section>
 
     <!-- ============ BERITA + AGENDA ============ -->
     <section v-reveal class="grid lg:grid-cols-3 gap-6 lg:gap-8 items-stretch">
@@ -511,7 +568,7 @@ onBeforeUnmount(() => {
       <div class="rounded-2xl border border-border-default bg-surface divide-y divide-border-default overflow-hidden">
         <div
           v-for="item in complaintsList"
-          :key="item.title"
+          :key="item.complaint_id ?? item.title"
           class="flex items-center gap-3.5 p-4 sm:p-5 border-l-4"
           :class="colorForSeverity(item.severity).border.split(' ')[0]"
         >
@@ -735,40 +792,60 @@ onBeforeUnmount(() => {
         </RouterLink>
       </div>
 
-      <div v-if="galleryList.length" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3.5 auto-rows-[90px] sm:auto-rows-[110px] lg:auto-rows-[240px]">
-        <RouterLink
-          v-for="(item, i) in galleryList"
-          :key="item.image || i"
-          :to="{ name: 'gallery' }"
-          :class="i === 0 ? 'col-span-2 row-span-2' : 'col-span-1 row-span-1'"
-          class="group relative rounded-xl sm:rounded-2xl bg-primary-50 border border-border-default flex items-center justify-center overflow-hidden"
+      <div v-if="galleryList.length" class="relative">
+        <button
+          type="button"
+          aria-label="Foto sebelumnya"
+          @click="scrollGallery(-1)"
+          class="hidden sm:flex absolute -left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-surface border border-border-default shadow-sm items-center justify-center text-primary-700 hover:bg-primary-50 transition-colors"
         >
-          <img
-            v-if="item.image"
-            :src="item.image"
-            :alt="item.caption || 'Galeri Bimomartani'"
-            class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
-            @error="handleImgError"
-          />
-          <i v-else class="pi pi-image text-2xl text-primary-200" />
+          <i class="pi pi-chevron-left text-[13px]" />
+        </button>
 
-          <!-- overlay caption berwarna bergilir, muncul saat hover -->
-          <div
-            class="absolute inset-0 flex flex-col justify-end p-2.5 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity"
+        <div
+          ref="galleryTrackRef"
+          class="flex gap-3 sm:gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-1.5 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <RouterLink
+            v-for="(item, i) in galleryList"
+            :key="item.image || i"
+            :to="{ name: 'gallery' }"
+            class="group relative snap-start shrink-0 w-[82%] sm:w-[46%] lg:w-[32%] aspect-[4/3] rounded-xl sm:rounded-2xl bg-primary-50 border border-border-default flex items-center justify-center overflow-hidden"
           >
-            <span
-              class="self-start rounded-full px-2 py-0.5 text-[9.5px] font-bold text-white mb-1"
-              :class="colorAt(i).gradient.replace('to-', 'to-').concat(' bg-gradient-to-r')"
-            >
-              {{ item.caption }}
-            </span>
-          </div>
+            <img
+              v-if="item.image"
+              :src="item.image"
+              :alt="item.caption || 'Galeri Bimomartani'"
+              class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+              draggable="false"
+              @error="handleImgError"
+            />
+            <i v-else class="pi pi-image text-2xl text-primary-200" />
 
-          <div class="absolute inset-0 flex items-end justify-end p-2.5">
-            <i class="pi pi-search-plus text-white text-[13px] opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </RouterLink>
+            <!-- caption selalu tampil (di layar sentuh tidak ada hover) -->
+            <div
+              v-if="item.caption"
+              class="absolute inset-x-0 bottom-0 flex flex-col justify-end p-3 pt-10 bg-gradient-to-t from-black/65 via-black/25 to-transparent"
+            >
+              <span
+                class="self-start max-w-full rounded-full px-2.5 py-0.5 text-[10.5px] font-bold text-white truncate bg-gradient-to-r"
+                :class="colorAt(i).gradient"
+              >
+                {{ item.caption }}
+              </span>
+            </div>
+          </RouterLink>
+        </div>
+
+        <button
+          type="button"
+          aria-label="Foto berikutnya"
+          @click="scrollGallery(1)"
+          class="hidden sm:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-surface border border-border-default shadow-sm items-center justify-center text-primary-700 hover:bg-primary-50 transition-colors"
+        >
+          <i class="pi pi-chevron-right text-[13px]" />
+        </button>
       </div>
       <div v-else class="rounded-2xl border border-border-default bg-primary-50 p-8 text-center text-[13px] text-muted">
         <i class="pi pi-images text-2xl text-primary-200" />
