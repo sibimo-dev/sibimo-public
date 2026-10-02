@@ -10,7 +10,7 @@ const socialLinks = [
 
 const footerLinks = [
   { label: "Profil Kalurahan", to: { name: "profile" } },
-  { label: "Layanan Surat", to: { name: "services" } },
+  { label: "Layanan Mandiri", to: { name: "services" } },
   { label: "Aduan Masyarakat", to: { name: "complaints" } },
   { label: "Potensi Bimomartani", to: { name: "potential" } },
   { label: "Galeri Kalurahan", to: { name: "gallery" } },

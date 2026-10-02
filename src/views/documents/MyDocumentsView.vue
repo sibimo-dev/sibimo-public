@@ -1,312 +1,316 @@
 <script setup>
+import { onBeforeUnmount, onMounted, ref } from "vue";
+import Button from "primevue/button";
+import Dialog from "primevue/dialog";
+import Message from "primevue/message";
+import Tag from "primevue/tag";
+import SubmissionCheckForm from "@/components/shared/SubmissionCheckForm.vue";
+import {
+  fetchSubmissionPdf,
+  getSubmissionErrorMessage,
+  lookupSubmissions,
+} from "@/services/submissionCheck.service";
+import { useSubmissionCheckStore } from "@/stores/submissionCheck";
 
-import { ref, computed } from 'vue'
-import InputText from 'primevue/inputtext'
-import Button from 'primevue/button'
-import Tag from 'primevue/tag'
-import Dialog from 'primevue/dialog'
 
-const nik = ref('')
-const submissionCode = ref('')
-const hasSearched = ref(false)
-const errors = ref({})
-
-const previewVisible = ref(false)
-const previewDocument = ref(null)
-
-const documents = ref([
-  {
-    id: 1,
-    nik: '3273123456789012',
-    name: 'Surat Keterangan Domisili',
-    submissionCode: 'SKD-2026-0217',
-    submittedDate: '20/08/2026',
-    status: 'Terverifikasi',
-    fileUrl: '/documents/skd-0217.pdf',
+const letterStatuses = {
+  submitted: {
+    label: "Menunggu Verifikasi",
+    severity: "warn",
+    icon: "pi pi-clock",
+    hint: "Pengajuan sudah diterima dan menunggu diperiksa petugas kalurahan.",
   },
-  {
-    id: 2,
-    nik: '3273123456789012',
-    name: 'Surat Pengantar KTP',
-    submissionCode: 'SPK-2026-0842',
-    submittedDate: '25/08/2026',
-    status: 'Menunggu',
-    fileUrl: null,
+  verified: {
+    label: "Terverifikasi",
+    severity: "info",
+    icon: "pi pi-check-circle",
+    hint: "Data sudah diverifikasi. Surat menunggu persetujuan dan tanda tangan.",
   },
-  {
-    id: 3,
-    nik: '3273987654321098',
-    name: 'Surat Keterangan Usaha',
-    submissionCode: 'SKU-2026-0913',
-    submittedDate: '24/08/2026',
-    status: 'Ditolak',
-    fileUrl: null,
+  authorized: {
+    label: "Siap Diunduh",
+    severity: "success",
+    icon: "pi pi-file-pdf",
+    hint: "Surat sudah disetujui dan siap dilihat serta diunduh.",
   },
-  {
-    id: 4,
-    nik: '3273987654321098',
-    name: 'Surat Permohonan Nikah',
-    submissionCode: 'SPN-2026-0155',
-    submittedDate: '23/08/2026',
-    status: 'Terverifikasi',
-    fileUrl: '/documents/spn-0155.pdf',
+  completed: {
+    label: "Selesai",
+    severity: "success",
+    icon: "pi pi-check",
+    hint: "Pengajuan sudah selesai diproses.",
   },
-])
+  rejected: {
+    label: "Ditolak",
+    severity: "danger",
+    icon: "pi pi-times-circle",
+    hint: "Pengajuan tidak dapat dilanjutkan.",
+  },
+};
 
-const filteredDocuments = computed(() => {
-  if (!hasSearched.value) return []
-  const nikQuery = nik.value.trim()
-  const codeQuery = submissionCode.value.trim().toUpperCase()
-  return documents.value.filter(
-    (document) =>
-      document.nik === nikQuery &&
-      document.submissionCode.toUpperCase() === codeQuery
-  )
-})
+function getLetterStatus(status) {
+  return (
+    letterStatuses[status] ?? {
+      label: status || "Tidak diketahui",
+      severity: "secondary",
+      icon: "pi pi-info-circle",
+      hint: "",
+    }
+  );
+}
 
-function validate() {
-  const nextErrors = {}
-  if (!/^\d{16}$/.test(nik.value.trim())) {
-    nextErrors.nik = 'NIK harus 16 digit angka.'
+// Urutan tahap normal, dipakai untuk menandai langkah mana yang sudah dilewati.
+const letterStatusOrder = ["submitted", "verified", "authorized", "completed"];
+
+const store = useSubmissionCheckStore();
+
+const isRefreshing = ref(false);
+const refreshError = ref("");
+const pdfError = ref("");
+const busyKey = ref(""); // "<request_code>:preview" atau "<request_code>:download"
+const previewVisible = ref(false);
+const previewUrl = ref("");
+const previewTitle = ref("");
+
+const dateFormatter = new Intl.DateTimeFormat("id-ID", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+function formatDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : dateFormatter.format(date);
+}
+
+function isReleased(item) {
+  return item.status === "authorized" || item.status === "completed";
+}
+
+// Tahapan yang ditampilkan. Pengajuan yang ditolak berhenti di tahap "Ditolak".
+function timelineOf(item) {
+  const steps = [{ key: "submitted", label: "Diajukan", at: item.submitted_at, rank: 0 }];
+
+  if (item.status === "rejected") {
+    steps.push({ key: "rejected", label: "Ditolak", at: item.verified_at, rejected: true });
+    return steps.map((step) => ({ ...step, tone: step.rejected ? "rejected" : "done" }));
   }
-  if (!submissionCode.value.trim()) {
-    nextErrors.submissionCode = 'ID pengajuan wajib diisi.'
+
+  steps.push({ key: "verified", label: "Diverifikasi", at: item.verified_at, rank: 1 });
+  steps.push({ key: "authorized", label: "Disetujui, surat siap diunduh", at: item.authorized_at, rank: 2 });
+  if (item.status === "completed") {
+    steps.push({ key: "completed", label: "Selesai", at: item.completed_at, rank: 3 });
   }
-  errors.value = nextErrors
-  return Object.keys(nextErrors).length === 0
+
+  const currentRank = letterStatusOrder.indexOf(item.status);
+  return steps.map((step) => ({ ...step, tone: step.rank <= currentRank ? "done" : "pending" }));
 }
 
-function searchDocuments() {
-  if (!validate()) {
-    hasSearched.value = false
-    return
+const dotClass = {
+  done: "bg-emerald-100 text-emerald-600",
+  pending: "bg-slate-100 text-slate-400",
+  rejected: "bg-red-100 text-red-600",
+};
+const dotIcon = {
+  done: "pi pi-check",
+  pending: "pi pi-clock",
+  rejected: "pi pi-times",
+};
+
+function downloadHint(item) {
+  if (item.status === "rejected") return "Surat tidak tersedia karena pengajuan ditolak.";
+  if (isReleased(item)) return "Berkas PDF surat ini belum tersedia. Silakan hubungi kantor kalurahan.";
+  return "Surat bisa dilihat dan diunduh setelah pengajuan disetujui.";
+}
+
+async function refresh() {
+  if (!store.nik || !store.requestCode) return;
+  isRefreshing.value = true;
+  refreshError.value = "";
+  try {
+    store.updateItems(await lookupSubmissions({ nik: store.nik, requestCode: store.requestCode }));
+  } catch (error) {
+    refreshError.value = await getSubmissionErrorMessage(error, "Status terbaru tidak dapat dimuat saat ini.");
+  } finally {
+    isRefreshing.value = false;
   }
-  hasSearched.value = true
 }
 
-function resetSearch() {
-  nik.value = ''
-  submissionCode.value = ''
-  hasSearched.value = false
-  errors.value = {}
+function releasePreview() {
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
+  previewUrl.value = "";
 }
 
-function statusSeverity(status) {
-  if (status === 'Terverifikasi') return 'success'
-  if (status === 'Menunggu') return 'warn'
-  return 'danger'
+async function openPdf(item, { download }) {
+  pdfError.value = "";
+  busyKey.value = `${item.request_code}:${download ? "download" : "preview"}`;
+  try {
+    const blob = await fetchSubmissionPdf({ requestCode: item.request_code, nik: store.nik, download });
+    const url = URL.createObjectURL(blob);
+
+    if (download) {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${item.request_code}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } else {
+      releasePreview();
+      previewUrl.value = url;
+      previewTitle.value = item.letter_type?.name ?? "Surat";
+      previewVisible.value = true;
+    }
+  } catch (error) {
+    pdfError.value = await getSubmissionErrorMessage(error, "Surat tidak dapat dimuat saat ini. Coba lagi nanti.");
+  } finally {
+    busyKey.value = "";
+  }
 }
 
-function statusIcon(status) {
-  if (status === 'Terverifikasi') return 'pi pi-check-circle'
-  if (status === 'Menunggu') return 'pi pi-clock'
-  return 'pi pi-times-circle'
-}
+onMounted(() => {
+  // Hasil dari beranda baru saja diambil; segarkan hanya kalau datanya sudah agak lama.
+  if (store.hasResult && Date.now() - store.checkedAt > 60000) refresh();
+});
 
-function openPreview(document) {
-  if (!document.fileUrl) return
-  previewDocument.value = document
-  previewVisible.value = true
-}
-
-function downloadDocument(document) {
-  if (!document?.fileUrl) return
-  window.open(document.fileUrl, '_blank')
-}
+onBeforeUnmount(releasePreview);
 </script>
 
 <template>
-  <div class="p-6">
-    <!-- Kartu verifikasi, ditampilkan sebelum pencarian dilakukan -->
-    <div
-      v-if="!hasSearched"
-      class="mt-6 max-w-md mx-auto relative overflow-hidden rounded-3xl bg-gradient-to-br from-white to-slate-100 shadow-xl p-6 sm:p-8"
-    >
-      <div class="pointer-events-none absolute -top-8 -right-8 h-32 w-32 rounded-full bg-blue-100/80 blur-md"></div>
-      <div class="pointer-events-none absolute -bottom-8 -left-8 h-28 w-28 rounded-full bg-slate-200/70 blur-md"></div>
-
-      <div class="relative flex flex-col items-center text-center gap-2">
-        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[#1B3657] shadow-md">
-          <i class="pi pi-shield text-2xl text-white" />
-        </div>
-        <p class="text-xl font-bold text-gray-900 mt-3">
-          Dokumen Saya
-        </p>
-        <p class="text-sm text-gray-500 leading-relaxed max-w-xs mx-auto">
-          Verifikasi NIK dan ID pengajuan untuk melihat serta mengunduh dokumen surat kamu.
-        </p>
-      </div>
-
-      <div class="relative flex flex-col gap-4 mt-6">
-        <div class="flex flex-col gap-1">
-          <label for="nik" class="text-sm font-semibold text-gray-900">NIK</label>
-          <InputText
-            id="nik"
-            v-model="nik"
-            maxlength="16"
-            placeholder="16 Digit NIK"
-            class="w-full rounded-2xl py-3 px-4"
-            :invalid="!!errors.nik"
-            @keyup.enter="searchDocuments"
-          />
-          <small v-if="errors.nik" class="text-red-500">{{ errors.nik }}</small>
-        </div>
-
-        <div class="flex flex-col gap-1">
-          <label for="submission-code" class="text-sm font-semibold text-gray-900">ID Pengajuan</label>
-          <InputText
-            id="submission-code"
-            v-model="submissionCode"
-            placeholder="Contoh: SKD-2026-0217"
-            class="w-full rounded-2xl py-3 px-4"
-            :invalid="!!errors.submissionCode"
-            @keyup.enter="searchDocuments"
-          />
-          <small v-if="errors.submissionCode" class="text-red-500">{{ errors.submissionCode }}</small>
-        </div>
-      </div>
-
-      <Button
-        label="Cek Data"
-        icon="pi pi-search"
-        class="relative w-full mt-6 rounded-2xl py-3 !bg-[#1B3657] !border-[#1B3657] hover:!bg-[#142943] hover:!border-[#142943]"
-        @click="searchDocuments"
-      />
+  <div class="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+    <!-- Belum ada hasil (mis. halaman dibuka langsung): tampilkan form -->
+    <div v-if="!store.hasResult" class="py-4 sm:py-8">
+      <SubmissionCheckForm />
     </div>
 
-    <!-- Data tidak ditemukan, menggantikan kartu verifikasi -->
-    <div
-      v-else-if="filteredDocuments.length === 0"
-      class="mt-6 max-w-md mx-auto relative overflow-hidden rounded-3xl bg-gradient-to-br from-white to-slate-100 shadow-xl p-6 sm:p-8 text-center"
-    >
-      <div class="pointer-events-none absolute -top-8 -right-8 h-32 w-32 rounded-full bg-red-100/70 blur-md"></div>
-      <div class="relative flex flex-col items-center gap-2">
-        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
-          <i class="pi pi-exclamation-circle text-2xl text-red-500" />
+    <template v-else>
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 class="font-heading font-extrabold text-2xl sm:text-3xl text-heading m-0">Cek Pengajuan</h1>
+          <p class="text-sm text-muted mt-1 mb-0">
+            Status pengajuan <span class="font-mono font-semibold text-heading">{{ store.requestCode }}</span>
+            untuk NIK {{ store.maskedNik }}.
+          </p>
         </div>
-        <p class="text-xl font-bold text-gray-900 mt-3">Dokumen Tidak Ditemukan</p>
-        <p class="text-sm text-gray-500 leading-relaxed max-w-xs mx-auto">
-          Kombinasi NIK dan ID pengajuan yang kamu masukkan tidak cocok dengan data manapun.
-        </p>
-        <Button
-          label="Coba Lagi"
-          icon="pi pi-refresh"
-          class="w-full mt-6 rounded-2xl py-3 !bg-[#1B3657] !border-[#1B3657] hover:!bg-[#142943] hover:!border-[#142943]"
-          @click="resetSearch"
-        />
+        <div class="flex flex-wrap gap-2">
+          <Button
+            label="Segarkan"
+            icon="pi pi-refresh"
+            severity="secondary"
+            outlined
+            size="small"
+            :loading="isRefreshing"
+            @click="refresh"
+          />
+          <Button label="Cek Pengajuan Lain" icon="pi pi-search" size="small" @click="store.clear()" />
+        </div>
       </div>
-    </div>
 
-    <!-- Hasil pencarian, menggantikan kartu verifikasi setelah berhasil -->
-    <div v-else class="mt-6 max-w-3xl mx-auto">
-      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white to-slate-100 shadow-xl p-6 sm:p-8">
-        <div class="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-blue-100/70 blur-md"></div>
+      <Message v-if="refreshError" severity="warn" :closable="false" class="mt-4">{{ refreshError }}</Message>
+      <Message v-if="pdfError" severity="error" :closable="false" class="mt-4">{{ pdfError }}</Message>
 
-        <div class="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <div class="flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
-              <i class="pi pi-check-circle text-xl text-green-600" />
-            </div>
-            <div>
-              <p class="text-lg font-bold text-gray-900">Verifikasi Berhasil</p>
-              <p class="text-sm text-gray-500">
-                Ditemukan {{ filteredDocuments.length }} dokumen untuk NIK {{ nik }}.
+      <ul class="mt-6 flex flex-col gap-4 m-0 p-0 list-none">
+        <li
+          v-for="item in store.items"
+          :key="item.request_code"
+          class="rounded-2xl border border-border-default bg-surface p-4 sm:p-5 shadow-sm"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h2 class="font-heading font-bold text-base sm:text-lg text-heading m-0">
+                {{ item.letter_type?.name || "Surat" }}
+              </h2>
+              <p class="text-xs text-muted mt-1 mb-0">
+                ID Pengajuan: <span class="font-mono font-semibold text-heading">{{ item.request_code }}</span>
+                <template v-if="item.letter_type?.category"> · {{ item.letter_type.category }}</template>
               </p>
             </div>
+            <Tag
+              :value="getLetterStatus(item.status).label"
+              :severity="getLetterStatus(item.status).severity"
+              :icon="getLetterStatus(item.status).icon"
+              class="shrink-0"
+            />
           </div>
-          <Button label="Cari Lagi" icon="pi pi-refresh" text class="!text-[#1B3657]" @click="resetSearch" />
-        </div>
 
-        <div class="relative flex flex-col gap-3 mt-6">
-          <div
-            v-for="document in filteredDocuments"
-            :key="document.id"
-            class="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5 sm:flex-row sm:items-center sm:justify-between transition hover:shadow-md"
+          <p class="text-sm text-muted mt-3 mb-0">{{ getLetterStatus(item.status).hint }}</p>
+          <p v-if="item.letter_number" class="text-sm text-muted mt-1 mb-0">
+            Nomor surat: <span class="font-semibold text-heading">{{ item.letter_number }}</span>
+          </p>
+          <p
+            v-else-if="(item.status === 'submitted' || item.status === 'verified') && item.letter_type?.processing_time"
+            class="text-sm text-muted mt-1 mb-0"
           >
-            <div class="flex items-start gap-3">
-              <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100">
-                <i class="pi pi-file-pdf text-lg text-[#1B3657]" />
-              </div>
-              <div>
-                <p class="text-sm font-semibold text-gray-900">
-                  {{ document.name }}
-                </p>
-                <p class="mt-0.5 text-xs text-gray-500">
-                  Kode Pengajuan: {{ document.submissionCode }} · Diajukan {{ document.submittedDate }}
-                </p>
-                <Tag
-                  class="mt-2"
-                  :value="document.status"
-                  :severity="statusSeverity(document.status)"
-                  :icon="statusIcon(document.status)"
-                />
-              </div>
-            </div>
+            Perkiraan waktu proses: {{ item.letter_type.processing_time }}
+          </p>
 
-            <div class="flex items-center gap-2 sm:shrink-0">
+          <div
+            v-if="item.status === 'rejected' && item.rejection_reason"
+            class="mt-3 rounded-xl border border-red-100 bg-red-50 px-3.5 py-3"
+          >
+            <p class="text-xs font-bold text-red-700 m-0">Alasan penolakan</p>
+            <p class="text-sm text-red-700/90 mt-1 mb-0">{{ item.rejection_reason }}</p>
+          </div>
+
+          <ol class="mt-4 flex flex-col gap-3 sm:flex-row sm:gap-2 m-0 p-0 list-none">
+            <li v-for="step in timelineOf(item)" :key="step.key" class="flex items-start gap-2.5 sm:flex-1">
+              <span
+                class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[0.625rem]"
+                :class="dotClass[step.tone]"
+              >
+                <i :class="dotIcon[step.tone]" />
+              </span>
+              <div class="min-w-0">
+                <p class="text-xs font-semibold m-0" :class="step.tone === 'pending' ? 'text-muted' : 'text-heading'">
+                  {{ step.label }}
+                </p>
+                <p v-if="step.at" class="text-[0.6875rem] text-muted m-0 mt-0.5">{{ formatDate(step.at) }}</p>
+              </div>
+            </li>
+          </ol>
+
+          <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-border-default pt-4">
+            <template v-if="item.can_download">
               <Button
-                label="Lihat"
+                label="Pratinjau"
                 icon="pi pi-eye"
-                size="small"
+                severity="secondary"
                 outlined
-                class="!border-[#1B3657] !text-[#1B3657] hover:!bg-slate-50"
-                :disabled="!document.fileUrl"
-                @click="openPreview(document)"
+                size="small"
+                :loading="busyKey === `${item.request_code}:preview`"
+                :disabled="!!busyKey"
+                @click="openPdf(item, { download: false })"
               />
               <Button
                 label="Unduh PDF"
                 icon="pi pi-download"
                 size="small"
-                class="!bg-[#1B3657] !border-[#1B3657] hover:!bg-[#142943] hover:!border-[#142943]"
-                :disabled="!document.fileUrl"
-                @click="downloadDocument(document)"
+                :loading="busyKey === `${item.request_code}:download`"
+                :disabled="!!busyKey"
+                @click="openPdf(item, { download: true })"
               />
-            </div>
+            </template>
+            <p v-else class="text-xs text-muted m-0">{{ downloadHint(item) }}</p>
           </div>
-        </div>
-      </div>
-    </div>
+        </li>
+      </ul>
+    </template>
 
-    <!-- Dialog pratinjau dokumen sebelum diunduh -->
     <Dialog
       v-model:visible="previewVisible"
       modal
-      dismissableMask
-      :header="previewDocument?.name ?? 'Pratinjau Dokumen'"
-      class="w-[95vw] max-w-2xl"
+      :header="previewTitle"
+      class="w-[95vw] max-w-4xl"
+      @hide="releasePreview"
     >
-      <p class="text-xs text-gray-500 -mt-2 mb-3">
-        Kode Pengajuan: {{ previewDocument?.submissionCode }} · Diajukan {{ previewDocument?.submittedDate }}
-      </p>
-
-      <div
-        v-if="previewDocument?.fileUrl"
-        class="aspect-[3/4] w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50"
-      >
-        <iframe
-          :src="previewDocument.fileUrl"
-          title="Pratinjau dokumen"
-          class="h-full w-full"
-        />
-      </div>
-      <div
-        v-else
-        class="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 p-10 text-center text-sm text-gray-500"
-      >
-        <i class="pi pi-file-excel text-2xl text-gray-400" />
-        Pratinjau belum tersedia untuk dokumen ini.
-      </div>
-
-      <template #footer>
-        <Button label="Tutup" text class="!text-[#1B3657]" @click="previewVisible = false" />
-        <Button
-          label="Unduh PDF"
-          icon="pi pi-download"
-          class="!bg-[#1B3657] !border-[#1B3657] hover:!bg-[#142943] hover:!border-[#142943]"
-          :disabled="!previewDocument?.fileUrl"
-          @click="downloadDocument(previewDocument)"
-        />
-      </template>
+      <iframe
+        v-if="previewUrl"
+        :src="previewUrl"
+        title="Pratinjau surat"
+        class="h-[75vh] w-full rounded-lg border border-border-default"
+      />
     </Dialog>
   </div>
 </template>

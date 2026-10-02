@@ -7,7 +7,6 @@ import Button from "primevue/button";
 import {
   navMenuItems,
   navMenuItemsMobile,
-  navCta,
   mobileBottomNav,
 } from "@/components/shared/navMenu.js";
 import AppFooter from "@/components/shared/AppFooter.vue";
@@ -33,7 +32,7 @@ onBeforeUnmount(() => {
 });
 
 // Desktop: navMenuItems lengkap (tampilan tidak berubah).
-// Mobile (hamburger): hanya 5 item dari navMenuItemsMobile.
+// Mobile (hamburger): hanya item dari navMenuItemsMobile.
 const menubarModel = computed(() =>
   isDesktop.value ? navMenuItems : navMenuItemsMobile
 );
@@ -48,12 +47,10 @@ function isHome(item) {
 }
 
 // Susun ulang item bottom nav supaya "Beranda" selalu berada tepat di tengah,
-// apa pun urutan aslinya di navMenu.js.
+// apa pun urutan aslinya di navMenu.js. Tombol "Lainnya" (action: "more")
+// tidak ditampilkan di bottom nav.
 const bottomNavItems = computed(() => {
-  const items = [
-    ...mobileBottomNav.filter((item) => item.action !== "more"),
-    { label: navCta.label, icon: navCta.icon, route: navCta.route },
-  ];
+  const items = mobileBottomNav.filter((item) => item.action !== "more");
 
   const homeIndex = items.findIndex((item) => isHome(item));
   if (homeIndex === -1) return items;
@@ -66,7 +63,7 @@ const bottomNavItems = computed(() => {
 });
 
 const menubarPt = {
-  root: { class: "!border-0 !bg-transparent !px-0 !py-4 lg:!py-5 !flex !items-center !justify-between !w-full" },
+  root: { class: "!border-0 !bg-transparent !px-0 !py-2.5 lg:!py-2 !flex !items-center !justify-between !w-full" },
   button: {
     class: "!bg-white !text-primary-900 hover:!bg-primary-50 !border-2 !border-primary-900 !w-10 !h-10 !rounded-lg transition-colors lg:!hidden !order-1 lg:!order-none !mr-3 lg:!mr-0 shrink-0",
   },
@@ -82,18 +79,13 @@ const menubarPt = {
       options.context.active || options.context.focused ? "!bg-primary-50 lg:!bg-transparent" : "",
     ],
   }),
-  itemLink: { class: "!px-3 !py-3 !gap-1.5 !whitespace-nowrap" },
+  itemLink: { class: "!px-3 !py-2 !gap-1.5 !whitespace-nowrap" },
   submenu: {
     class:
       "lg:!bg-gradient-to-b lg:!from-primary-900 lg:!to-primary-800 lg:!border lg:!border-white/10 lg:!shadow-lg lg:!rounded-lg lg:!mt-1 lg:!py-1",
   },
 };
 
-const navCtaPt = {
-  root: {
-    class: "!bg-white !border-white hover:!bg-primary-50 hover:!border-primary-50 !rounded-lg transition-colors",
-  },
-};
 </script>
 
 <template>
@@ -113,7 +105,7 @@ const navCtaPt = {
               :to="{ name: 'home' }"
               class="flex items-center gap-2.5 sm:gap-3 shrink-0 lg:mr-6 order-2 lg:order-none min-w-0"
             >
-              <Avatar :image="villageLogo" shape="square" size="large" class="!w-10 !h-10 sm:!w-11 sm:!h-11 shrink-0" />
+              <Avatar :image="villageLogo" shape="square" size="large" class="!w-9 !h-9 sm:!w-10 sm:!h-10 shrink-0" />
               <span class="flex flex-col leading-tight min-w-0">
                 <b class="font-heading font-bold tracking-tight text-sm sm:text-lg uppercase text-white truncate">
                   Kalurahan Bimomartani
@@ -157,19 +149,6 @@ const navCtaPt = {
             </a>
           </template>
 
-
-          <!-- Tombol Unduh: cuma tampil di desktop (lg+), di mobile sudah ada di bottom nav -->
-          <template #end>
-            <Button
-              as="router-link"
-              :to="navCta.route"
-              :pt="navCtaPt"
-              class="!hidden lg:!inline-flex shrink-0 !px-4 sm:!px-5 !py-2.5 order-4 lg:order-none"
-            >
-              <i :class="navCta.icon" class="pi text-[15px] text-primary-800" />
-              <span class="ml-1.5 font-bold text-sm text-primary-800">{{ navCta.label }}</span>
-            </Button>
-          </template>
         </Menubar>
       </div>
     </header>
@@ -185,27 +164,26 @@ const navCtaPt = {
 
     <!-- ============ BOTTOM NAV, mobile only ============ -->
     <nav
-  class="lg:hidden fixed bottom-0 inset-x-0 z-40 h-[var(--bottom-nav-h)] bg-surface border-t border-border-default flex items-stretch"
-  style="padding-bottom: env(safe-area-inset-bottom)"
-  ><Button
-  v-for="item in bottomNavItems"
-  :key="item.label"
-  as="router-link"
-  :to="item.route"
-  text
-  class="!flex-1 !flex-col !gap-1 !rounded-none"
-  :class="!isHome(item) ? (isActive(item) ? '!text-primary-800' : '!text-text') : '!text-primary-800'"
->
-  <span
-    class="flex items-center justify-center w-9 h-6 rounded-full transition-colors"
-    :class="isHome(item) ? 'bg-primary-800' : (isActive(item) ? 'bg-primary-50' : '')"
-  >
-    <i :class="[item.icon, 'text-[19px]', isHome(item) ? 'text-white' : '']" />
-  </span>
-  <span class="text-[10.5px] font-bold" :class="isHome(item) ? 'text-primary-900' : ''">{{ item.label }}</span>
-</Button>
-</nav>
-      
-    
+      class="lg:hidden fixed bottom-0 inset-x-0 z-40 h-[var(--bottom-nav-h)] bg-surface border-t border-border-default flex items-stretch"
+      style="padding-bottom: env(safe-area-inset-bottom)"
+    >
+      <Button
+        v-for="item in bottomNavItems"
+        :key="item.label"
+        as="router-link"
+        :to="item.route"
+        text
+        class="!flex-1 !flex-col !gap-1 !rounded-none"
+        :class="!isHome(item) ? (isActive(item) ? '!text-primary-800' : '!text-text') : '!text-primary-800'"
+      >
+        <span
+          class="flex items-center justify-center w-9 h-6 rounded-full transition-colors"
+          :class="isHome(item) ? 'bg-primary-800' : (isActive(item) ? 'bg-primary-50' : '')"
+        >
+          <i :class="[item.icon, 'text-[19px]', isHome(item) ? 'text-white' : '']" />
+        </span>
+        <span class="text-[10.5px] font-bold" :class="isHome(item) ? 'text-primary-900' : ''">{{ item.label }}</span>
+      </Button>
+    </nav>
   </div>
 </template>
