@@ -1,12 +1,18 @@
-export const potentialCategories = [
+/*
+ * Kategori potensi.
+ * Beri `hidden: true` untuk menyembunyikan kategori (beserta semua datanya)
+ * dari halaman. Hapus flag tersebut kalau kategori sudah siap ditampilkan.
+ */
+const allCategories = [
   { slug: 'all', label: 'Semua' },
   { slug: 'umkm', label: 'UMKM', icon: 'pi pi-shop' },
   { slug: 'pertanian', label: 'Pertanian', icon: 'pi pi-sun' },
   { slug: 'pariwisata', label: 'Pariwisata', icon: 'pi pi-map' },
-  { slug: 'bumdes', label: 'BUMDes', icon: 'pi pi-building' },
+  // Kalurahan belum memiliki BUMDes. Hapus "hidden: true" jika sudah dibentuk.
+  { slug: 'bumdes', label: 'BUMDes', icon: 'pi pi-building', hidden: true },
 ]
 
-export const potentials = [
+const allPotentials = [
   {
     slug: 'batik-permata-ukmk-bimomartani',
     category: 'umkm',
@@ -75,6 +81,12 @@ export const potentials = [
   },
 ]
 
+/* ---- Versi yang di-export: kategori & data yang hidden sudah disaring ---- */
+const hiddenSlugs = new Set(allCategories.filter((c) => c.hidden).map((c) => c.slug))
+
+export const potentialCategories = allCategories.filter((c) => !c.hidden)
+export const potentials = allPotentials.filter((p) => !hiddenSlugs.has(p.category))
+
 export function getPotentialBySlug(slug) {
   return potentials.find((p) => p.slug === slug) ?? null
 }
@@ -84,9 +96,9 @@ export function getRelatedPotentials(category, excludeSlug, limit = 3) {
 }
 
 export function categoryLabel(slug) {
-  return potentialCategories.find((c) => c.slug === slug)?.label ?? slug
+  return allCategories.find((c) => c.slug === slug)?.label ?? slug
 }
 
 export function categoryIcon(slug) {
-  return potentialCategories.find((c) => c.slug === slug)?.icon ?? 'pi pi-tag'
+  return allCategories.find((c) => c.slug === slug)?.icon ?? 'pi pi-tag'
 }
