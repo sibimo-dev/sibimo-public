@@ -50,9 +50,9 @@ function getCategoryStyle(value) {
 }
 
 /* ---------------- 2. Data Pelapor & Detail Aduan ----------------
-   Cukup nama & nomor telepon saja untuk pelapor (NIK & alamat sengaja
-   tidak diminta). Struktur `citizen` yang dikirim ke store hanya berisi
-   full_name & phone_number. */
+   Nama dan nomor telepon bersifat opsional agar warga tetap dapat melapor
+   secara anonim. NIK & alamat sengaja tidak diminta. Struktur `citizen`
+   yang dikirim ke store hanya berisi full_name & phone_number. */
 const fullName = ref('')
 const phoneNumber = ref('')
 
@@ -229,8 +229,6 @@ function saveDraft() {
 const canSubmit = computed(
   () =>
     !!selectedCategory.value &&
-    fullName.value.trim().length > 0 &&
-    phoneNumber.value.trim().length > 0 &&
     title.value.trim().length > 0 &&
     isDescriptionValid.value
 )
@@ -392,12 +390,12 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
           <div class="mt-4 space-y-5 border-b border-slate-100 pb-6">
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
-                <label class="mb-1.5 block text-xs font-semibold text-slate-500">Nama Lengkap</label>
-                <InputText v-model="fullName" placeholder="Nama lengkap Anda" class="w-full" />
+                <label class="mb-1.5 block text-xs font-semibold text-slate-500">Nama Lengkap <span class="font-normal text-slate-400">(opsional)</span></label>
+                <InputText v-model="fullName" placeholder="Boleh dikosongkan untuk anonim" class="w-full" />
               </div>
               <div>
-                <label class="mb-1.5 block text-xs font-semibold text-slate-500">Nomor Telepon</label>
-                <InputText v-model="phoneNumber" placeholder="08xxxxxxxxxx" class="w-full" />
+                <label class="mb-1.5 block text-xs font-semibold text-slate-500">Nomor Telepon <span class="font-normal text-slate-400">(opsional)</span></label>
+                <InputText v-model="phoneNumber" placeholder="Boleh dikosongkan untuk anonim" class="w-full" />
               </div>
             </div>
 
