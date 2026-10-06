@@ -27,8 +27,8 @@ const h = computed(() => hue(props.hue));
       <span class="flex h-12 w-12 items-center justify-center rounded-2xl text-xl shadow-sm transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-3" :class="h.icon">
         <i :class="service.icon" />
       </span>
-      <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold" :class="h.pill">
-        <i v-if="isBundle" class="pi pi-objects-column text-[10px]" />
+      <span v-if="isBundle" class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold" :class="h.pill">
+        <i class="pi pi-objects-column text-[10px]" />
         {{ service.badge }}
       </span>
     </div>

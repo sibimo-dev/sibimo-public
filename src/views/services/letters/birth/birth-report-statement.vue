@@ -1,35 +1,23 @@
-<script setup>
+<script>
+// sections & documents di-export supaya juga dibaca paket surat (data/letterBundles.js) dan halaman register.
+// Ubah isian surat ini di sini saja; paket & register ikut berubah.
 // Laporan Kelahiran
 // Template PDF: letters/birth/birth-report-statement.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import LetterWizard from "@/views/services/layout/LetterWizard.vue";
-import { f, pemohonRingkas, DOC, opt, anak, ortu } from "@/data/letterFields";
+import { DOC, anak, f, opt, ortu, pemohonRingkas } from "@/data/letterFields";
 
 // Langkah 1: isian sesuai surat yang diajukan
-const sections = [
-  anak({ detail: true }),
-  {
-      title: "Keterangan Persalinan",
-      fields: [
-        f.text("deliveryAddress", "Alamat tempat dilahirkan", { span: 2 }),
-        f.text("gestationalAge", "Usia kehamilan (minggu)"),
-        f.text("deliveryMethod", "Cara persalinan", { placeholder: "Normal/Caesar" }),
-        f.text("deliveryCost", "Biaya persalinan", { optional: true }),
-      ],
-    },
-  ortu("mother", "Data Ibu"),
-  ortu("father", "Data Ayah"),
-  pemohonRingkas([f.text("reporterRelation", "Hubungan pelapor dengan bayi")]),
-];
+export const sections = [anak({ detail: true }),
+     { title: "Keterangan Persalinan", fields: [f.text("deliveryAddress", "Alamat tempat dilahirkan", { span: 2 }), f.text("gestationalAge", "Usia kehamilan (minggu)"), f.text("deliveryMethod", "Cara persalinan", { placeholder: "Normal/Caesar" }), f.text("deliveryCost", "Biaya persalinan", { optional: true })] },
+     ortu("mother", "Data Ibu"), ortu("father", "Data Ayah"), pemohonRingkas([f.text("reporterRelation", "Hubungan pelapor dengan bayi")])];
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
-const documents = [
-  DOC.kk,
-  "Fotokopi KTP ayah dan ibu",
-  DOC.akta,
-  opt("Surat keterangan lahir dari penolong kelahiran"),
-];
+export const documents = [DOC.kk, "Fotokopi KTP ayah dan ibu", DOC.akta, opt("Surat keterangan lahir dari penolong kelahiran")];
+</script>
+
+<script setup>
+import LetterWizard from "@/views/services/layout/LetterWizard.vue";
 </script>
 
 <template>

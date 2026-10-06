@@ -70,12 +70,14 @@ export function validateFields(sections, form) {
         continue;
       }
       if (!isFilled(v)) {
-        if (!field.optional) e[field.key] = `${field.label} wajib diisi.`;
+        if (!field.optional && !section.requireOne) e[field.key] = `${field.label} wajib diisi.`;
         continue;
       }
       if (field.digits && !new RegExp(`^\\d{${field.digits}}$`).test(String(v).trim())) e[field.key] = `${field.label} harus ${field.digits} digit angka.`;
       if (field.key === "whatsapp" && !/^(\+62|62|0)8\d{7,12}$/.test(String(v).replace(/[\s-]/g, ""))) e[field.key] = "Nomor WhatsApp tidak valid.";
     }
+    // section.requireOne: minimal satu isian di section ini harus terisi (mis. jenis permohonan pada F-1.02)
+    if (section.requireOne && !section.fields.some((x) => isFilled(form[x.key]))) e[section.fields[0].key] = "Pilih minimal satu jenis permohonan.";
   }
   return e;
 }

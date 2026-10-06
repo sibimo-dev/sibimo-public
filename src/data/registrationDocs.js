@@ -1,78 +1,52 @@
 /* Surat/dokumen yang bisa dipilih saat mendaftar sebagai warga baru.
    `types` = jenis pendaftaran yang memunculkan dokumen ini (lihat RESIDENT_TYPES; satu dokumen boleh untuk beberapa jenis).
-   `hue` = warna kartu/ikon, dibuat berbeda untuk tiap dokumen (nama hue ada di layout/pastel.js).
-   `fields` = isian tambahan yang muncul HANYA jika dokumen itu dipilih. */
+   `hue`   = warna kartu/ikon, dibuat berbeda untuk tiap dokumen (nama hue ada di layout/pastel.js).
+   `code`  = kode singkat di kartu & kode pengajuan.
+   `separate` = true → tiap surat di `letters` jadi langkah isian sendiri, tidak digabung ke satu halaman.
+   `letters` = slug berkas surat di views/services/letters/<group>/<slug>.vue. Isian & dokumen pendukung DIBACA dari berkas surat itu
+               (export `sections` & `documents`), jadi mengubah isian cukup di berkas suratnya, bukan di sini.
+               Bila 1 dokumen memakai beberapa surat, isiannya digabung dalam satu halaman. */
 export const REGISTRATION_DOCS = [
   {
-    value: "ktp", types: ["tetap"], hue: "sky", label: "KTP", icon: "pi pi-id-card", badge: "Umum",
+    value: "ktp", code: "KTP", types: ["tetap"], hue: "sky", label: "KTP", icon: "pi pi-id-card",
     description: "Pendaftaran / pembuatan KTP.",
-    fields: [{ key: "ktpReason", label: "Alasan Pembuatan", type: "select", options: ["Baru", "Hilang", "Rusak", "Perubahan Data"] }],
+    letters: ["ktp-application-form"],
   },
   {
-    value: "kk", types: ["tetap"], hue: "emerald", label: "Kartu Keluarga", icon: "pi pi-users", badge: "Sosial",
+    value: "kk", code: "KK", types: ["tetap"], hue: "emerald", label: "Kartu Keluarga", icon: "pi pi-users",
     description: "Masuk / pembuatan Kartu Keluarga.",
-    fields: [
-      { key: "headOfFamily", label: "Nama Kepala Keluarga", type: "text" },
-      { key: "familyRelation", label: "Hubungan dalam Keluarga", type: "select", options: ["Kepala Keluarga", "Istri", "Anak", "Orang Tua", "Famili Lain"] },
-    ],
+    letters: ["population-occurrence-registration", "family-biodata"],
   },
   {
-    value: "akta-kelahiran", types: ["tetap"], hue: "rose", label: "Akta Kelahiran", icon: "pi pi-heart", badge: "Sosial",
+    value: "akta-kelahiran", code: "AKL", types: ["tetap"], hue: "rose", label: "Akta Kelahiran", icon: "pi pi-heart",
     description: "Pencatatan data kelahiran.",
-    fields: [
-      { key: "fatherName", label: "Nama Ayah", type: "text" },
-      { key: "motherName", label: "Nama Ibu", type: "text" },
-    ],
+    letters: ["birth-certificate-application-form"],
   },
   {
-    value: "surat-pindah", types: ["tetap"], hue: "orange", label: "Surat Pindah Datang", icon: "pi pi-map-marker", badge: "Umum",
-    description: "Untuk warga yang pindah ke kelurahan ini.",
-    fields: [
-      { key: "previousAddress", label: "Alamat Asal", type: "textarea" },
-      { key: "moveDate", label: "Tanggal Pindah", type: "date" },
-    ],
-  },
-  {
-    value: "permohonan-pindah-datang", types: ["tetap"], hue: "teal", label: "Formulir Permohonan Pindah Datang WNI", icon: "pi pi-sign-in", badge: "Umum",
+    value: "permohonan-pindah-datang", code: "SKD", types: ["tetap"], hue: "teal", label: "Formulir Permohonan Pindah Datang WNI", icon: "pi pi-sign-in",
     description: "Permohonan pindah datang bagi WNI yang akan menjadi warga baru.",
-    fields: [
-      { key: "arrivalPreviousAddress", label: "Alamat Asal", type: "textarea" },
-      { key: "arrivalMoveDate", label: "Tanggal Pindah", type: "date" },
-    ],
+    letters: ["resident-arrival-form"],
   },
   {
-    value: "permohonan-penduduk-sementara-skts", types: ["sementara"], hue: "amber", label: "Permohonan Menjadi Penduduk Sementara / SKTS", icon: "pi pi-clock", badge: "Umum",
+    value: "permohonan-penduduk-sementara-skts", code: "PPS", types: ["sementara"], hue: "amber", label: "Permohonan Menjadi Penduduk Sementara / SKTS", icon: "pi pi-clock",
     description: "Permohonan menjadi penduduk sementara (SKTS) bagi pendatang.",
-    fields: [
-      { key: "sktsPreviousAddress", label: "Alamat Asal", type: "textarea" },
-      { key: "sktsPurpose", label: "Tujuan Tinggal Sementara", type: "text" },
-      { key: "sktsStartDate", label: "Tanggal Mulai Tinggal", type: "date" },
-    ],
+    letters: ["temporary-resident-request"],
   },
   {
-    value: "permohonan-tinggal-sementara", types: ["tinggal-sementara"], hue: "fuchsia", label: "Permohonan Tinggal Sementara", icon: "pi pi-home", badge: "Umum",
+    value: "permohonan-tinggal-sementara", code: "TSM", types: ["tinggal-sementara"], hue: "fuchsia", label: "Permohonan Tinggal Sementara", icon: "pi pi-home",
     description: "Permohonan tinggal sementara di wilayah ini.",
-    fields: [
-      { key: "stayPreviousAddress", label: "Alamat Asal", type: "textarea" },
-      { key: "stayPurpose", label: "Tujuan Tinggal Sementara", type: "text" },
-      { key: "stayStartDate", label: "Tanggal Mulai Tinggal", type: "date" },
-    ],
+    letters: ["temporary-stay-application-form"],
   },
   {
-    value: "pengantar-pindah-wni", types: ["tetap"], hue: "lime", label: "Surat Pengantar Permohonan Pindah WNI & Formulir Keterangan Pindah WNI (Kop Dukcapil)", icon: "pi pi-file-export", badge: "Umum",
-    fields: [
-      { key: "moveCoverPreviousAddress", label: "Alamat Asal", type: "textarea" },
-      { key: "moveCoverDate", label: "Tanggal Pindah", type: "date" },
-      { key: "moveCoverReason", label: "Alasan Pindah", type: "text" },
-    ],
+    value: "pengantar-pindah-wni", code: "PPN", types: ["tetap"], hue: "lime", label: "Permohonan Pindah WNI", icon: "pi pi-file-export",
+    description: "Pindah antar desa dalam satu kecamatan. Terdiri dari Surat Pengantar Permohonan Pindah WNI dan Formulir Keterangan Pindah WNI, diisi dalam satu pengajuan.",
+    separate: true, // 1 kartu pilihan, tapi tiap surat = satu langkah isian sendiri (tidak digabung)
+    letters: ["relocation-cover-letter", "relocation-certificate-form"],
   },
   {
-    value: "akta-nikah", types: ["tetap"], hue: "violet", label: "Akta / Buku Nikah", icon: "pi pi-star", badge: "Ekonomi",
+    value: "akta-nikah", code: "PNB", types: ["tetap"], hue: "violet", label: "Akta / Buku Nikah", icon: "pi pi-star",
     description: "Pencatatan status perkawinan.",
-    fields: [
-      { key: "spouseName", label: "Nama Pasangan", type: "text" },
-      { key: "marriageDate", label: "Tanggal Menikah", type: "date" },
-    ],
+    letters: ["unregistered-marriage-responsibility-letter"],
   },
 ];
 

@@ -1,5 +1,6 @@
 <script setup>
-/* Wizard PAKET surat (banyak surat dalam 1 pengajuan). 4 langkah tetap, berapa pun surat yang dipilih:
+/* Wizard PAKET surat (banyak surat dalam 1 pengajuan). Dipakai juga oleh Pendaftaran Warga Baru (register)
+   lewat `bundle.ui` (teks, tombol kembali, tombol selesai). 4 langkah tetap, berapa pun surat yang dipilih:
    1) Pilih Surat      : ceklis surat yang dibutuhkan
    2) Isian Surat      : data pemohon (terisi otomatis dari data warga) + isian KHUSUS tiap surat terpilih.
                          Step di dalam step: 1 surat = 1 halaman, lanjut ke surat berikutnya (tidak scroll panjang)
@@ -32,6 +33,7 @@ const props = defineProps({
 
 const router = useRouter();
 const resident = useResidentVerificationStore();
+const ui = computed(() => props.bundle.ui ?? {}); // penyesuaian teks/navigasi (dipakai register); kosong = tampilan paket
 const hueName = computed(() => props.hue || props.bundle.hue);
 const h = computed(() => hue(hueName.value));
 
@@ -56,7 +58,7 @@ const fileErrors = ref({});
 const stepAlert = ref("");
 
 /* ---------- Surat terpilih → langkah ---------- */
-const selected = ref([]);
+const selected = ref([...(props.bundle.ui?.preselected ?? [])].filter((id) => props.bundle.letters.some((l) => l.id === id)));
 const selectError = ref(false);
 const selectedLetters = computed(() => props.bundle.letters.filter((l) => selected.value.includes(l.id)));
 const docsOf = (letter) => normalizeDocs(letter.documents, letter.id);
@@ -83,17 +85,25 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 const groups = computed(() => {
   const map = new Map();
   for (const l of props.bundle.letters) {
+    if (l.hidden) continue; // surat pendamping (lihat `with`): tidak punya kartu sendiri
     if (!map.has(l.group)) map.set(l.group, []);
     map.get(l.group).push(l);
   }
   return [...map.entries()].map(([title, letters]) => ({ title, letters }));
 });
 const groupHue = (gi) => HUES[SECTION_HUES[(gi + 1) % SECTION_HUES.length]];
+// surat boleh punya warna sendiri (`hue`), mis. kartu dokumen di register; bila tidak, ikut warna kelompoknya
+const cardHue = (l, gi) => (l.hue ? hue(l.hue) : groupHue(gi));
 const isSelected = (id) => selected.value.includes(id);
+/* Satu kartu bisa membawa surat pendamping: letter.with = [id, ...] (surat pendamping diberi hidden: true).
+   Memilih kartu = memilih semuanya; tiap surat tetap punya langkah isian sendiri. */
 function toggle(id) {
   selectError.value = false;
-  selected.value = isSelected(id) ? selected.value.filter((x) => x !== id) : [...selected.value, id];
+  const ids = [id, ...(props.bundle.letters.find((l) => l.id === id)?.with ?? [])];
+  selected.value = isSelected(id) ? selected.value.filter((x) => !ids.includes(x)) : [...new Set([...selected.value, ...ids])];
 }
+const visibleLetters = computed(() => props.bundle.letters.filter((l) => !l.hidden));
+const visibleSelected = computed(() => visibleLetters.value.filter((l) => selected.value.includes(l.id)).length);
 const selectAll = () => {
   selectError.value = false;
   selected.value = props.bundle.letters.map((l) => l.id);
@@ -131,7 +141,7 @@ watch([current, fieldIdx], () => {
 });
 
 const nextLabel = computed(() => {
-  if (isReview.value) return "Kirim Pengajuan";
+  if (isReview.value) return ui.value.submitLabel ?? "Kirim Pengajuan";
   if (isChecklist.value) return `Lanjut (${selected.value.length} surat)`;
   if (!isFields.value) return "Lanjut ke Cek & Kirim";
   if (fieldIdx.value < lastIdx.value) return `Lanjut ke ${selectedLetters.value[fieldIdx.value + 1].code}`;
@@ -139,7 +149,7 @@ const nextLabel = computed(() => {
 });
 
 function back() {
-  if (isChecklist.value) return router.push({ name: "general-catalog", query: { category: "permohonan" } });
+  if (isChecklist.value) return router.push(ui.value.back ?? { name: "general-catalog", query: { category: "permohonan" } });
   if (isFields.value) return fieldIdx.value > 0 ? goSub(fieldIdx.value - 1) : goTo(STEP_SELECT);
   if (isDocs.value) return goTo(STEP_FIELDS, selectedLetters.value[lastIdx.value]?.id);
   goTo(STEP_DOCS);
@@ -334,7 +344,7 @@ async function copyOne(code) {
       <div class="relative flex items-start gap-4">
         <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl shadow-sm" :class="h.icon"><i :class="bundle.icon" /></span>
         <div class="min-w-0">
-          <p class="text-xs font-medium uppercase tracking-wide" :class="h.text">Paket Pengajuan Surat</p>
+          <p class="text-xs font-medium uppercase tracking-wide" :class="h.text">{{ ui.kindLabel ?? "Paket Pengajuan Surat" }}</p>
           <h1 class="text-xl font-semibold text-[var(--color-text-h)] mt-0.5">{{ bundle.title }}</h1>
           <p class="text-sm mt-1 text-[var(--color-text-muted)]">{{ bundle.description }}</p>
         </div>
@@ -349,15 +359,15 @@ async function copyOne(code) {
     <div class="mt-4 rounded-3xl border border-surface-200 bg-white p-5 sm:p-7 shadow-sm">
       <!-- ============ LANGKAH 1: CEKLIS SURAT ============ -->
       <div v-if="isChecklist">
-        <h2 class="text-lg font-semibold text-[var(--color-text-h)]">Surat apa saja yang Anda butuhkan?</h2>
+        <h2 class="text-lg font-semibold text-[var(--color-text-h)]">{{ ui.selectTitle ?? "Surat apa saja yang Anda butuhkan?" }}</h2>
         <p class="text-sm mt-1 text-[var(--color-text-muted)]">
-          Centang semua surat yang ingin diajukan. Setiap surat yang dipilih mendapat satu langkah pengisian sendiri.
+          {{ ui.selectHint ?? "Centang semua surat yang ingin diajukan. Setiap surat yang dipilih mendapat satu langkah pengisian sendiri." }}
         </p>
 
         <div class="mt-4 flex flex-wrap items-center gap-2">
           <Button label="Pilih semua" icon="pi pi-check-square" size="small" severity="secondary" outlined @click="selectAll" />
           <Button label="Kosongkan" icon="pi pi-times" size="small" severity="secondary" text :disabled="!selected.length" @click="clearAll" />
-          <span class="ml-auto rounded-full px-3 py-1 text-xs font-semibold" :class="h.pill">{{ selected.length }} dari {{ bundle.letters.length }} surat dipilih</span>
+          <span class="ml-auto rounded-full px-3 py-1 text-xs font-semibold" :class="h.pill">{{ visibleSelected }} dari {{ visibleLetters.length }} surat dipilih</span>
         </div>
 
         <div v-for="(g, gi) in groups" :key="g.title" class="mt-6">
@@ -370,15 +380,15 @@ async function copyOne(code) {
               v-for="l in g.letters"
               :key="l.id"
               class="relative flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
-              :class="isSelected(l.id) ? groupHue(gi).selected : groupHue(gi).idle"
+              :class="isSelected(l.id) ? cardHue(l, gi).selected : cardHue(l, gi).idle"
             >
               <Checkbox :modelValue="isSelected(l.id)" binary class="mt-0.5" @update:modelValue="toggle(l.id)" />
               <span class="min-w-0 flex-1">
                 <span class="flex items-center gap-2">
-                  <span class="rounded-md px-1.5 py-0.5 text-[10px] font-bold tracking-wide" :class="groupHue(gi).icon">{{ l.code }}</span>
-                  <span class="text-sm font-semibold text-[var(--color-text-h)]">{{ l.title }}</span>
+                  <span class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold tracking-wide" :class="cardHue(l, gi).icon"><i v-if="l.icon" :class="l.icon" class="text-[10px]" />{{ l.cardCode ?? l.code }}</span>
+                  <span class="text-sm font-semibold text-[var(--color-text-h)]">{{ l.cardTitle ?? l.title }}</span>
                 </span>
-                <span class="block text-xs mt-1 text-[var(--color-text-muted)]">{{ l.description }}</span>
+                <span class="block text-xs mt-1 text-[var(--color-text-muted)]">{{ l.cardDescription ?? l.description }}</span>
               </span>
             </label>
           </div>
@@ -539,7 +549,7 @@ async function copyOne(code) {
 
       <!-- Tombol navigasi -->
       <div class="flex justify-between gap-3 mt-7 pt-6 border-t border-surface-200">
-        <Button :label="current === 0 ? 'Kembali ke Katalog' : 'Kembali'" icon="pi pi-arrow-left" severity="secondary" outlined :disabled="isSubmitting" @click="back" />
+        <Button :label="current === 0 ? (ui.backLabel ?? 'Kembali ke Katalog') : 'Kembali'" icon="pi pi-arrow-left" severity="secondary" outlined :disabled="isSubmitting" @click="back" />
         <Button
           :label="nextLabel"
           :icon="isReview ? 'pi pi-send' : 'pi pi-arrow-right'"
@@ -554,23 +564,25 @@ async function copyOne(code) {
     <FilePreviewDialog v-model="preview.open" :file="preview.file" :title="preview.title" />
 
     <!-- ============ POP-UP KONFIRMASI KIRIM ============ -->
-    <Dialog v-model:visible="confirmOpen" modal :closable="!isSubmitting" :draggable="false" :style="{ width: '28rem', maxWidth: '94vw' }" header="Kirim Pengajuan?">
+    <Dialog v-model:visible="confirmOpen" modal :closable="!isSubmitting" :draggable="false" :style="{ width: '28rem', maxWidth: '94vw' }" :header="ui.confirmTitle ?? 'Kirim Pengajuan?'">
       <div class="flex flex-col items-center text-center gap-3">
         <span class="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-600 text-2xl"><i class="pi pi-question" /></span>
-        <p class="text-sm text-[var(--color-text-h)]">Apakah Anda yakin ingin mengirim paket <b>{{ bundle.title }}</b> ({{ selectedLetters.length }} surat) sekarang?</p>
-        <p class="text-xs text-[var(--color-text-muted)]">Setelah dikirim, pengajuan akan diproses oleh petugas dan data tidak bisa diubah lagi dari sini.</p>
+        <p v-if="ui.confirmText" class="text-sm text-[var(--color-text-h)]">{{ ui.confirmText }}</p>
+        <p v-else class="text-sm text-[var(--color-text-h)]">Apakah Anda yakin ingin mengirim paket <b>{{ bundle.title }}</b> ({{ selectedLetters.length }} surat) sekarang?</p>
+        <p class="text-xs text-[var(--color-text-muted)]">{{ ui.confirmNote ?? "Setelah dikirim, pengajuan akan diproses oleh petugas dan data tidak bisa diubah lagi dari sini." }}</p>
       </div>
       <template #footer>
         <Button label="Periksa Lagi" severity="secondary" outlined :disabled="isSubmitting" @click="confirmOpen = false" />
-        <Button label="Ya, Kirim Pengajuan" icon="pi pi-send" :class="h.btn" :loading="isSubmitting" @click="confirmOpen = false; submit()" />
+        <Button :label="ui.confirmYes ?? 'Ya, Kirim Pengajuan'" icon="pi pi-send" :class="h.btn" :loading="isSubmitting" @click="confirmOpen = false; submit()" />
       </template>
     </Dialog>
 
     <!-- ============ POP-UP HASIL KIRIM ============ -->
-    <Dialog v-model:visible="result.open" modal :closable="false" :draggable="false" :style="{ width: '30rem', maxWidth: '94vw' }" :header="result.ok ? 'Pengajuan Berhasil' : 'Pengajuan Gagal'">
+    <Dialog v-model:visible="result.open" modal :closable="false" :draggable="false" :style="{ width: '30rem', maxWidth: '94vw' }" :header="result.ok ? (ui.doneTitle ?? 'Pengajuan Berhasil') : (ui.failTitle ?? 'Pengajuan Gagal')">
       <div v-if="result.ok" class="flex flex-col items-center text-center gap-3">
         <span class="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 text-2xl"><i class="pi pi-check" /></span>
-        <p class="text-sm text-[var(--color-text-muted)]">Paket <b>{{ bundle.title }}</b> berhasil dikirim ({{ result.codes.length }} surat).</p>
+        <p v-if="ui.doneIntro" class="text-sm text-[var(--color-text-muted)]">{{ ui.doneIntro }}</p>
+        <p v-else class="text-sm text-[var(--color-text-muted)]">Paket <b>{{ bundle.title }}</b> berhasil dikirim ({{ result.codes.length }} surat).</p>
         <ul class="w-full rounded-2xl border border-dashed p-3 text-left" :class="h.soft">
           <li v-for="c in result.codes" :key="c.code" class="flex items-center justify-between gap-3 py-1 text-sm">
             <span class="truncate text-[var(--color-text-h)]">{{ c.title }}</span>
@@ -581,7 +593,8 @@ async function copyOne(code) {
           </li>
           <li class="pt-1 text-center"><Button :label="copied ? 'Tersalin' : copyFailed ? 'Gagal, salin manual' : 'Salin semua kode'" :icon="copied ? 'pi pi-check' : 'pi pi-copy'" text size="small" :severity="copyFailed ? 'danger' : undefined" @click="copyCodes" /></li>
         </ul>
-        <p class="text-sm text-[var(--color-text-h)]">Pengajuan Anda sedang <b>menunggu proses verifikasi dan otorisasi</b> oleh petugas. Setelah selesai, Anda akan mendapat notifikasi melalui <b>WhatsApp</b> ke nomor {{ form.whatsapp }}.</p>
+        <p v-if="ui.doneMessage" class="text-sm text-[var(--color-text-h)]">{{ ui.doneMessage }} Notifikasi akan dikirim melalui <b>WhatsApp</b> ke nomor {{ form.whatsapp }}.</p>
+        <p v-else class="text-sm text-[var(--color-text-h)]">Pengajuan Anda sedang <b>menunggu proses verifikasi dan otorisasi</b> oleh petugas. Setelah selesai, Anda akan mendapat notifikasi melalui <b>WhatsApp</b> ke nomor {{ form.whatsapp }}.</p>
       </div>
       <div v-else class="flex flex-col items-center text-center gap-3">
         <span class="flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-red-600 text-2xl"><i class="pi pi-times" /></span>
@@ -591,7 +604,10 @@ async function copyOne(code) {
       </div>
 
       <template #footer>
-        <template v-if="result.ok">
+        <template v-if="result.ok && ui.done">
+          <Button :label="ui.done.label" :icon="ui.done.icon" :class="h.btn" @click="ui.done.run(router)" />
+        </template>
+        <template v-else-if="result.ok">
           <Button label="Ke Katalog" severity="secondary" outlined @click="router.push({ name: 'general-catalog', query: { category: 'permohonan' } })" />
           <Button label="Lihat Dokumen Saya" :class="h.btn" @click="router.push({ name: 'my-documents' })" />
         </template>

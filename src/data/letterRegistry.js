@@ -33,77 +33,77 @@ export const LETTER_REGISTRY = [
   {
     "flow": "general",
     "category": "permohonan",
-    "group": "application",
-    "slug": "ktp-application",
+    "group": "applications",
+    "slug": "ktp-application-form",
     "title": "Surat Permohonan KTP"
   },
   {
     "flow": "general",
     "category": "permohonan",
-    "group": "application",
-    "slug": "resident-arrival",
+    "group": "applications",
+    "slug": "resident-arrival-form",
     "title": "Formulir Permohonan Pindah Datang WNI"
   },
   {
     "flow": "general",
     "category": "permohonan",
-    "group": "application",
-    "slug": "kia-application",
+    "group": "applications",
+    "slug": "kia-application-form",
     "title": "Surat Permohonan Penerbitan KIA"
   },
   {
     "flow": "general",
     "category": "permohonan",
-    "group": "application",
+    "group": "applications",
     "slug": "temporary-resident-request",
     "title": "Surat Permohonan Menjadi Penduduk Sementara / SKTS"
   },
   {
     "flow": "general",
     "category": "permohonan",
-    "group": "application",
-    "slug": "divorce-lawsuit",
+    "group": "applications",
+    "slug": "divorce-lawsuit-letter",
     "title": "Surat Permohonan Cerai"
   },
   {
     "flow": "general",
     "category": "permohonan",
-    "group": "referral",
-    "slug": "fuel-recommendation",
+    "group": "applications",
+    "slug": "fuel-recommendation-letter",
     "title": "Surat Rekomendasi Pembelian Jenis BBM Tertentu"
   },
   {
     "flow": "general",
     "category": "permohonan",
-    "group": "application",
-    "slug": "temporary-stay-application",
+    "group": "applications",
+    "slug": "temporary-stay-application-form",
     "title": "Permohonan Tinggal Sementara"
   },
   {
     "flow": "general",
     "category": "permohonan",
-    "group": "referral",
-    "slug": "relocation-cover",
+    "group": "applications",
+    "slug": "relocation-cover-letter",
     "title": "Surat Pengantar Permohonan Pindah WNI"
   },
   {
     "flow": "general",
     "category": "permohonan",
-    "group": "application",
-    "slug": "relocation-certificate",
+    "group": "applications",
+    "slug": "relocation-certificate-form",
     "title": "Formulir Keterangan Pindah WNI"
   },
   {
     "flow": "general",
     "category": "permohonan",
-    "group": "application",
+    "group": "applications",
     "slug": "population-occurrence-registration",
     "title": "Formulir Pendaftaran Peristiwa Kependudukan"
   },
   {
     "flow": "general",
     "category": "permohonan",
-    "group": "application",
+    "group": "applications",
     "slug": "family-biodata",
     "title": "Formulir Biodata Penduduk WNI (Per Keluarga)"
   },
@@ -159,43 +159,43 @@ export const LETTER_REGISTRY = [
   {
     "flow": "general",
     "category": "pernyataan",
-    "group": "statement",
-    "slug": "identity-discrepancy-statement",
+    "group": "declarations",
+    "slug": "identity-discrepancy-statement-letter",
     "title": "Surat Pernyataan Beda Nama/Identitas"
   },
   {
     "flow": "general",
     "category": "pernyataan",
-    "group": "statement",
-    "slug": "population-data-change-statement",
+    "group": "declarations",
+    "slug": "statement-population-data-change",
     "title": "Surat Pernyataan Perubahan Elemen Data Kependudukan"
   },
   {
     "flow": "general",
     "category": "pernyataan",
-    "group": "statement",
-    "slug": "population-document-statement",
+    "group": "declarations",
+    "slug": "population-document-statement-letter",
     "title": "Surat Pernyataan Tidak Memiliki Dokumen Kependudukan"
   },
   {
     "flow": "general",
     "category": "pernyataan",
-    "group": "statement",
-    "slug": "unregistered-marriage-responsibility",
+    "group": "declarations",
+    "slug": "unregistered-marriage-responsibility-letter",
     "title": "Surat Pernyataan Tanggung Jawab Mutlak Perkawinan Belum Tercatat"
   },
   {
     "flow": "general",
     "category": "pernyataan",
-    "group": "statement",
-    "slug": "heir-power-of-attorney",
+    "group": "declarations",
+    "slug": "heir-power-of-attorney-letter",
     "title": "Surat Kuasa Sidang Waris"
   },
   {
     "flow": "general",
     "category": "pernyataan",
-    "group": "statement",
-    "slug": "population-service-authorization",
+    "group": "declarations",
+    "slug": "population-service-authorization-letter",
     "title": "Surat Kuasa Dalam Pelayanan Administrasi Kependudukan"
   },
   {
@@ -292,84 +292,77 @@ export const LETTER_REGISTRY = [
   {
     "flow": "general",
     "category": "keterangan",
-    "group": "certificate",
-    "slug": "unmarried-status",
+    "group": "certificates",
+    "slug": "unmarried-status-letter",
     "title": "Surat Keterangan Belum Kawin"
   },
   {
     "flow": "general",
     "category": "keterangan",
-    "group": "permit",
-    "slug": "business-permit",
+    "group": "certificates",
+    "slug": "bussiness-permit-letter",
     "title": "Surat Keterangan Usaha"
   },
   {
     "flow": "general",
     "category": "keterangan",
-    "group": "statement",
-    "slug": "general-statement",
-    "title": "Surat Keterangan Umum (Kop Lurah)"
+    "group": "certificates",
+    "slug": "general-statement-letter",
+    "title": "Surat Keterangan Umum"
   },
   {
     "flow": "general",
     "category": "keterangan",
-    "group": "statement",
-    "slug": "general-statement-gov",
-    "title": "Surat Keterangan Umum (Kop Pemerintah Kalurahan)"
-  },
-  {
-    "flow": "general",
-    "category": "keterangan",
-    "group": "certificate",
+    "group": "certificates",
     "slug": "domicile-certificate",
     "title": "Surat Keterangan Domisili"
   },
   {
     "flow": "general",
     "category": "keterangan",
-    "group": "certificate",
+    "group": "certificates",
     "slug": "sktm-general",
     "title": "Surat Keterangan Tidak Mampu"
   },
   {
     "flow": "general",
     "category": "keterangan",
-    "group": "certificate",
+    "group": "certificates",
     "slug": "sktm-school",
     "title": "Surat Keterangan Tidak Mampu Sekolah"
   },
   {
     "flow": "general",
     "category": "keterangan",
-    "group": "permit",
-    "slug": "income-permit",
+    "group": "certificates",
+    "slug": "income-permit-letter",
     "title": "Surat Keterangan Penghasilan"
   },
   {
     "flow": "general",
     "category": "keterangan",
-    "group": "permit",
-    "slug": "event-permit",
+    "group": "certificates",
+    "slug": "event-permit-letter",
     "title": "Surat Keterangan Keramaian"
   },
   {
     "flow": "general",
     "category": "keterangan",
-    "group": "permit",
-    "slug": "travel-permit-gov",
+    "group": "certificates",
+    "slug": "travel-permit-letter-gov",
     "title": "Surat Keterangan Jalan"
   },
   {
     "flow": "general",
     "category": "keterangan",
-    "group": "referral",
-    "slug": "skck-referral",
+    "group": "certificates",
+    "slug": "skck-referral-letter",
     "title": "Surat Keterangan Mohon SKCK"
   },
   {
     "flow": "general",
     "category": "keterangan",
-    "group": "application",
+    "group": "certificates",
     "slug": "legalization-register",
     "title": "Surat Legalisasi"
   },
@@ -481,8 +474,8 @@ export const LETTER_REGISTRY = [
   {
     "flow": "general",
     "category": "perintah",
-    "group": "order",
-    "slug": "duty-travel-order",
+    "group": "orders",
+    "slug": "duty-travel-order-letter",
     "title": "SPPD"
   },
   {
@@ -495,36 +488,36 @@ export const LETTER_REGISTRY = [
   {
     "flow": "general",
     "category": "balasan",
-    "group": "permit",
-    "slug": "permit-followup",
+    "group": "replies",
+    "slug": "permit-followup-letter",
     "title": "Surat Tindak Lanjut Permohonan Izin"
   },
   {
     "flow": "general",
     "category": "balasan",
-    "group": "application",
-    "slug": "lease-offer",
+    "group": "replies",
+    "slug": "lease-offer-letter",
     "title": "Surat Penawaran Sewa Kontrak Gedung BRI Unit Ngemplak II"
   },
   {
     "flow": "general",
     "category": "balasan",
-    "group": "referral",
-    "slug": "research-response",
+    "group": "replies",
+    "slug": "research-response-letter",
     "title": "Surat Balasan Penelitian"
   },
   {
     "flow": "general",
     "category": "pengantar",
-    "group": "application",
-    "slug": "marriage-certificate-duplicate",
+    "group": "cover-letters",
+    "slug": "marriage-certificate-duplicate-letter",
     "title": "Surat Pengantar Duplikat Nikah"
   },
   {
     "flow": "general",
     "category": "pengantar",
-    "group": "referral",
-    "slug": "general-cover",
+    "group": "cover-letters",
+    "slug": "general-cover-letter",
     "title": "Surat Pengantar Umum"
   },
   {
@@ -593,50 +586,36 @@ export const LETTER_REGISTRY = [
   {
     "flow": "permit",
     "category": null,
-    "group": "permit",
-    "slug": "business-permit",
+    "group": "certificates",
+    "slug": "bussiness-permit-letter",
     "title": "Surat Keterangan Usaha"
   },
   {
     "flow": "permit",
     "category": null,
-    "group": "permit",
-    "slug": "income-permit",
+    "group": "certificates",
+    "slug": "income-permit-letter",
     "title": "Surat Keterangan Penghasilan"
   },
   {
     "flow": "permit",
     "category": null,
-    "group": "permit",
-    "slug": "event-permit",
+    "group": "certificates",
+    "slug": "event-permit-letter",
     "title": "Surat Keterangan Keramaian"
   },
   {
     "flow": "permit",
     "category": null,
-    "group": "permit",
-    "slug": "travel-permit",
-    "title": "Surat Keterangan Jalan (Umum)"
-  },
-  {
-    "flow": "permit",
-    "category": null,
-    "group": "permit",
-    "slug": "travel-permit-gov",
+    "group": "certificates",
+    "slug": "travel-permit-letter-gov",
     "title": "Surat Keterangan Jalan"
   },
   {
     "flow": "permit",
     "category": null,
-    "group": "permit",
-    "slug": "travel-permit-village",
-    "title": "Surat Keterangan Jalan (Desa)"
-  },
-  {
-    "flow": "permit",
-    "category": null,
-    "group": "permit",
-    "slug": "permit-followup",
+    "group": "replies",
+    "slug": "permit-followup-letter",
     "title": "Surat Tindak Lanjut Permohonan Izin"
   }
 ];

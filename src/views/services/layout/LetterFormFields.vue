@@ -63,11 +63,16 @@ const minRows = (field) => field.min ?? (field.optional ? 0 : 1);
             <InputText v-else-if="field.type === 'time'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" type="time" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
 
             <!-- pilihan banyak -->
-            <div v-else-if="field.type === 'checks'" class="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-xl border bg-white p-3" :class="errors[field.key] ? 'border-red-400' : 'border-surface-200'">
-              <label v-for="o in field.options" :key="o" class="flex items-center gap-2 text-sm">
-                <Checkbox v-model="form[field.key]" :value="o" />
-                <span>{{ o }}</span>
-              </label>
+            <!-- pilihan banyak. Opsi: "teks" | { value, label?, indent? } | { heading: "A. BARU" } (judul, tidak bisa dicentang).
+                 field.cols === 1 → satu kolom (untuk daftar bertingkat). -->
+            <div v-else-if="field.type === 'checks'" class="grid grid-cols-1 gap-2 rounded-xl border bg-white p-3" :class="[field.cols === 1 ? '' : 'sm:grid-cols-2', errors[field.key] ? 'border-red-400' : 'border-surface-200']">
+              <template v-for="o in field.options" :key="o.heading ?? o.value ?? o">
+                <p v-if="o.heading" class="pt-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)] first:pt-0" :class="field.cols === 1 ? '' : 'sm:col-span-2'">{{ o.heading }}</p>
+                <label v-else class="flex items-center gap-2 text-sm" :class="o.indent ? 'pl-7' : ''">
+                  <Checkbox v-model="form[field.key]" :value="o.value ?? o" />
+                  <span>{{ o.label ?? o.value ?? o }}</span>
+                </label>
+              </template>
             </div>
 
             <!-- baris berulang -->
