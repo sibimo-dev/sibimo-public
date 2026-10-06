@@ -1,0 +1,270 @@
+/* Palet pastel untuk seluruh layanan surat.
+   Semua kelas ditulis utuh (bukan dirakit dari string) supaya terbaca oleh Tailwind. File ini dibuat sekali; ubah warna dengan mengganti nama hue. */
+
+export const HUES = {
+  rose: {
+    card: "bg-gradient-to-br from-rose-100/80 via-rose-50 to-white border-rose-200",
+    cardHover: "hover:border-rose-300 hover:shadow-rose-200/70",
+    bar: "bg-rose-300",
+    blob: "bg-rose-200/60",
+    icon: "bg-rose-200 text-rose-700",
+    pill: "bg-white/80 text-rose-700 ring-1 ring-rose-200",
+    soft: "bg-rose-50 border-rose-200",
+    softer: "bg-gradient-to-br from-rose-50/80 to-white border-rose-100",
+    dot: "bg-rose-400",
+    text: "text-rose-700",
+    textStrong: "text-rose-900",
+    selected: "ring-2 ring-rose-400 border-rose-300 bg-rose-100/70",
+    idle: "bg-white border-rose-100 hover:border-rose-300 hover:bg-rose-50/60",
+    segOn: "bg-rose-400",
+    segNow: "bg-rose-500",
+    segOff: "bg-rose-100",
+    circleDone: "bg-rose-400 text-white border-rose-400",
+    circleNow: "bg-white text-rose-700 border-rose-400 ring-4 ring-rose-100",
+    hero: "from-rose-100 via-rose-50 to-white",
+    chipOn: "bg-rose-200 border-rose-300 text-rose-900 shadow-sm",
+    chipOff: "bg-white border-rose-200 text-rose-700 hover:bg-rose-50",
+    drop: "border-rose-300 bg-rose-50/60",
+    btn: "!bg-rose-600 !border-rose-600 hover:!bg-rose-700",
+  },
+  orange: {
+    card: "bg-gradient-to-br from-orange-100/80 via-orange-50 to-white border-orange-200",
+    cardHover: "hover:border-orange-300 hover:shadow-orange-200/70",
+    bar: "bg-orange-300",
+    blob: "bg-orange-200/60",
+    icon: "bg-orange-200 text-orange-700",
+    pill: "bg-white/80 text-orange-700 ring-1 ring-orange-200",
+    soft: "bg-orange-50 border-orange-200",
+    softer: "bg-gradient-to-br from-orange-50/80 to-white border-orange-100",
+    dot: "bg-orange-400",
+    text: "text-orange-700",
+    textStrong: "text-orange-900",
+    selected: "ring-2 ring-orange-400 border-orange-300 bg-orange-100/70",
+    idle: "bg-white border-orange-100 hover:border-orange-300 hover:bg-orange-50/60",
+    segOn: "bg-orange-400",
+    segNow: "bg-orange-500",
+    segOff: "bg-orange-100",
+    circleDone: "bg-orange-400 text-white border-orange-400",
+    circleNow: "bg-white text-orange-700 border-orange-400 ring-4 ring-orange-100",
+    hero: "from-orange-100 via-orange-50 to-white",
+    chipOn: "bg-orange-200 border-orange-300 text-orange-900 shadow-sm",
+    chipOff: "bg-white border-orange-200 text-orange-700 hover:bg-orange-50",
+    drop: "border-orange-300 bg-orange-50/60",
+    btn: "!bg-orange-600 !border-orange-600 hover:!bg-orange-700",
+  },
+  amber: {
+    card: "bg-gradient-to-br from-amber-100/80 via-amber-50 to-white border-amber-200",
+    cardHover: "hover:border-amber-300 hover:shadow-amber-200/70",
+    bar: "bg-amber-300",
+    blob: "bg-amber-200/60",
+    icon: "bg-amber-200 text-amber-700",
+    pill: "bg-white/80 text-amber-700 ring-1 ring-amber-200",
+    soft: "bg-amber-50 border-amber-200",
+    softer: "bg-gradient-to-br from-amber-50/80 to-white border-amber-100",
+    dot: "bg-amber-400",
+    text: "text-amber-700",
+    textStrong: "text-amber-900",
+    selected: "ring-2 ring-amber-400 border-amber-300 bg-amber-100/70",
+    idle: "bg-white border-amber-100 hover:border-amber-300 hover:bg-amber-50/60",
+    segOn: "bg-amber-400",
+    segNow: "bg-amber-500",
+    segOff: "bg-amber-100",
+    circleDone: "bg-amber-400 text-white border-amber-400",
+    circleNow: "bg-white text-amber-700 border-amber-400 ring-4 ring-amber-100",
+    hero: "from-amber-100 via-amber-50 to-white",
+    chipOn: "bg-amber-200 border-amber-300 text-amber-900 shadow-sm",
+    chipOff: "bg-white border-amber-200 text-amber-700 hover:bg-amber-50",
+    drop: "border-amber-300 bg-amber-50/60",
+    btn: "!bg-amber-600 !border-amber-600 hover:!bg-amber-700",
+  },
+  emerald: {
+    card: "bg-gradient-to-br from-emerald-100/80 via-emerald-50 to-white border-emerald-200",
+    cardHover: "hover:border-emerald-300 hover:shadow-emerald-200/70",
+    bar: "bg-emerald-300",
+    blob: "bg-emerald-200/60",
+    icon: "bg-emerald-200 text-emerald-700",
+    pill: "bg-white/80 text-emerald-700 ring-1 ring-emerald-200",
+    soft: "bg-emerald-50 border-emerald-200",
+    softer: "bg-gradient-to-br from-emerald-50/80 to-white border-emerald-100",
+    dot: "bg-emerald-400",
+    text: "text-emerald-700",
+    textStrong: "text-emerald-900",
+    selected: "ring-2 ring-emerald-400 border-emerald-300 bg-emerald-100/70",
+    idle: "bg-white border-emerald-100 hover:border-emerald-300 hover:bg-emerald-50/60",
+    segOn: "bg-emerald-400",
+    segNow: "bg-emerald-500",
+    segOff: "bg-emerald-100",
+    circleDone: "bg-emerald-400 text-white border-emerald-400",
+    circleNow: "bg-white text-emerald-700 border-emerald-400 ring-4 ring-emerald-100",
+    hero: "from-emerald-100 via-emerald-50 to-white",
+    chipOn: "bg-emerald-200 border-emerald-300 text-emerald-900 shadow-sm",
+    chipOff: "bg-white border-emerald-200 text-emerald-700 hover:bg-emerald-50",
+    drop: "border-emerald-300 bg-emerald-50/60",
+    btn: "!bg-emerald-600 !border-emerald-600 hover:!bg-emerald-700",
+  },
+  teal: {
+    card: "bg-gradient-to-br from-teal-100/80 via-teal-50 to-white border-teal-200",
+    cardHover: "hover:border-teal-300 hover:shadow-teal-200/70",
+    bar: "bg-teal-300",
+    blob: "bg-teal-200/60",
+    icon: "bg-teal-200 text-teal-700",
+    pill: "bg-white/80 text-teal-700 ring-1 ring-teal-200",
+    soft: "bg-teal-50 border-teal-200",
+    softer: "bg-gradient-to-br from-teal-50/80 to-white border-teal-100",
+    dot: "bg-teal-400",
+    text: "text-teal-700",
+    textStrong: "text-teal-900",
+    selected: "ring-2 ring-teal-400 border-teal-300 bg-teal-100/70",
+    idle: "bg-white border-teal-100 hover:border-teal-300 hover:bg-teal-50/60",
+    segOn: "bg-teal-400",
+    segNow: "bg-teal-500",
+    segOff: "bg-teal-100",
+    circleDone: "bg-teal-400 text-white border-teal-400",
+    circleNow: "bg-white text-teal-700 border-teal-400 ring-4 ring-teal-100",
+    hero: "from-teal-100 via-teal-50 to-white",
+    chipOn: "bg-teal-200 border-teal-300 text-teal-900 shadow-sm",
+    chipOff: "bg-white border-teal-200 text-teal-700 hover:bg-teal-50",
+    drop: "border-teal-300 bg-teal-50/60",
+    btn: "!bg-teal-600 !border-teal-600 hover:!bg-teal-700",
+  },
+  sky: {
+    card: "bg-gradient-to-br from-sky-100/80 via-sky-50 to-white border-sky-200",
+    cardHover: "hover:border-sky-300 hover:shadow-sky-200/70",
+    bar: "bg-sky-300",
+    blob: "bg-sky-200/60",
+    icon: "bg-sky-200 text-sky-700",
+    pill: "bg-white/80 text-sky-700 ring-1 ring-sky-200",
+    soft: "bg-sky-50 border-sky-200",
+    softer: "bg-gradient-to-br from-sky-50/80 to-white border-sky-100",
+    dot: "bg-sky-400",
+    text: "text-sky-700",
+    textStrong: "text-sky-900",
+    selected: "ring-2 ring-sky-400 border-sky-300 bg-sky-100/70",
+    idle: "bg-white border-sky-100 hover:border-sky-300 hover:bg-sky-50/60",
+    segOn: "bg-sky-400",
+    segNow: "bg-sky-500",
+    segOff: "bg-sky-100",
+    circleDone: "bg-sky-400 text-white border-sky-400",
+    circleNow: "bg-white text-sky-700 border-sky-400 ring-4 ring-sky-100",
+    hero: "from-sky-100 via-sky-50 to-white",
+    chipOn: "bg-sky-200 border-sky-300 text-sky-900 shadow-sm",
+    chipOff: "bg-white border-sky-200 text-sky-700 hover:bg-sky-50",
+    drop: "border-sky-300 bg-sky-50/60",
+    btn: "!bg-sky-600 !border-sky-600 hover:!bg-sky-700",
+  },
+  violet: {
+    card: "bg-gradient-to-br from-violet-100/80 via-violet-50 to-white border-violet-200",
+    cardHover: "hover:border-violet-300 hover:shadow-violet-200/70",
+    bar: "bg-violet-300",
+    blob: "bg-violet-200/60",
+    icon: "bg-violet-200 text-violet-700",
+    pill: "bg-white/80 text-violet-700 ring-1 ring-violet-200",
+    soft: "bg-violet-50 border-violet-200",
+    softer: "bg-gradient-to-br from-violet-50/80 to-white border-violet-100",
+    dot: "bg-violet-400",
+    text: "text-violet-700",
+    textStrong: "text-violet-900",
+    selected: "ring-2 ring-violet-400 border-violet-300 bg-violet-100/70",
+    idle: "bg-white border-violet-100 hover:border-violet-300 hover:bg-violet-50/60",
+    segOn: "bg-violet-400",
+    segNow: "bg-violet-500",
+    segOff: "bg-violet-100",
+    circleDone: "bg-violet-400 text-white border-violet-400",
+    circleNow: "bg-white text-violet-700 border-violet-400 ring-4 ring-violet-100",
+    hero: "from-violet-100 via-violet-50 to-white",
+    chipOn: "bg-violet-200 border-violet-300 text-violet-900 shadow-sm",
+    chipOff: "bg-white border-violet-200 text-violet-700 hover:bg-violet-50",
+    drop: "border-violet-300 bg-violet-50/60",
+    btn: "!bg-violet-600 !border-violet-600 hover:!bg-violet-700",
+  },
+  fuchsia: {
+    card: "bg-gradient-to-br from-fuchsia-100/80 via-fuchsia-50 to-white border-fuchsia-200",
+    cardHover: "hover:border-fuchsia-300 hover:shadow-fuchsia-200/70",
+    bar: "bg-fuchsia-300",
+    blob: "bg-fuchsia-200/60",
+    icon: "bg-fuchsia-200 text-fuchsia-700",
+    pill: "bg-white/80 text-fuchsia-700 ring-1 ring-fuchsia-200",
+    soft: "bg-fuchsia-50 border-fuchsia-200",
+    softer: "bg-gradient-to-br from-fuchsia-50/80 to-white border-fuchsia-100",
+    dot: "bg-fuchsia-400",
+    text: "text-fuchsia-700",
+    textStrong: "text-fuchsia-900",
+    selected: "ring-2 ring-fuchsia-400 border-fuchsia-300 bg-fuchsia-100/70",
+    idle: "bg-white border-fuchsia-100 hover:border-fuchsia-300 hover:bg-fuchsia-50/60",
+    segOn: "bg-fuchsia-400",
+    segNow: "bg-fuchsia-500",
+    segOff: "bg-fuchsia-100",
+    circleDone: "bg-fuchsia-400 text-white border-fuchsia-400",
+    circleNow: "bg-white text-fuchsia-700 border-fuchsia-400 ring-4 ring-fuchsia-100",
+    hero: "from-fuchsia-100 via-fuchsia-50 to-white",
+    chipOn: "bg-fuchsia-200 border-fuchsia-300 text-fuchsia-900 shadow-sm",
+    chipOff: "bg-white border-fuchsia-200 text-fuchsia-700 hover:bg-fuchsia-50",
+    drop: "border-fuchsia-300 bg-fuchsia-50/60",
+    btn: "!bg-fuchsia-600 !border-fuchsia-600 hover:!bg-fuchsia-700",
+  },
+  lime: {
+    card: "bg-gradient-to-br from-lime-100/80 via-lime-50 to-white border-lime-200",
+    cardHover: "hover:border-lime-300 hover:shadow-lime-200/70",
+    bar: "bg-lime-300",
+    blob: "bg-lime-200/60",
+    icon: "bg-lime-200 text-lime-700",
+    pill: "bg-white/80 text-lime-700 ring-1 ring-lime-200",
+    soft: "bg-lime-50 border-lime-200",
+    softer: "bg-gradient-to-br from-lime-50/80 to-white border-lime-100",
+    dot: "bg-lime-400",
+    text: "text-lime-700",
+    textStrong: "text-lime-900",
+    selected: "ring-2 ring-lime-400 border-lime-300 bg-lime-100/70",
+    idle: "bg-white border-lime-100 hover:border-lime-300 hover:bg-lime-50/60",
+    segOn: "bg-lime-400",
+    segNow: "bg-lime-500",
+    segOff: "bg-lime-100",
+    circleDone: "bg-lime-400 text-white border-lime-400",
+    circleNow: "bg-white text-lime-700 border-lime-400 ring-4 ring-lime-100",
+    hero: "from-lime-100 via-lime-50 to-white",
+    chipOn: "bg-lime-200 border-lime-300 text-lime-900 shadow-sm",
+    chipOff: "bg-white border-lime-200 text-lime-700 hover:bg-lime-50",
+    drop: "border-lime-300 bg-lime-50/60",
+    btn: "!bg-lime-600 !border-lime-600 hover:!bg-lime-700",
+  },
+};
+
+export const HUE_ORDER = ["rose", "orange", "amber", "emerald", "teal", "sky", "violet", "fuchsia"];
+/* Urutan warna untuk blok isian / grup (berselang-seling supaya tidak monoton). */
+export const SECTION_HUES = ["sky", "rose", "emerald", "violet", "amber", "teal", "fuchsia", "orange"];
+
+export const hue = (name) => HUES[name] ?? HUES.violet;
+
+/* Warna stabil per layanan: kunci yang sama selalu mendapat warna yang sama. */
+export function hueOf(key = "") {
+  let h = 0;
+  for (const ch of String(key)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return HUE_ORDER[h % HUE_ORDER.length];
+}
+
+/* Tombol utama (indigo agar kontras dengan latar pastel). */
+export const PRIMARY_BTN = "!bg-indigo-600 !border-indigo-600 hover:!bg-indigo-700";
+
+/* Warna per KATEGORI surat — dipakai seragam di tab kategori, kartu katalog, dan wizard pengajuan.
+   Ubah warna cukup dengan mengganti nama hue di sini. */
+export const CATEGORY_HUES = {
+  permohonan: "sky", // biru
+  keterangan: "rose", // pink
+  pengantar: "emerald", // hijau
+  balasan: "amber", // kuning
+  pernyataan: "violet", // ungu
+  perizinan: "orange", // semua layanan perizinan
+};
+
+/* Cocokkan nilai/label kategori apa pun ("Permohonan", "permohonan-surat", ...) ke nama hue. */
+export function hueForCategory(...values) {
+  for (const v of values) {
+    const s = String(v ?? "").toLowerCase();
+    const key = Object.keys(CATEGORY_HUES).find((k) => s.includes(k));
+    if (key) return CATEGORY_HUES[key];
+  }
+  return "violet";
+}
+
+/* Warna dua pintu masuk di halaman awal layanan. */
+export const ENTRY_HUES = { general: "violet", permit: "orange" };
