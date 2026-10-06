@@ -159,7 +159,7 @@ function colorForSeverity(severity) {
 const quickAccess = [
   {
     icon: "pi-file",
-    title: "Layanan Surat",
+    title: "Layanan Mandiri",
     desc: "Pengajuan berbagai jenis surat ke kalurahan.",
     route: { name: "services" },
   },
