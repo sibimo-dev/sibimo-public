@@ -155,7 +155,9 @@ const menubarPt = {
 
     <!-- ============ KONTEN HALAMAN ============ -->
     <main class="flex-1 pb-[calc(var(--bottom-nav-h)+12px)] lg:pb-0">
-      <div class="max-w-[1350px] mx-auto px-4 sm:px-6 md:px-10 lg:px-12">
+      <!-- Beranda mengatur container-nya sendiri supaya hero bisa full-width -->
+      <RouterView v-if="route.name === 'home'" />
+      <div v-else class="max-w-[1350px] mx-auto px-4 sm:px-6 md:px-10 lg:px-12">
         <RouterView />
       </div>
     </main>

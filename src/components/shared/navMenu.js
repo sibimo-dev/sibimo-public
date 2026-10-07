@@ -14,6 +14,8 @@ export const navMenuItems = [
       { label: "Berita Kalurahan", route: { name: "news" } },
       { label: "Agenda Kalurahan", route: { name: "events" } },
       { label: "Galeri Kalurahan", route: { name: "gallery" } },
+      { label: "Produk Hukum", route: { name: "legal-products" } },
+      { label: "Pembangunan", route: { name: "development" } },
     ],
   },
   { label: "Aduan", route: { name: "complaints" } },
@@ -27,6 +29,8 @@ export const navMenuItemsMobile = [
   { label: "Agenda", route: { name: "events" } },
   { label: "Galeri", route: { name: "gallery" } },
   { label: "Data Kalurahan", route: { name: "data" } },
+  { label: "Produk Hukum", route: { name: "legal-products" } },
+  { label: "Pembangunan", route: { name: "development" } },
 ];
 
 // Tidak dipakai bottom nav lagi, dibiarkan kalau dipakai di tempat lain
@@ -46,6 +50,8 @@ export const mobileMoreLinks = [
   { label: "Profil Kalurahan", icon: "pi pi-building", route: { name: "profile" } },
   { label: "Agenda Kalurahan", icon: "pi pi-calendar", route: { name: "events" } },
   { label: "Gallery Kalurahan", icon: "pi pi-image", route: { name: "gallery" } },
-  { label: "Data Kalurahan", icon: "pi pi-map-marker", route: { name: "region" } },
+  { label: "Data Kalurahan", icon: "pi pi-chart-bar", route: { name: "data" } },
+  { label: "Produk Hukum", icon: "pi pi-book", route: { name: "legal-products" } },
+  { label: "Pembangunan", icon: "pi pi-wrench", route: { name: "development" } },
   { label: "Unduh Dokumen", icon: "pi pi-download", route: { name: "my-documents" } },
 ];

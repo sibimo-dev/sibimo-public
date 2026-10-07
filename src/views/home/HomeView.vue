@@ -7,8 +7,23 @@ import {
 } from "@/services/home.service";
 import { RouterLink, useRouter } from "vue-router";
 import Tag from "primevue/tag";
-import HeroCarousel from "@/components/shared/HeroCarousel.vue";
+import AnimateOnScroll from "primevue/animateonscroll";
+import heroImage from "@/assets/hero/hero1.jpeg";
 import SubmissionCheckForm from "@/components/shared/SubmissionCheckForm.vue";
+
+/* Direktif PrimeVue AnimateOnScroll (modifier .once = animasi hanya jalan sekali) */
+const vAnimateonscroll = AnimateOnScroll;
+
+const presets = Object.fromEntries(
+  ["up", "down", "left", "right", "zoom", "pop"].map((kind) => [
+    kind,
+    { enterClass: `anim-${kind}`, threshold: 0.1 },
+  ]),
+);
+
+function appear(kind = "up") {
+  return presets[kind] || presets.up;
+}
 
 const router = useRouter();
 const newsList = ref([]);
@@ -32,11 +47,15 @@ function handleSearch() {
   } else if (/aduan|lapor|keluhan|pengaduan/.test(q)) {
     router.push({ name: "complaints" });
   } else if (/wilayah|peta|dusun|rt|rw/.test(q)) {
-    router.push({ name: "region" });
+    router.push({ name: "profile", hash: "#wilayah" });
   } else if (/potensi|bumdes|usaha desa|umkm|wisata|pariwisata|pertanian/.test(q)) {
     router.push({ name: "potential" });
   } else if (/agenda|kegiatan|jadwal/.test(q)) {
     router.push({ name: "events" });
+  } else if (/produk hukum|hukum|perkal|peraturan|sk kades|keputusan/.test(q)) {
+    router.push({ name: "legal-products" });
+  } else if (/pembangunan|proyek|infrastruktur/.test(q)) {
+    router.push({ name: "development" });
   } else if (/galeri|foto|dokumentasi/.test(q)) {
     router.push({ name: "gallery" });
   } else {
@@ -156,30 +175,27 @@ function colorForSeverity(severity) {
   return complaintSeverityColor[severity] || colorPalette[0];
 }
 
+/* Ikon menu cepat (SVG filled, digabung di sini) */
+const quickMenuIcons = {
+  surat: '<path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>',
+  aduan: '<path d="M15.73 3H8.27L3 8.27v7.46L8.27 21h7.46L21 15.73V8.27L15.73 3zM12 17.3c-.72 0-1.3-.58-1.3-1.3 0-.72.58-1.3 1.3-1.3.72 0 1.3.58 1.3 1.3 0 .72-.58 1.3-1.3 1.3zm1-4.3h-2V7h2v6z"/>',
+  profil: '<path d="M4 10v7h3v-7H4zm6 0v7h3v-7h-3zM2 22h19v-3H2v3zm14-12v7h3v-7h-3zM11.5 1L2 6v2h19V6l-9.5-5z"/>',
+  potensi: '<path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/>',
+  statistik: '<path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/>',
+  hukum: '<path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>',
+  pembangunan: '<path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/>',
+  galeri: '<path d="M22 16V4c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2zm-11-4l2.03 2.71L16 11l4 5H8l3-4zM2 6v14c0 1.1.9 2 2 2h14v-2H4V6H2z"/>',
+};
+
 const quickAccess = [
-  {
-    icon: "pi-file",
-    title: "Layanan Mandiri",
-    desc: "Pengajuan berbagai jenis surat ke kalurahan.",
-    route: { name: "services" },
-  },
-  {
-    icon: "pi-megaphone",
-    title: "Pengaduan",
-    desc: "Sampaikan aspirasi atau laporan kejadian di lingkungan.",
-    route: { name: "complaints" },
-  },
-  {
-    icon: "pi-map",
-    title: "Data Wilayah",
-    desc: "Peta dan data administratif dusun, RT, dan RW.",
-  },
-  {
-    icon: "pi-star",
-    title: "Potensi",
-    desc: "UMKM, pertanian, dan wisata unggulan kalurahan.",
-    route: { name: "potential" },
-  },
+  { icon: "surat", title: "Layanan Mandiri", route: { name: "services" } },
+  { icon: "aduan", title: "Pengaduan", route: { name: "complaints" } },
+  { icon: "profil", title: "Profil Kalurahan", route: { name: "profile" } },
+  { icon: "potensi", title: "Potensi Kalurahan", route: { name: "potential" } },
+  { icon: "statistik", title: "Statistik", route: { name: "data" } },
+  { icon: "hukum", title: "Produk Hukum", route: { name: "legal-products" } },
+  { icon: "pembangunan", title: "Pembangunan", route: { name: "development" } },
+  { icon: "galeri", title: "Galeri", route: { name: "gallery" } },
 ];
 
 /* Langkah singkat untuk kartu Cek Pengajuan */
@@ -317,91 +333,119 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="py-6 lg:py-8 flex flex-col gap-10 lg:gap-10">
-
-    <!-- ============ HERO ============ -->
+  <div>
+    <!-- ============ HERO (full-width, 1 foto statis) ============ -->
     <section
-      class="relative isolate overflow-hidden rounded-3xl px-6 pt-14 pb-10 sm:px-10 sm:pt-16 sm:pb-14 lg:px-16 lg:pt-24 lg:pb-20 min-h-[380px] sm:min-h-[440px] lg:min-h-[480px] flex flex-col justify-center items-center text-white text-center"
+      class="relative isolate overflow-hidden flex flex-col items-center justify-center text-center text-white px-6 pt-16 pb-36 sm:pt-20 sm:pb-40 lg:pt-28 lg:pb-48 min-h-[460px] sm:min-h-[520px] lg:min-h-[600px]"
     >
-      <HeroCarousel />
+      <!-- Foto dibuat sedikit blur supaya tulisan papan di foto tidak
+           bertabrakan dengan teks hero -->
+      <img
+        :src="heroImage"
+        alt="Kalurahan Bimomartani"
+        class="absolute inset-0 -z-30 h-full w-full object-cover scale-105 blur-[3px]"
+      />
+      <!-- Overlay gelap merata -->
+      <div class="absolute inset-0 -z-20 bg-gradient-to-b from-primary-900/80 via-primary-900/70 to-primary-900/90" />
+      <!-- Vignette gelap di tengah, tepat di belakang blok teks -->
+      <div class="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,rgba(6,16,32,0.65)_0%,rgba(6,16,32,0.35)_45%,transparent_75%)]" />
 
-      <div class="pointer-events-none absolute -right-24 -top-24 w-72 h-72 rounded-full bg-white/10 blur-2xl" />
-      <div class="pointer-events-none absolute -right-10 bottom-[-4rem] w-56 h-56 rounded-full bg-secondary-400/20 blur-2xl" />
-
-      <div class="relative max-w-[680px] mx-auto flex flex-col items-center">
-        <span class="inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-wider text-secondary-300 mb-4">
-          <span class="w-1.5 h-1.5 rounded-full bg-secondary-300" />
+      <div class="relative max-w-[720px] mx-auto flex flex-col items-center">
+        <!-- Badge "Selamat Datang Di": layout pill mengikuti lebar tulisan -->
+        <span
+          class="hero-in hero-in-down inline-flex items-center gap-2.5 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-[11.5px] sm:text-[13px] font-bold uppercase tracking-[0.18em] text-secondary-300 backdrop-blur-md shadow-lg shadow-black/20 mb-5"
+          style="--i: 0"
+        >
+          <span class="relative flex h-2 w-2">
+            <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-secondary-300 opacity-70 motion-reduce:animate-none" />
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-secondary-300" />
+          </span>
           Selamat Datang Di
         </span>
 
-        <h1 class="font-heading font-extrabold uppercase whitespace-nowrap text-[20px] xs:text-[24px] sm:text-[38px] lg:text-[50px] leading-[1.15] tracking-tight text-white m-0">
+        <h1 class="font-heading font-extrabold uppercase whitespace-nowrap text-[20px] xs:text-[24px] sm:text-[38px] lg:text-[50px] leading-[1.15] tracking-tight text-white m-0 [text-shadow:0_2px_14px_rgba(0,0,0,0.6)]">
           <span
             class="inline-block align-bottom overflow-hidden whitespace-nowrap border-r-4 border-sky-300 animate-hero-typing motion-reduce:animate-none motion-reduce:border-r-0"
             style="animation-duration: 8.5s, 0.75s"
           >Kalurahan Bimomartani</span>
         </h1>
-        <p class="mt-2 text-[15px] sm:text-base font-semibold text-secondary-200 uppercase tracking-wide">
+        <p
+          class="hero-in mt-3 text-[15px] sm:text-base font-bold text-secondary-200 uppercase tracking-wide [text-shadow:0_2px_10px_rgba(0,0,0,0.65)]"
+          style="--i: 1"
+        >
           Sistem Informasi Kalurahan Bimomartani
         </p>
 
-        <p class="mt-4 text-[15.5px] sm:text-[17px] leading-relaxed text-secondary-200">
+        <p
+          class="hero-in mt-4 text-[15.5px] sm:text-[17px] font-medium leading-relaxed text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.7)]"
+          style="--i: 2"
+        >
           Mewujudkan tata kelola kalurahan yang transparan, inovatif, dan responsif melalui layanan
           digital yang mudah diakses oleh seluruh warga.
         </p>
 
         <form
-  @submit.prevent="handleSearch"
-  class="mt-6 sm:mt-7 flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md border border-white/25 p-1 w-full max-w-[560px] focus-within:border-white/50 focus-within:bg-white/15 transition-colors"
->
-  <i class="pi pi-search text-white/70 text-base pl-3.5 shrink-0" />
-  <input
-    v-model="searchQuery"
-    type="text"
-    placeholder="Cari layanan, berita..."
-    class="flex-1 min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/60 focus:outline-none py-1.5"
-  />
-  <button
-    type="submit"
-    class="shrink-0 rounded-full bg-white/20 hover:bg-white/30 border border-white/30 transition-colors text-white text-[13px] font-bold px-4 sm:px-5 py-2"
-  >
-    Cari
-  </button>
-</form>
+          @submit.prevent="handleSearch"
+          class="hero-in mt-6 sm:mt-7 flex items-center gap-2 rounded-full bg-black/25 backdrop-blur-md border border-white/30 p-1 w-full max-w-[560px] shadow-lg shadow-black/20 focus-within:border-white/60 focus-within:bg-black/30 transition-colors"
+          style="--i: 3"
+        >
+          <i class="pi pi-search text-white/80 text-base pl-3.5 shrink-0" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Cari layanan, berita..."
+            class="flex-1 min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/70 focus:outline-none py-1.5"
+          />
+          <button
+            type="submit"
+            class="shrink-0 rounded-full bg-white/20 hover:bg-white/30 border border-white/30 transition-colors text-white text-[13px] font-bold px-4 sm:px-5 py-2"
+          >
+            Cari
+          </button>
+        </form>
       </div>
     </section>
 
-    <!-- ============ QUICK ACCESS ============
-         Sebelumnya semua kartu memakai gradient primary-800/900 yang sama
-         persis, jadi datar. Sekarang tiap kartu punya warna sendiri
-         (sky/rose/amber/violet) mengikuti pola colorPalette. -->
-    <section v-reveal class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
-  <component
-    :is="card.route ? RouterLink : 'div'"
-    v-for="(card, i) in quickAccess"
-    :key="card.title"
-    :to="card.route"
-    class="group relative overflow-hidden flex flex-col items-center text-center rounded-2xl border bg-surface p-5 sm:p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-    :class="colorAt(i).border"
-  >
-    <div
-      class="pointer-events-none absolute -right-6 -top-6 w-20 h-20 rounded-full opacity-70 group-hover:scale-125 transition-transform duration-500"
-      :class="colorAt(i).iconBg"
-    />
-    <div
-      class="relative w-11 h-11 rounded-xl text-white flex items-center justify-center mb-3.5 shadow-sm group-hover:scale-110 transition-all duration-300 bg-gradient-to-br"
-      :class="colorAt(i).gradient"
-    >
-      <i :class="card.icon" class="pi text-[18px]" />
+    <!-- ============ MENU CEPAT: 1 kartu, separuh menimpa hero ============ -->
+    <div class="relative z-10 -mt-24 sm:-mt-16 max-w-[1350px] mx-auto px-4 sm:px-6 md:px-10 lg:px-12">
+      <nav
+        aria-label="Menu cepat"
+        class="relative isolate grid grid-cols-4 gap-y-5 overflow-hidden rounded-2xl border border-border-default bg-surface px-3 py-5 shadow-xl sm:px-6 sm:py-6 lg:grid-cols-8"
+      >
+        <!-- Hiasan kartu: blob biru lembut di sudut, wash gradasi tipis,
+             dan pola titik halus di sisi kanan atas -->
+        <div class="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-transparent via-transparent to-primary-50/80" aria-hidden="true" />
+        <div class="pointer-events-none absolute -right-10 -top-12 -z-10 h-40 w-40 rounded-full bg-primary-100/80 blur-2xl" aria-hidden="true" />
+        <div class="pointer-events-none absolute -bottom-14 -left-10 -z-10 h-40 w-40 rounded-full bg-sky-200/50 blur-2xl" aria-hidden="true" />
+        <div
+          class="pointer-events-none absolute inset-y-0 right-0 -z-10 hidden w-1/3 opacity-70 sm:block [background-image:radial-gradient(rgba(30,58,95,0.12)_1px,transparent_1px)] [background-size:14px_14px] [mask-image:linear-gradient(to_left,black,transparent)]"
+          aria-hidden="true"
+        />
+        <component
+          :is="card.route ? RouterLink : 'div'"
+          v-for="(card, i) in quickAccess"
+          :key="card.title"
+          :to="card.route"
+          class="group flex flex-col items-center gap-3 text-center"
+          v-animateonscroll.once="appear('pop')" :style="{ '--i': i }"
+        >
+          <span
+            class="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-900 to-primary-800 text-white shadow-md shadow-primary-900/25 transition-transform duration-300 group-hover:-translate-y-1 group-hover:scale-105 sm:h-[62px] sm:w-[62px]"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" class="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" v-html="quickMenuIcons[card.icon]" />
+          </span>
+          <span class="text-[11.5px] font-medium leading-tight text-default sm:text-[13px]">{{ card.title }}</span>
+        </component>
+      </nav>
     </div>
-    <h3 class="relative font-heading font-extrabold text-[14.5px] sm:text-[15px] text-heading m-0">{{ card.title }}</h3>
-    <p class="relative text-[12px] sm:text-[12.5px] text-muted mt-1 leading-snug">{{ card.desc }}</p>
-  </component>
-</section>
+
+    <!-- ============ ISI HALAMAN ============ -->
+    <div class="max-w-[1350px] mx-auto px-4 sm:px-6 md:px-10 lg:px-12 py-8 lg:py-10 flex flex-col gap-10">
 
     <!-- ============ CEK PENGAJUAN ============ -->
-    <section v-reveal class="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
+    <section class="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
       <!-- Penjelasan fungsi Cek Pengajuan (kanan di desktop) -->
-      <div class="relative lg:order-2">
+      <div v-animateonscroll.once="appear('right')" style="--i: 1" class="relative lg:order-2">
         <div class="pointer-events-none absolute -top-10 -left-10 h-40 w-40 rounded-full bg-primary-100/70 blur-2xl"></div>
         <div class="pointer-events-none absolute -bottom-10 right-0 h-32 w-32 rounded-full bg-primary-50 blur-2xl"></div>
         <i class="pi pi-file-pdf pointer-events-none absolute -top-4 right-2 text-[88px] text-primary-100 rotate-12 hidden sm:block"></i>
@@ -433,11 +477,13 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Form cek pengajuan (kiri di desktop) -->
-      <SubmissionCheckForm class="w-full lg:order-1 lg:[&>div]:mx-0 lg:[&>div]:mr-auto" />
+      <div v-animateonscroll.once="appear('left')" style="--i: 0" class="w-full lg:order-1">
+        <SubmissionCheckForm class="w-full lg:[&>div]:mx-0 lg:[&>div]:mr-auto" />
+      </div>
     </section>
 
     <!-- ============ BERITA + AGENDA ============ -->
-    <section v-reveal class="grid lg:grid-cols-3 gap-6 lg:gap-8 items-stretch">
+    <section class="grid lg:grid-cols-3 gap-6 lg:gap-8 items-stretch">
       <!-- Berita Desa -->
       <div class="lg:col-span-2 flex flex-col">
         <div class="flex items-end justify-between mb-1">
@@ -457,11 +503,12 @@ onBeforeUnmount(() => {
 
         <div v-if="newsList.length" class="grid sm:grid-cols-2 gap-4 mt-4 flex-1">
           <RouterLink
-            v-for="item in newsList"
+            v-for="(item, idx) in newsList"
             :key="item.slug"
             :to="{ name: 'news-detail', params: { slug: item.slug } }"
             class="relative flex flex-col h-full rounded-2xl border bg-surface overflow-hidden hover:shadow-md transition-all"
             :class="colorForNewsCategory(item.category).border"
+            v-animateonscroll.once="appear('zoom')" :style="{ '--i': idx }"
           >
             <span class="absolute inset-x-0 top-0 z-10 h-1" :class="colorForNewsCategory(item.category).topBar" />
 
@@ -520,6 +567,7 @@ onBeforeUnmount(() => {
             v-for="(item, i) in agendaList"
             :key="item.key"
             class="flex items-start gap-3 rounded-xl border border-white/15 bg-white/5 p-3 hover:bg-white/10 transition-colors flex-1"
+            v-animateonscroll.once="appear('right')" :style="{ '--i': i + 1 }"
           >
             <div
               class="shrink-0 w-11 rounded-lg text-white text-center py-1.5 leading-tight bg-gradient-to-br"
@@ -553,7 +601,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ============ ADUAN MASYARAKAT ============ -->
-    <section v-reveal>
+    <section v-animateonscroll.once="appear('up')">
 
       <div class="flex items-end justify-between mb-4">
         <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-heading m-0">Aduan Masyarakat</h2>
@@ -593,7 +641,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ============ POTENSI DESA ============ -->
-    <section v-reveal>
+    <section>
       <div class="flex items-end justify-between mb-4">
         <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-heading m-0">Potensi Kalurahan</h2>
         <RouterLink
@@ -606,10 +654,11 @@ onBeforeUnmount(() => {
 
       <div v-if="potentialList.length" class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
         <RouterLink
-          v-for="item in potentialList"
+          v-for="(item, idx) in potentialList"
           :key="item.title"
           :to="{ name: 'potential' }"
           class="group relative overflow-hidden rounded-2xl border border-border-default bg-surface p-4 sm:p-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+          v-animateonscroll.once="appear('zoom')" :style="{ '--i': idx }"
         >
           <div
             :class="[item.bg, item.ring]"
@@ -631,7 +680,7 @@ onBeforeUnmount(() => {
     </section>
 
    <!-- ============ STRUKTUR ORGANISASI ============ -->
-<section v-reveal class="flex flex-col gap-6">
+<section class="flex flex-col gap-6">
   <div class="flex items-end justify-between mb-1">
     <div>
       <span class="text-[11px] font-bold uppercase tracking-wider text-secondary-600">
@@ -653,6 +702,7 @@ onBeforeUnmount(() => {
            (bukan putih polos) agar tetap selaras dengan palet section lain -->
       <div
         class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-900 to-primary-800 p-6 sm:p-8 lg:p-10 flex flex-col sm:flex-row items-center gap-6 sm:gap-8 lg:gap-10"
+        v-animateonscroll.once="appear('zoom')" style="--i: 0"
       >
         <div class="pointer-events-none absolute -right-16 -top-16 w-56 h-56 rounded-full bg-sky-400/15 blur-2xl" />
         <div class="pointer-events-none absolute -left-10 bottom-[-3rem] w-48 h-48 rounded-full bg-violet-400/15 blur-2xl" />
@@ -705,7 +755,7 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Carousel pamong & staf: tiap kartu punya top bar warna bergilir -->
-      <div class="relative">
+      <div class="relative" v-animateonscroll.once="appear('up')" style="--i: 1">
         <button
           type="button"
           aria-label="Sebelumnya"
@@ -781,7 +831,7 @@ onBeforeUnmount(() => {
     </section>
 
     <!-- ============ GALERI ============ -->
-    <section v-reveal>
+    <section v-animateonscroll.once="appear('up')">
       <div class="flex items-end justify-between mb-6">
         <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-heading m-0">Galeri Bimomartani</h2>
         <RouterLink
@@ -852,5 +902,63 @@ onBeforeUnmount(() => {
         <p class="mt-2">{{ homeLoading ? "Memuat galeri..." : "Belum ada foto galeri." }}</p>
       </div>
     </section>
+    </div>
   </div>
 </template>
+
+<style>
+/* ============ ANIMASI SCROLL (dipakai v-animateonscroll PrimeVue) ============
+   Satu keyframe, arah gerak ditentukan lewat variabel (--x, --y, --s).
+   700ms + easing lembut: tidak terlalu cepat, tidak terlalu lambat.
+   "backwards" menahan elemen tetap tersembunyi selama menunggu jeda dan
+   tidak mengunci transform setelah selesai (hover kartu tetap jalan).
+   Jeda antar elemen = urutan (--i) x 90ms. */
+@keyframes home-in {
+  from {
+    opacity: 0;
+    transform: translate3d(var(--x, 0), var(--y, 0), 0) scale(var(--s, 1));
+  }
+}
+
+.anim-up,
+.anim-down,
+.anim-left,
+.anim-right,
+.anim-zoom,
+.anim-pop {
+  animation: home-in 700ms cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+  animation-delay: calc(min(var(--i, 0), 6) * 90ms);
+}
+
+/* Hero: selalu terlihat, animasi jalan sekali saat halaman dibuka
+   (tidak bergantung pada scroll, jadi tidak mungkin tersembunyi) */
+.hero-in {
+  --y: 24px;
+  animation: home-in 800ms cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 120ms);
+}
+.hero-in-down { --y: -20px; }
+
+.anim-up { --y: 32px; }
+.anim-down { --y: -24px; }
+.anim-left { --x: -40px; }
+.anim-right { --x: 40px; }
+.anim-zoom { --s: 0.92; --y: 16px; }
+.anim-pop {
+  --s: 0.5;
+  animation-duration: 600ms;
+  animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-up,
+  .anim-down,
+  .anim-left,
+  .anim-right,
+  .anim-zoom,
+  .anim-pop,
+  .hero-in {
+    animation: none !important;
+  }
+}
+</style>
