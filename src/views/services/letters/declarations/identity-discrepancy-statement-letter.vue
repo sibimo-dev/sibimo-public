@@ -1,23 +1,42 @@
 <script>
-// sections & documents di-export supaya juga dibaca paket surat (data/letterBundles.js) dan halaman register.
 // Surat Pernyataan Beda Nama/Identitas
 // Template PDF: letters/identity-discrepancy-statement-letter.blade.php
-// 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
-// Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { f, pemohonRingkas, person, DOC } from "@/data/letterFields";
+import { f, DOC, opt } from "@/data/letterFields";
 
 // Langkah 1: isian sesuai surat yang diajukan
 export const sections = [
-  pemohonRingkas(),
-  person("other", "Identitas Lain yang Berbeda", ["name", "nik", "address"]),
-  { title: "Uraian", fields: [f.area("discrepancy", "Penjelasan perbedaan identitas", { span: 2 })] },
+  {
+    // Surat: Nama Lengkap, NIK, Alamat Sesuai KTP
+    title: "Data Pemohon (sesuai KTP)",
+    lead: "Saya yang bertanda tangan di bawah ini:",
+    hint: "Terisi otomatis dari data warga. Koreksi bila ada yang tidak sesuai.",
+    fields: [
+      f.text("name", "Nama Lengkap", { from: "fullName" }),
+      f.nik("nik", "NIK", { from: "nik" }),
+      f.area("address", "Alamat Sesuai KTP", { from: "address", span: 2 }),
+    ],
+  },
+  {
+    // Surat: "terdapat perbedaan Nama/NIK/Alamat dalam ..." lalu Nama, Alamat, NIK
+    title: "Data yang Berbeda",
+    lead: "Dengan ini menyatakan dengan sebenarnya bahwa terdapat perbedaan Nama/NIK/Alamat dalam:",
+    hint: "Tulis persis seperti yang tercantum di dokumen yang berbeda, termasuk bila ada salah ketik. Bila ada data yang sama dengan KTP, tulis sama.",
+    fields: [
+      f.text("otherName", "Nama pada dokumen"),
+      f.area("otherAddress", "Alamat pada dokumen", { span: 2 }),
+      f.nik("otherNik", "NIK pada dokumen", { placeholder: "Sesuai tulisan di dokumen" }),
+    ],
+  },
 ];
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
+// KTP & KK wajib. Unggah dokumen yang memuat nama/identitas berbeda (sesuai yang Anda punya).
 export const documents = [
   DOC.ktp,
   DOC.kk,
-  "Dokumen yang memuat identitas berbeda (ijazah, akta, dll)",
+  opt("Fotokopi SHM / Letter C"),
+  opt("Fotokopi SPPT PBB"),
+  opt("Dokumen lain yang namanya berbeda (ijazah, akta, dll)"),
 ];
 </script>
 

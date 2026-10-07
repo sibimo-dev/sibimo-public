@@ -1,15 +1,24 @@
 <script>
-// sections & documents di-export supaya juga dibaca paket surat (data/letterBundles.js) dan halaman register.
-// Surat Pernyataan Tidak Memiliki Dokumen Kependudukan
+// Surat Pernyataan Tidak Memiliki Dokumen Kependudukan (F.1-04)
 // Template PDF: letters/population-document-statement-letter.blade.php
-// 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
-// Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { f, pemohonRingkas, DOC } from "@/data/letterFields";
+import { f, DOC } from "@/data/letterFields";
 
 // Langkah 1: isian sesuai surat yang diajukan
 export const sections = [
-  pemohonRingkas([f.text("birthPlace", "Tempat Lahir"), f.date("birthDate", "Tanggal Lahir"), f.text("fatherName", "Nama Ayah"), f.text("motherName", "Nama Ibu")]),
-  { title: "Pernyataan", fields: [f.area("documentStatement", "Dokumen kependudukan yang dinyatakan", { span: 2, placeholder: "Contoh: akta kelahiran hilang/belum dimiliki" })] },
+  {
+    // Surat: Nama, Alamat (RT/RW), Tempat & Tanggal Lahir, Nama Ibu, Nama Ayah
+    title: "Data Pemohon",
+    hint: "Terisi otomatis dari data warga. Koreksi bila ada yang tidak sesuai.",
+    fields: [
+      f.text("name", "Nama Lengkap", { from: "fullName" }),
+      f.nik("nik", "NIK", { from: "nik" }),  // NIK Tidak ditampilkan di surat, tapi tetap diisi untuk keperluan validasi data warga.
+      f.area("address", "Alamat (RT/RW, Kalurahan, Kapanewon)", { from: "address", span: 2 }),
+      f.text("birthPlace", "Tempat Lahir", { from: "birthPlace" }),
+      f.date("birthDate", "Tanggal Lahir", { from: "birthDate" }),
+      f.text("motherName", "Nama Ibu"),
+      f.text("fatherName", "Nama Ayah"),
+    ],
+  },
 ];
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
