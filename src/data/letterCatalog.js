@@ -3,12 +3,12 @@ import { GENERAL_CATEGORIES as ALL_CATEGORIES, LETTER_REGISTRY as ALL_LETTERS } 
 /* Surat Balasan & Perintah tidak ditampilkan ke publik (hanya dipakai internal/kantor).
    Entri tetap ada di letterRegistry.js supaya template & route tidak hilang. */
 const HIDDEN_CATEGORIES = new Set(["balasan", "perintah"]);
-const HIDDEN_PUBLIC_SLUGS = new Set(["permit-followup"]); // Surat Tindak Lanjut Permohonan Izin (jenis Balasan)
+const HIDDEN_PUBLIC_SLUGS = new Set(["permit-followup-letter"]); // Surat Tindak Lanjut Permohonan Izin (jenis Balasan)
 
 /* Surat penduduk/tinggal sementara hanya untuk warga luar yang NIK-nya belum terdaftar.
    Tidak ditampilkan di katalog Layanan Warga (terdaftar); entri tetap ada di letterRegistry.js
    & letterIndex.js supaya template dan route-nya tetap jalan. Alur NIK belum terdaftar memakai NON_RESIDENT_SERVICES. */
-const NON_RESIDENT_SLUGS = new Set(["temporary-resident-request", "temporary-stay-application"]);
+const NON_RESIDENT_SLUGS = new Set(["temporary-resident-request", "temporary-stay-application-form"]);
 
 const LETTER_REGISTRY = ALL_LETTERS.filter((l) => !HIDDEN_CATEGORIES.has(l.category) && !HIDDEN_PUBLIC_SLUGS.has(l.slug) && !NON_RESIDENT_SLUGS.has(l.slug));
 const GENERAL_CATEGORIES = ALL_CATEGORIES.filter((c) => !HIDDEN_CATEGORIES.has(c.value));

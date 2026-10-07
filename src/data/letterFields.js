@@ -211,3 +211,19 @@ export const alamat = (prefix, title) => ({
 
 /* Jadikan semua isian dalam satu blok opsional (mis. data pasangan terdahulu). */
 export const optional = (section) => ({ ...section, fields: section.fields.map((x) => ({ ...x, optional: true })) });
+
+/* ---------- Blok & dokumen yang dipakai bersama beberapa surat paket (nikah, kelahiran, kematian, Letter C) ---------- */
+export const N7 = ["name", "nik", "birth", "nationality", "religion", "occupation", "address"]; // bagian data tanpa pendidikan
+export const eduNat = () => [f.select("education", "Pendidikan Terakhir", OPT.education), f.text("nationality", "Kewarganegaraan", { default: "WNI" })];
+export const calonPengantin = () => ({ title: "Calon Pengantin", fields: [f.text("groomName", "Nama Calon Suami"), f.text("brideName", "Nama Calon Istri")] });
+
+export const DOC_LAHIR = "Surat keterangan lahir dari dokter/bidan/penolong kelahiran";
+export const bayi = () => [keluarga(), anak({ detail: true }), ortu("mother", "Data Ibu Kandung"), ortu("father", "Data Ayah Kandung"), perkawinanOrtu(),
+  pemohonRingkas([f.text("reporterRelation", "Hubungan pelapor dengan bayi", { placeholder: "Contoh: Ayah, Ibu, Kakek" })]), saksi(1), saksi(2)];
+export const dokBayi = () => [DOC_LAHIR, DOC.kk, "Fotokopi KTP ayah dan ibu", DOC.akta, DOC.ktpSaksi];
+
+export const jenazah = () => [keluarga(), almarhum(), pelaporKematian(), saksi(1), saksi(2)];
+export const dokJenazah = () => [DOC.suratKematian, DOC.kk, "Fotokopi KTP almarhum/almarhumah", "Fotokopi KTP pelapor", DOC.ktpSaksi];
+
+export const DOC_LETTER_C = "Fotokopi Letter C / bukti kepemilikan tanah";
+export const DOC_PBB = opt("Fotokopi SPPT PBB");

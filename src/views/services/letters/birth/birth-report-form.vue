@@ -1,31 +1,21 @@
-<script setup>
+<script>
+// sections & documents di-export supaya juga dibaca paket surat (data/letterBundles.js) dan halaman register.
+// Ubah isian surat ini di sini saja; paket & register ikut berubah.
 // Formulir Pelaporan Kelahiran (Untuk Mendapatkan Akta Kelahiran)
 // Template PDF: letters/birth/birth-report-form.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import LetterWizard from "@/views/services/layout/LetterWizard.vue";
-import { f, pemohonRingkas, DOC, keluarga, anak, ortu, perkawinanOrtu, saksi } from "@/data/letterFields";
+import { bayi, dokBayi } from "@/data/letterFields";
 
 // Langkah 1: isian sesuai surat yang diajukan
-const sections = [
-  keluarga(),
-  anak({ detail: true }),
-  ortu("mother", "Data Ibu Kandung"),
-  ortu("father", "Data Ayah Kandung"),
-  perkawinanOrtu(),
-  pemohonRingkas([f.text("reporterRelation", "Hubungan pelapor dengan bayi", { placeholder: "Contoh: Ayah, Ibu, Kakek" })]),
-  saksi(1),
-  saksi(2),
-];
+export const sections = bayi();
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
-const documents = [
-  "Surat keterangan lahir dari dokter/bidan/penolong kelahiran",
-  DOC.kk,
-  "Fotokopi KTP ayah dan ibu",
-  DOC.akta,
-  DOC.ktpSaksi,
-];
+export const documents = dokBayi();
+</script>
+
+<script setup>
+import LetterWizard from "@/views/services/layout/LetterWizard.vue";
 </script>
 
 <template>

@@ -2,8 +2,8 @@ import { LETTER_REGISTRY } from "@/data/letterRegistry";
 
 /* Auto-load semua file surat (1 surat = 1 file .vue):
      views/services/letters/<group>/<slug>.vue
-   group = application, statement, certificate, order, referral, birth, death,
-           married-man, marriage-women, letter-c, permit
+   group = certificates, applications, orders, declarations, replies, cover-letters
+           (sesuai kategori pemetaan Blade), serta birth, death, married-man, marriage-women, letter-c
    Judul, tab katalog (category) & group diambil dari data/letterRegistry.js. */
 const letterFiles = import.meta.glob("@/views/services/letters/*/*.vue");
 
@@ -42,44 +42,13 @@ export default [
         component: () => import("@/views/services/general/verify/VerifyNikView.vue"),
       },
 
-      // Daftar warga baru (NIK tidak ditemukan)
+      // Daftar warga baru (NIK tidak ditemukan): wizard yang sama dengan paket surat
+      // (Pilih Surat → Isian per surat → Dokumen → Cek & Kirim)
       {
         path: "register",
-        component: () => import("@/views/services/general/register/RegisterLayout.vue"),
+        name: "general-register-select-letters",
+        component: () => import("@/views/services/general/register/RegisterWizardView.vue"),
         meta: { requiresNik: true },
-        children: [
-          { path: "", redirect: { name: "general-register-select-letters" } },
-          {
-            path: "select-letters",
-            name: "general-register-select-letters",
-            component: () => import("@/views/services/general/register/SelectRequiredLettersView.vue"),
-            meta: { stepIndex: 0 },
-          },
-          {
-            path: "personal-data",
-            name: "general-register-personal-data",
-            component: () => import("@/views/services/general/register/RegisterPersonalDataView.vue"),
-            meta: { stepIndex: 1 },
-          },
-          {
-            path: "documents",
-            name: "general-register-documents",
-            component: () => import("@/views/services/general/register/RegisterDocumentsView.vue"),
-            meta: { stepIndex: 2 },
-          },
-          {
-            path: "review",
-            name: "general-register-review",
-            component: () => import("@/views/services/general/register/RegisterReviewView.vue"),
-            meta: { stepIndex: 3 },
-          },
-          {
-            path: "submitted",
-            name: "general-register-submitted",
-            component: () => import("@/views/services/general/register/RegisterSubmittedView.vue"),
-            meta: { stepIndex: 4 },
-          },
-        ],
       },
 
       // Katalog surat (hanya untuk warga terverifikasi)

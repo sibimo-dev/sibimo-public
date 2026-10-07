@@ -1,9 +1,9 @@
 /* Pencari berkas surat untuk kartu katalog.
    Kartu katalog (GENERAL_SERVICES / PERMIT_SERVICES) dicocokkan ke berkas surat lewat:
-     1) slug kartu  = nama berkas letters/<group>/<slug>.vue atau nama template PDF
+     1) slug kartu  = nama berkas letters/<kategori>/<slug>.vue atau nama template PDF
      2) judul kartu = judul pada <LetterWizard title="...">
      3) kode kartu  = kode surat, hanya bila kodenya unik di lingkup itu
-   Catatan: berkas di letters/permit juga boleh dipakai alur "general" (mis. Surat Keterangan Usaha/Penghasilan/Keramaian/Jalan).
+   Catatan: berkas yang sama (mis. Surat Keterangan Usaha/Penghasilan/Keramaian/Jalan di letters/certificates) dipakai oleh alur "general" dan "permit".
    Bila ada kartu yang slug/judulnya berbeda dari berkas, isi LETTER_ALIASES di bawah: { "slug-kartu": "slug-berkas" }. */
 import { LETTER_INDEX } from "./letterIndex";
 
@@ -13,7 +13,7 @@ const modules = import.meta.glob("../letters/*/*.vue");
 const norm = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
 const ENTRIES = LETTER_INDEX.map(([file, scope, category, title, code, blade]) => {
-  const path = Object.keys(modules).find((p) => p.endsWith(`/${file}.vue`) && (scope !== "permit" || p.includes("/letters/permit/")));
+  const path = Object.keys(modules).find((p) => p.endsWith(`/${file}.vue`));
   return { file, scope, category, title, code, blade, load: modules[path] };
 }).filter((e) => e.load);
 
