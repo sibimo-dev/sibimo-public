@@ -4,11 +4,10 @@ import Select from 'primevue/select'
 import Button from 'primevue/button'
 
 const categories = [
-  { slug: 'all', label: 'Semua', count: 24 },
-  { slug: 'musyawarah', label: 'Musyawarah', count: 5 },
-  { slug: 'kegiatan-sosial', label: 'Kegiatan Sosial', count: 8 },
-  { slug: 'pembangunan', label: 'Pembangunan', count: 3 },
-  { slug: 'budaya', label: 'Budaya', count: 8 },
+  { slug: 'all', label: 'Semua' },
+  { slug: 'musyawarah', label: 'Musyawarah' },
+  { slug: 'kegiatan-sosial', label: 'Kegiatan Sosial' },
+  { slug: 'budaya', label: 'Budaya' },
 ]
 
 const timeOptions = [
@@ -96,17 +95,6 @@ const events = [
     image: '/images/gallery/rapat koordinasi.jpeg',
   },
   {
-    id: 7,
-    day: '02',
-    month: 'FEBRUARI',
-    monthKey: '2024-02',
-    category: 'pembangunan',
-    location: 'Dusun Jetis',
-    title: 'Pembangunan Talud Jalan Dusun Jetis',
-    description:
-      'Proyek pembangunan talud penahan jalan di Dusun Jetis menggunakan dana kalurahan, bertujuan mencegah longsor dan kerusakan jalan saat musim hujan.',
-  },
-  {
     id: 8,
     day: '10',
     month: 'JANUARI',
@@ -118,6 +106,17 @@ const events = [
       'Pagelaran wayang kulit semalam suntuk dalam rangka bersih kalurahan, menghadirkan dalang lokal dan diikuti oleh seluruh warga dari 12 padukuhan.',
   },
 ]
+
+// Jumlah per kategori dihitung otomatis dari data events
+const categoryList = computed(() =>
+  categories.map((c) => ({
+    ...c,
+    count:
+      c.slug === 'all'
+        ? events.length
+        : events.filter((e) => e.category === c.slug).length,
+  }))
+)
 
 const activeCategory = ref('all')
 const activeTime = ref('all')
@@ -175,20 +174,6 @@ const categoryStyles = {
     dateBg: 'bg-rose-50',
     dateNum: 'text-rose-700',
     ring: 'hover:shadow-rose-600/10',
-  },
-  pembangunan: {
-    icon: 'pi pi-building',
-    sidebarActive: 'bg-amber-600 text-white shadow-amber-600/25',
-    sidebarCount: 'bg-white/15 text-white',
-    dot: 'bg-amber-500',
-    badge: 'bg-amber-50 text-amber-700',
-    location: 'text-amber-700',
-    imageGrad: 'from-amber-100 via-orange-100 to-amber-200',
-    shimmer: 'via-amber-200/70',
-    topBar: 'bg-gradient-to-r from-amber-400 to-orange-500',
-    dateBg: 'bg-amber-50',
-    dateNum: 'text-amber-700',
-    ring: 'hover:shadow-amber-600/10',
   },
   budaya: {
     icon: 'pi pi-star',
@@ -254,7 +239,7 @@ function styleFor(slug) {
           </p>
           <div class="space-y-1.5">
             <button
-              v-for="c in categories"
+              v-for="c in categoryList"
               :key="c.slug"
               @click="activeCategory = c.slug"
               class="sidebar-tab flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 active:scale-[0.97]"
