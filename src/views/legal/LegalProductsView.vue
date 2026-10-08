@@ -8,6 +8,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
+import api from '@/services/api'
 import { getLegalProducts } from '@/services/legalProducts'
 
 const items = ref([])
@@ -18,10 +19,14 @@ const typeFilter = ref('all')
 const statusFilter = ref('all')
 const search = ref('')
 const first = ref(0)
+const hasError = ref(false)
 
 onMounted(async () => {
   try {
     items.value = await getLegalProducts()
+  } catch (err) {
+    console.error('Gagal memuat produk hukum:', err)
+    hasError.value = true
   } finally {
     loading.value = false
   }
@@ -99,32 +104,14 @@ const downloadingId = ref(null)
 
 /* Unduh sebagai berkas sungguhan. Atribut `download` pada <a> diabaikan browser
    bila file ada di domain lain (backend), jadi berkas diambil dulu lalu disimpan. */
-async function downloadFile(item) {
+function downloadFile(item) {
   if (!item.file_url) return
-  downloadingId.value = item.id
-  try {
-    const res = await fetch(item.file_url)
-    if (!res.ok) throw new Error('Gagal mengambil berkas')
-    const blob = await res.blob()
-
-    const ext = item.file_url.split('?')[0].split('.').pop()
-    const safeTitle = String(item.title).replace(/[\\/:*?"<>|]+/g, '').trim() || 'produk-hukum'
-    const fileName = `${safeTitle}.${ext && ext.length <= 5 ? ext : 'pdf'}`
-
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = fileName
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
-  } catch {
-    /* Cadangan: bila diblokir CORS, buka berkas di tab baru */
-    window.open(item.file_url, '_blank', 'noopener')
-  } finally {
-    downloadingId.value = null
-  }
+  const a = document.createElement('a')
+  a.href = `${api.defaults.baseURL}/legal-products/${item.id}/download`
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
 }
 
 /* ============ Styling filter bar (tanpa CSS murni) ============ */
@@ -265,12 +252,12 @@ const cellStart = '!py-5 !align-middle !text-left !text-[15px]'
           table-style="min-width: 52rem"
           :class="tableCls"
         >
-          <template #empty>
-            <div class="py-8 text-center text-[14px] text-muted">
-              <i class="pi pi-inbox mb-2 block text-2xl text-primary-200" />
-              Tidak ada produk hukum yang cocok.
-            </div>
-          </template>
+        <template #empty>
+          <div class="py-8 text-center text-[14px] text-muted">
+            <i class="pi pi-inbox mb-2 block text-2xl text-primary-200" />
+            {{ hasError ? 'Data produk hukum gagal dimuat. Coba muat ulang halaman.' : 'Tidak ada produk hukum yang cocok.' }}
+          </div>
+        </template>
 
           <!-- No -->
           <Column header="No" :header-class="headCenter('w-20')" :body-class="cellCenter">
