@@ -1,16 +1,9 @@
 <script>
-// sections & documents di-export supaya juga dibaca paket surat (data/letterBundles.js) dan halaman register.
-// Ubah isian surat ini di sini saja; paket & register ikut berubah.
 // Surat Keterangan Belum Menikah Lagi
-// Template PDF: letters/married-man/not-remarried-statement-letter.blade.php
-// 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
-// Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
 import { DOC, eduNat, f, opt, pemohon } from "@/data/letterFields";
 
-// Langkah 1: isian sesuai surat yang diajukan
-export const sections = [pemohon(eduNat()), { title: "Data Pendaftaran Nikah", fields: [f.text("registrationNumber", "Nomor pendaftaran", { optional: true }), f.date("registrationDate", "Tanggal pendaftaran", { optional: true })] }];
+export const sections = [{ ...pemohon(eduNat()), title: "Data Catin Pria" }, { title: "Data Pendaftaran Nikah", fields: [f.text("registrationNumber", "Nomor pendaftaran", { optional: true }), f.date("registrationDate", "Tanggal pendaftaran", { optional: true })] }];
 
-// Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [DOC.ktp, DOC.kk, opt("Akta cerai/surat kematian pasangan terdahulu")];
 </script>
 

@@ -1,18 +1,10 @@
 <script>
-// sections & documents di-export supaya juga dibaca paket surat (data/letterBundles.js) dan halaman register.
-// Ubah isian surat ini di sini saja; paket & register ikut berubah.
 // Surat Keterangan Numpang Nikah
-// Template PDF: letters/married-man/marriage-lodging-certificate-letter.blade.php
-// 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
-// Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
 import { DOC, N7, eduNat, f, opt, pemohon, person } from "@/data/letterFields";
 
-// Langkah 1: isian sesuai surat yang diajukan
-export const sections = [pemohon([f.text("applicantBin", "Bin/Binti (nama ayah)"), ...eduNat()]),
-     person("spouse", "Data Calon Pasangan", N7, [f.text("spouseBin", "Bin/Binti (nama ayah)")]),
-     { title: "Tempat Menikah", fields: [f.text("marriagePlace", "KUA/tempat akad nikah tujuan", { span: 2 })] }];
+export const sections = [{ ...pemohon([f.text("applicantBin", "Bin/Binti (nama ayah)"), ...eduNat()]), title: "Data Catin Pria" },
+     person("spouse", "Data Catin Wanita", N7, [f.text("spouseBin", "Binti (nama ayah)")])];
 
-// Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [DOC.ktp, DOC.kk, DOC.rt, opt("Fotokopi KTP calon pasangan")];
 </script>
 
