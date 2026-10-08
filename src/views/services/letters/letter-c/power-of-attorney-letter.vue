@@ -1,19 +1,45 @@
 <script>
-// sections & documents di-export supaya juga dibaca paket surat (data/letterBundles.js) dan halaman register.
-// Ubah isian surat ini di sini saja; paket & register ikut berubah.
 // Surat Kuasa
 // Template PDF: letters/letter-c/power-of-attorney-letter.blade.php
-// 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
-// Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { DOC, DOC_LETTER_C, DOC_PBB, f, pemohon, person } from "@/data/letterFields";
+import { DOC, DOC_LETTER_C, DOC_PBB, f } from "@/data/letterFields";
 
-// Langkah 1: isian sesuai surat yang diajukan
-export const sections = [pemohon(),
-     person("attorney", "Data Penerima Kuasa", ["name", "nik", "birth", "address"], [f.select("attorneyGender", "Jenis Kelamin", ["Laki-laki", "Perempuan"])]),
-     { title: "Data Pewaris (Almarhum/ah)", fields: [f.text("deceasedName", "Nama Pewaris"), f.text("deceasedDeathPlace", "Tempat Meninggal")] },
-     { title: "Mengetahui", fields: [f.text("endorserOffice", "Kelurahan/Notaris", { optional: true }), f.text("endorserName", "Nama yang mengetahui", { optional: true })] }];
+export const sections = [
+  {
+    title: "Data Pemberi Kuasa (Pihak Pertama)",
+    fields: [
+      f.text("name", "Nama"),
+      f.text("birthPlaceDate", "Tempat/Tgl. Lahir", { placeholder: "Contoh: Sleman, 17 Agustus 1990" }),
+      f.select("gender", "Jenis Kelamin", ["Laki-laki", "Perempuan"]),
+      f.text("nik", "NIK"),
+      f.area("address", "Alamat", { span: 2 }),
+    ],
+  },
+  {
+    title: "Data Pewaris (Almarhum/Almarhumah)",
+    fields: [
+      f.text("deceasedName", "Nama Almarhum/Almarhumah"),
+      f.text("deceasedDeathPlace", "Meninggal dunia di"),
+    ],
+  },
+  {
+    title: "Data Penerima Kuasa (Pihak Kedua)",
+    fields: [
+      f.text("attorneyName", "Nama"),
+      f.text("attorneyBirthPlaceDate", "Tempat/Tgl. Lahir", { placeholder: "Contoh: Sleman, 17 Agustus 1990" }),
+      f.select("attorneyGender", "Jenis Kelamin", ["Laki-laki", "Perempuan"]),
+      f.text("attorneyNik", "NIK"),
+      f.area("attorneyAddress", "Alamat", { span: 2 }),
+    ],
+  },
+  {
+    title: "Mengetahui",
+    fields: [
+      f.text("endorserOffice", "Kelurahan/Notaris", { optional: true }),
+      f.text("endorserName", "Nama yang mengetahui", { optional: true }),
+    ],
+  },
+];
 
-// Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [DOC.ktp, DOC.kk, DOC_LETTER_C, DOC_PBB, DOC.suratKematian, "Fotokopi KTP penerima kuasa"];
 </script>
 
