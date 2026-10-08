@@ -1,36 +1,54 @@
-<script>
-// sections & documents di-export supaya juga dibaca paket surat (data/letterBundles.js) dan halaman register.
-// Surat Permohonan Cerai
+<script setup>
+// Surat Permohonan Cerai (Gugat Cerai)
 // Template PDF: letters/divorce-lawsuit-letter.blade.php
-// 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
-// Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { f, pemohon, person, DOC, opt } from "@/data/letterFields";
+import LetterWizard from "@/views/services/layout/LetterWizard.vue";
+import { f, DOC, opt } from "@/data/letterFields";
 
-// Langkah 1: isian sesuai surat yang diajukan
-export const sections = [
-  pemohon(),
-  { title: "Pengadilan Tujuan", fields: [f.text("courtName", "Nama Pengadilan"), f.text("courtCity", "Kota Pengadilan")] },
-  person("spouse", "Data Pasangan (Tergugat)", ["name", "birth", "occupation", "address"], [f.text("marriageCertNumber", "Nomor Akta/Buku Nikah")]),
+// Helper: field biodata sesuai urutan di surat
+// Urutan: Nama, Tempat tgl lhr, [Agama], Pekerjaan, Alamat
+const biodata = (prefix, { religion = true } = {}) => [
+  f.text(`${prefix}Name`, "Nama"),
+  f.text(`${prefix}Birth`, "Tempat, Tanggal Lahir"),
+  ...(religion ? [f.text(`${prefix}Religion`, "Agama")] : []),
+  f.text(`${prefix}Occupation`, "Pekerjaan"),
+  f.text(`${prefix}Address`, "Alamat"),
+];
+
+// Langkah 1: isian sesuai surat
+const sections = [
+  // "Dengan ini menghadapkan seorang Laki-Laki / Perempuan"
   {
-      title: "Alasan & Saksi",
-      fields: [
-        f.rows("reasons", "Alasan gugatan", [{ key: "text", label: "Alasan" }], { max: 6 }),
-        f.rows("witnesses", "Saksi", [{ key: "name", label: "Nama Saksi" }, { key: "address", label: "Alamat" }], { optional: true, max: 4 }),
-      ],
-    },
+    title: "Data Orang yang Dihadapkan",
+    fields: [
+      f.select("applicantGender", "Jenis Kelamin", ["Laki-laki", "Perempuan"]),
+      ...biodata("applicant"),
+    ],
+  },
+
+  // "Cerai/Rapak kepada Suaminya/Istrinya" (tanpa agama, ada Surat Nikah)
+  {
+    title: "Data Suami/Istri",
+    fields: [
+      ...biodata("spouse", { religion: false }),
+      f.text("marriageCertNumber", "Surat Nikah (Nomor)"),
+    ],
+  },
+
+  // "Alasan ... Gugat Cerai/Rapak dikarenakan" (3 baris)
+  {
+    title: "Alasan Gugat Cerai",
+    fields: [
+      f.rows("reasons", "Alasan", [{ key: "text", label: "Alasan" }], { max: 3 }),
+    ],
+  },
+
+  // "Dua orang saksi"
+  { title: "Data Saksi 1", fields: biodata("witness1") },
+  { title: "Data Saksi 2", fields: biodata("witness2") },
 ];
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
-export const documents = [
-  DOC.ktp,
-  DOC.kk,
-  DOC.akta,
-  opt(DOC.bukti),
-];
-</script>
-
-<script setup>
-import LetterWizard from "@/views/services/layout/LetterWizard.vue";
+const documents = [DOC.ktp, DOC.kk, DOC.akta, opt(DOC.bukti)];
 </script>
 
 <template>
