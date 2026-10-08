@@ -1,12 +1,4 @@
-/* Paket surat (bundle): 1 pengajuan = banyak surat.
-   Isian (`sections`) dan dokumen (`documents`) tiap surat DIBACA langsung dari berkas suratnya
-   (views/services/letters/<group>/<slug>.vue) — bukan dibuat ulang di sini. Untuk mengubah isian atau
-   dokumen sebuah surat, edit berkas surat itu; paket dan halaman register ikut berubah.
-   Di file ini hanya ada: tabel surat (judul/kode/kelompok tampil di ceklis paket), pasangan kunci `aliases`,
-   dan daftar surat tiap paket.
 
-   Cara menambah/mengurangi surat dalam paket: edit array id di `pick(...)` pada paket terkait di bawah.
-   Surat baru: buat berkas surat (export `sections` & `documents`), tambahkan satu baris di tabel LETTERS. */
 import { opt } from "./letterFields";
 
 /* Semua berkas surat milik paket (nikah, kelahiran, kematian, Letter C, pindah WNI). Dimuat bersama modul ini. */
@@ -97,9 +89,15 @@ const ALIAS_NIKAH_PEREMPUAN = [
   ["previousSpouseName", "exHusbandName"], ["exHusbandName", "bridePrevName"], ["exHusbandNik", "bridePrevNik"],
   ["exHusbandDiedAt", "bridePrevDeathDate"], ["exHusbandDiedPlace", "bridePrevDeathPlace"],
 ];
-const ALIAS_LAHIR = [["grantorName", "fatherName"], ["grantorOccupation", "fatherOccupation"], ["grantorAddress", "fatherAddress"],
-  ["granteeName", "name"], ["granteeAddress", "address"], ["granteeOccupation", "occupation"]];
-const ALIAS_MATI = [["name", "reporterName"], ["nik", "reporterNik"], ["address", "reporterAddress"]];
+/* Surat kelahiran memakai nama field yang sama dengan blade (lihat data/letterFields.js), jadi isian orang tua, anak
+   dan saksi otomatis terbagi antar surat. Yang perlu dihubungkan hanya kkNumber dengan familyCardNumber serta
+   suami/istri dengan ayah/ibu. PELAPOR (reporter*) TIDAK dihubungkan ke data warga: diisi petugas/admin kalurahan. */
+const PARENT_ALIAS = ["Name", "Nik", "BirthPlace", "BirthDate", "Occupation", "Address"];
+const ALIAS_LAHIR = [
+  ["kkNumber", "familyCardNumber"],
+  ...link("husband", "father", PARENT_ALIAS), ...link("wife", "mother", PARENT_ALIAS),
+];
+const ALIAS_MATI = []; // pelapor kematian diisi petugas/admin, tidak disambungkan ke data warga
 const ALIAS_LETTER_C = [["letterCOwnerName", "ownerName"]]; // pemilik pada Letter C = pemilik tanah pada surat keterangan
 
 // 10 surat (married-man) dan 12 surat (marriage-women), sama dengan daftar di scaffold.

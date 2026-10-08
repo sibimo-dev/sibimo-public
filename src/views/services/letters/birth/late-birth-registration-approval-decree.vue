@@ -3,13 +3,49 @@
 // Ubah isian surat ini di sini saja; paket & register ikut berubah.
 // Surat Pencatatan Kelahiran Terlambat
 // Template PDF: letters/birth/late-birth-registration-approval-decree.blade.php
-// 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
+// Nama field (key) = variabel di blade (aturan penamaan: lihat komentar di data/letterFields.js).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { DOC, DOC_LAHIR, anak, f, opt, pemohonRingkas, person } from "@/data/letterFields";
+
+import { arrange, DOC, DOC_LAHIR, opt, birthChild, birthFather, birthMother } from "@/data/letterFields";
 
 // Langkah 1: isian sesuai surat yang diajukan
-export const sections = [pemohonRingkas(), anak(), { title: "Keterangan Tambahan", fields: [f.text("childBirthOrder", "Anak ke-"), f.area("lateReason", "Alasan keterlambatan pelaporan", { span: 2 })] },
-     person("mother", "Data Ibu", ["name", "nik"]), person("father", "Data Ayah", ["name", "nik"])];
+export const sections = arrange(
+  [
+    birthChild(["name", "nik", "gender", "birthOrder", "birthPlace", "birthDate"]),
+    birthMother(["name"], "Data Ibu"),
+    birthFather(["name"], "Data Ayah"),
+  ],
+  {
+    // Urutan blok (judul). Pindahkan baris untuk mengubah urutan.
+    order: [
+      "Data Bayi/Anak",
+      "Data Ibu",
+      "Data Ayah",
+    ],
+    // Urutan isian di tiap blok (key = variabel blade). Pindahkan baris untuk mengatur posisi.
+    // Taruh key blok lain di sini untuk memindahkannya ke blok ini.
+    fields: {
+      "Data Bayi/Anak": [
+        "childName",        // Nama Lengkap Anak
+        "childNik",         // NIK Anak
+        "childGender",      // Jenis Kelamin
+        "childBirthOrder",  // Kelahiran/Anak ke-
+        "childBirthPlace",  // Tempat Kelahiran
+        "childBirthDate",   // Tanggal Lahir
+      ],
+      "Data Ibu": [
+        "motherName",  // Nama Lengkap
+      ],
+      "Data Ayah": [
+        "fatherName",  // Nama Lengkap
+      ],
+    },
+    // Ubah label/placeholder/span satu isian khusus surat ini. Contoh:
+    // patch: { childBirthOrder: { placeholder: "Contoh: Kedua" } },
+    // Buang isian dari surat ini. Contoh:
+    // drop: ["childWeight"],
+  },
+);
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [DOC_LAHIR, DOC.kk, "Fotokopi KTP ayah dan ibu", DOC.akta, opt("Surat pernyataan keterlambatan pelaporan")];

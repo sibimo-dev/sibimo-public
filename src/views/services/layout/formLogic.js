@@ -32,6 +32,26 @@ export function normalizeDocs(documents = [], prefix = "") {
   });
 }
 
+/* Lookup data warga untuk fillForm.
+   - "nik"               → NIK yang diverifikasi
+   - "asFather:<kunci>"  → nilai warga HANYA bila jenis kelamin = Laki-laki (isi blok Ayah)
+   - "asMother:<kunci>"  → nilai warga HANYA bila jenis kelamin = Perempuan (isi blok Ibu)
+   - "parentRole"        → "Ayah" / "Ibu" menurut jenis kelamin
+   Kunci lain dibaca langsung dari data warga. */
+export function makeResidentLookup(store) {
+  const gender = () => store.resident?.gender;
+  const role = () => (gender() === "Laki-laki" ? "Father" : gender() === "Perempuan" ? "Mother" : null);
+  return (k) => {
+    if (k === "parentRole") return role() === "Father" ? "Ayah" : role() === "Mother" ? "Ibu" : undefined;
+    const m = /^as(Father|Mother):(.+)$/.exec(k);
+    if (m) {
+      if (role() !== m[1]) return undefined;
+      k = m[2];
+    }
+    return k === "nik" ? store.nik : store.resident?.[k];
+  };
+}
+
 /* Isi form dari data warga (field.from) / default. Aman dipanggil berkali-kali dan untuk
    banyak surat sekaligus: kunci yang sama dipakai bersama, nilai yang sudah diisi tidak ditimpa. */
 export function fillForm(form, sections, lookup = () => undefined) {

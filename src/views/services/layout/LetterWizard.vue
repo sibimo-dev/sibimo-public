@@ -16,7 +16,7 @@ import FileThumb from "./FileThumb.vue";
 import FilePreviewDialog from "./FilePreviewDialog.vue";
 import { copyText } from "./copyText";
 import WizardStepper from "./WizardStepper.vue";
-import { display, fillForm, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, MAX_FILE_MB } from "./formLogic";
+import { display, fillForm, makeResidentLookup, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, MAX_FILE_MB } from "./formLogic";
 import { hue as getHue, HUES, SECTION_HUES } from "./pastel";
 
 const props = defineProps({
@@ -54,7 +54,7 @@ const allSections = computed(() => [
 const docList = computed(() => normalizeDocs(props.documents));
 
 const form = reactive({});
-fillForm(form, allSections.value, (k) => (k === "nik" ? resident.nik : resident.resident?.[k]));
+fillForm(form, allSections.value, makeResidentLookup(resident));
 
 const files = reactive({}); // { [indexDokumen]: File }
 const preview = reactive({ open: false, file: null, title: "" });
