@@ -6,7 +6,8 @@ import DatePicker from "primevue/datepicker";
 import Select from "primevue/select";
 import Checkbox from "primevue/checkbox";
 import Button from "primevue/button";
-import { visible, isFilled, emptyRow } from "./formLogic";
+import { watch } from "vue";
+import { visible, isFilled, emptyRow, toDate } from "./formLogic";
 import { HUES, SECTION_HUES } from "./pastel";
 
 const props = defineProps({
@@ -20,6 +21,21 @@ const emit = defineEmits(["edit"]);
 
 const hueFor = (i) => HUES[SECTION_HUES[i % SECTION_HUES.length]];
 const edit = (key) => emit("edit", key);
+
+/* Field tanggal dengan `dayKey`: isi field hari (Senin–Minggu) otomatis tiap tanggal berubah. */
+const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const allFields = () => props.sections.flatMap((s) => s.fields);
+watch(
+  () => allFields().filter((x) => x.dayKey).map((x) => +toDate(props.form[x.key]) || 0),
+  () => {
+    const keys = new Set(allFields().map((x) => x.key));
+    for (const x of allFields().filter((y) => y.dayKey && keys.has(y.dayKey))) {
+      const d = toDate(props.form[x.key]);
+      if (d && !Number.isNaN(d.getTime())) props.form[x.dayKey] = HARI[d.getDay()];
+    }
+  },
+  { immediate: true },
+);
 const rowInvalid = (field, row, c) =>
   !!props.errors[field.key] && !c.optional && !isFilled(row[c.key]) && Object.values(row).some(isFilled);
 const minRows = (field) => field.min ?? (field.optional ? 0 : 1);

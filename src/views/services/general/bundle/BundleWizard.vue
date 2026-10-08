@@ -23,7 +23,7 @@ import FileThumb from "@/views/services/layout/FileThumb.vue";
 import FilePreviewDialog from "@/views/services/layout/FilePreviewDialog.vue";
 import { copyText } from "@/views/services/layout/copyText";
 import WizardStepper from "@/views/services/layout/WizardStepper.vue";
-import { applyAliases, buildAliasIndex, display, fillForm, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, MAX_FILE_MB } from "@/views/services/layout/formLogic";
+import { applyAliases, buildAliasIndex, display, fillForm, makeResidentLookup, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, MAX_FILE_MB } from "@/views/services/layout/formLogic";
 import { HUES, SECTION_HUES, hue } from "@/views/services/layout/pastel";
 
 const props = defineProps({
@@ -43,7 +43,7 @@ const NOTIF_SECTION = {
   hint: "Status verifikasi dan otorisasi surat akan dikirim melalui WhatsApp ke nomor ini.",
   fields: [{ key: "whatsapp", label: "Nomor WhatsApp", type: "text", from: "phoneNumber", placeholder: "08xx-xxxx-xxxx" }],
 };
-const lookup = (k) => (k === "nik" ? resident.nik : resident.resident?.[k]);
+const lookup = makeResidentLookup(resident);
 const aliasIndex = buildAliasIndex(props.bundle.aliases);
 
 const form = reactive({});
