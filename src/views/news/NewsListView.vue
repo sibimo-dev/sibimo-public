@@ -8,14 +8,19 @@ import SelectButton from "primevue/selectbutton";
 import Paginator from "primevue/paginator";
 import Tag from "primevue/tag";
 
-import { fetchAllNews, newsCategories } from "@/services/news.js";
+import { defaultNewsCategories, fetchAllNews, fetchNewsCategories } from "@/services/news.js";
 
 const allNews = ref([]);
 const loading = ref(true);
+const ALL_CATEGORY_LABEL = "Semua Kategori";
+const categoryOptions = ref([ALL_CATEGORY_LABEL, ...defaultNewsCategories]);
+const activeCategory = ref(ALL_CATEGORY_LABEL);
 
 onMounted(async () => {
   try {
-    allNews.value = await fetchAllNews();
+    const [news, categories] = await Promise.all([fetchAllNews(), fetchNewsCategories()]);
+    allNews.value = news;
+    categoryOptions.value = [ALL_CATEGORY_LABEL, ...categories];
   } catch (err) {
     console.error("Gagal memuat berita:", err);
   } finally {
@@ -28,9 +33,6 @@ const latestNews = computed(() =>
   [...allNews.value].sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO)).slice(0, 3)
 );
 
-const ALL_CATEGORY_LABEL = "Semua Kategori";
-const categoryOptions = [ALL_CATEGORY_LABEL, ...newsCategories];
-const activeCategory = ref(ALL_CATEGORY_LABEL);
 const searchQuery = ref("");
 
 const sortOptions = [
