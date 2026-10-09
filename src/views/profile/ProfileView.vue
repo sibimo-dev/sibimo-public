@@ -1,0 +1,790 @@
+<script setup>
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
+import markerIcon from 'leaflet/dist/images/marker-icon.png'
+import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+import heroImageUrl from '@/assets/hero/hero1.jpeg'
+import Card from 'primevue/card'
+import Tag from 'primevue/tag'
+import Avatar from 'primevue/avatar'
+import Tabs from 'primevue/tabs'
+import TabList from 'primevue/tablist'
+import Tab from 'primevue/tab'
+import ProgressSpinner from 'primevue/progressspinner'
+import Image from 'primevue/image'
+import {
+  getHistories,
+  getVisionMissions,
+  getOrganizationalStructures,
+  getRegions,
+  profileMediaUrl,
+  readProfileCache,
+  writeProfileCache,
+} from '@/services/profile'
+
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+})
+
+const heroImageLoaded = ref(false)
+const mounted = ref(false)
+
+const heroTitleWords = 'Profil Kalurahan Bimomartani'.split(' ')
+
+const history = ref(null)
+const visionMission = ref(null)
+const orgStructureData = ref([])
+const regions = ref([])
+const profileLoading = ref(true)
+const profileError = ref('')
+
+const historyPoints = computed(() => (
+  Array.isArray(history.value?.points) ? history.value.points.filter(Boolean) : []
+))
+const historyPhotos = computed(() => (
+  Array.isArray(history.value?.photos) ? history.value.photos : []
+))
+const missionsData = computed(() => (
+  Array.isArray(visionMission.value?.missions) ? visionMission.value.missions.filter(Boolean) : []
+))
+const orgStructure = computed(() => (
+  Array.isArray(orgStructureData.value?.levels) ? orgStructureData.value.levels : []
+))
+
+const heroOffset = ref(0)
+let rafId = null
+function onHeroScroll() {
+  if (rafId) return
+  rafId = requestAnimationFrame(() => {
+    heroOffset.value = Math.min(window.scrollY * 0.12, 40)
+    rafId = null
+  })
+}
+
+const sections = [
+  { id: 'history', label: 'Sejarah' },
+  { id: 'vision-mission', label: 'Visi & Misi' },
+  { id: 'org-structure', label: 'Struktur Organisasi' },
+  { id: 'wilayah', label: 'Wilayah & Demografi' },
+]
+const activeSection = ref('history')
+
+function scrollTo(id) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function onTabChange(id) {
+  activeSection.value = id
+  scrollTo(id)
+}
+
+const accentStyles = [
+  { border: '!border-l-blue-600', soft: '!from-blue-50', avatarBg: 'bg-blue-600', statBorder: 'border-blue-100', statIconBg: 'bg-blue-100', statIconText: 'text-blue-600', statHover: 'group-hover:bg-blue-600', cardBorder: 'border-sky-400', titleText: 'text-sky-600' },
+  { border: '!border-l-violet-600', soft: '!from-violet-50', avatarBg: 'bg-violet-600', statBorder: 'border-violet-100', statIconBg: 'bg-violet-100', statIconText: 'text-violet-600', statHover: 'group-hover:bg-violet-600', cardBorder: 'border-pink-400', titleText: 'text-pink-600' },
+  { border: '!border-l-teal-600', soft: '!from-teal-50', avatarBg: 'bg-teal-600', statBorder: 'border-teal-100', statIconBg: 'bg-teal-100', statIconText: 'text-teal-600', statHover: 'group-hover:bg-teal-600', cardBorder: 'border-amber-400', titleText: 'text-amber-600' },
+  { border: '!border-l-amber-600', soft: '!from-amber-50', avatarBg: 'bg-amber-600', statBorder: 'border-amber-100', statIconBg: 'bg-amber-100', statIconText: 'text-amber-600', statHover: 'group-hover:bg-amber-600', cardBorder: 'border-purple-400', titleText: 'text-purple-600' },
+  { border: '!border-l-rose-600', soft: '!from-rose-50', avatarBg: 'bg-rose-600', statBorder: 'border-rose-100', statIconBg: 'bg-rose-100', statIconText: 'text-rose-600', statHover: 'group-hover:bg-rose-600', cardBorder: 'border-emerald-400', titleText: 'text-emerald-600' },
+  { border: '!border-l-indigo-600', soft: '!from-indigo-50', avatarBg: 'bg-indigo-600', statBorder: 'border-indigo-100', statIconBg: 'bg-indigo-100', statIconText: 'text-indigo-600', statHover: 'group-hover:bg-indigo-600', cardBorder: 'border-blue-400', titleText: 'text-blue-600' },
+]
+const accentHex = ['#2563eb', '#7c3aed', '#0d9488', '#d97706', '#e11d48', '#4f46e5']
+function accentHexFor(i) {
+  return accentHex[i % accentHex.length]
+}
+function accentFor(i) {
+  return accentStyles[i % accentStyles.length]
+}
+
+const orgCardAccents = [
+  { cardBorder: 'border-amber-400', titleText: 'text-amber-600', avatarBg: 'bg-amber-500' },
+  { cardBorder: 'border-violet-400', titleText: 'text-violet-600', avatarBg: 'bg-violet-500' },
+  { cardBorder: 'border-emerald-400', titleText: 'text-emerald-600', avatarBg: 'bg-emerald-500' },
+  { cardBorder: 'border-indigo-400', titleText: 'text-indigo-600', avatarBg: 'bg-indigo-500' },
+  { cardBorder: 'border-sky-400', titleText: 'text-sky-600', avatarBg: 'bg-sky-500' },
+  { cardBorder: 'border-rose-400', titleText: 'text-rose-600', avatarBg: 'bg-rose-500' },
+]
+function orgAccentFor(i) {
+  return orgCardAccents[i % orgCardAccents.length]
+}
+
+const stats = reactive([
+  { icon: 'pi pi-users', label: 'Total Penduduk', target: 0, value: 0, suffix: '' },
+  { icon: 'pi pi-home', label: 'Kepala Keluarga', target: 0, value: 0, suffix: '' },
+  { icon: 'pi pi-map', label: 'Luas Wilayah', target: 245, value: 0, suffix: ' Ha' },
+  { icon: 'pi pi-sitemap', label: 'Jumlah RT/RW', target: 0, value: 0, suffix: ' / 0' },
+])
+
+let statsVisible = false
+
+function applyRegionStats(regionList) {
+  const totals = (Array.isArray(regionList) ? regionList : []).reduce(
+    (result, region) => ({
+      population: result.population + Number(region?.population ?? 0),
+      kk: result.kk + Number(region?.kk_count ?? 0),
+      rt: result.rt + Number(region?.rt_count ?? 0),
+      rw: result.rw + Number(region?.rw_count ?? 0),
+    }),
+    { population: 0, kk: 0, rt: 0, rw: 0 },
+  )
+
+  stats[0].target = totals.population
+  stats[1].target = totals.kk
+  stats[3].target = totals.rt
+  stats[3].suffix = ` / ${totals.rw}`
+  stats.forEach((stat) => { stat.value = 0 })
+  statsAnimated = false
+  if (statsVisible) animateStats()
+}
+
+let statsAnimated = false
+function animateStats() {
+  if (statsAnimated) return
+  statsAnimated = true
+  stats.forEach((s) => {
+    const duration = 1200
+    const start = performance.now()
+    function tick(now) {
+      const progress = Math.min((now - start) / duration, 1)
+      const eased = 1 - Math.pow(1 - progress, 3)
+      s.value = Math.floor(eased * s.target)
+      if (progress < 1) requestAnimationFrame(tick)
+      else s.value = s.target
+    }
+    requestAnimationFrame(tick)
+  })
+}
+
+async function loadProfile() {
+  profileLoading.value = true
+  const failedParts = []
+
+  const cached = readProfileCache()
+  if (cached) {
+    history.value = cached.history ?? null
+    visionMission.value = cached.visionMission ?? null
+    orgStructureData.value = cached.orgStructure ?? null
+    regions.value = cached.regions ?? []
+    applyRegionStats(regions.value)
+    nextTick(observeRevealElements)
+  }
+
+  const request = (promise, key, onData, cacheKey) => promise
+    .then((data) => {
+      onData(data)
+      writeProfileCache({ [cacheKey]: data })
+      nextTick(observeRevealElements)
+    })
+    .catch(() => {
+      failedParts.push(key)
+    })
+
+  await Promise.all([
+    request(getHistories(), 'sejarah', (data) => { history.value = data }, 'history'),
+    request(getVisionMissions(), 'visi-misi', (data) => { visionMission.value = data }, 'visionMission'),
+    request(getOrganizationalStructures(), 'struktur organisasi', (data) => {
+      orgStructureData.value = data?.[0] ?? null
+    }, 'orgStructure'),
+    request(getRegions(), 'wilayah', (data) => {
+      regions.value = data ?? []
+      applyRegionStats(regions.value)
+    }, 'regions'),
+  ])
+
+  profileError.value = failedParts.length
+    ? `Sebagian data profil belum dapat dimuat: ${failedParts.join(', ')}.`
+    : ''
+  profileLoading.value = false
+  nextTick(observeRevealElements)
+}
+
+onMounted(() => {
+  window.history.scrollRestoration = 'manual'
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  loadProfile()
+})
+
+const REVEAL_HIDDEN = ['opacity-0', 'translate-y-4']
+const REVEAL_VISIBLE = ['opacity-100', 'translate-y-0']
+
+let observer
+
+function observeRevealElements() {
+  if (!observer) return
+  document
+    .querySelectorAll('.js-reveal, [data-section], [data-trigger]')
+    .forEach((el) => observer.observe(el))
+}
+
+onMounted(() => {
+  requestAnimationFrame(() => {
+    mounted.value = true
+  })
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.remove(...REVEAL_HIDDEN)
+          entry.target.classList.add(...REVEAL_VISIBLE)
+          if (entry.target.dataset.trigger === 'stats') {
+            statsVisible = true
+            animateStats()
+          }
+          if (entry.target.dataset.trigger === 'map') initMap()
+          if (entry.target.dataset.section) activeSection.value = entry.target.dataset.section
+        }
+      })
+    },
+    { threshold: 0.2, rootMargin: '-80px 0px -10% 0px' }
+  )
+
+  nextTick(observeRevealElements)
+
+  window.addEventListener('scroll', onHeroScroll, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  leafletMap?.remove()
+  window.history.scrollRestoration = 'auto'
+  window.removeEventListener('scroll', onHeroScroll)
+  if (rafId) cancelAnimationFrame(rafId)
+})
+
+const mapEl = ref(null)
+const mapReady = ref(false)
+const boundaryStatus = ref('loading')
+let leafletMap = null
+
+const VILLAGE_CENTER = [-7.7132, 110.4551]
+const VILLAGE_QUERY = 'Bimomartani, Ngemplak, Sleman, Daerah Istimewa Yogyakarta, Indonesia'
+const BOUNDARY_FETCH_TIMEOUT_MS = 6000
+
+async function initMap() {
+  if (!mapEl.value || leafletMap) return
+
+  leafletMap = L.map(mapEl.value, {
+    scrollWheelZoom: false,
+    zoomControl: true,
+  }).setView(VILLAGE_CENTER, 14)
+
+  leafletMap.getPane('tilePane').style.zIndex = 1
+  leafletMap.getPane('overlayPane').style.zIndex = 4
+  leafletMap.getPane('markerPane').style.zIndex = 5
+  leafletMap.getPane('popupPane').style.zIndex = 6
+  const topLeft = leafletMap._controlCorners?.topleft
+  const topRight = leafletMap._controlCorners?.topright
+  if (topLeft) topLeft.style.zIndex = 10
+  if (topRight) topRight.style.zIndex = 10
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+  }).addTo(leafletMap)
+
+  leafletMap.on('click', () => leafletMap.scrollWheelZoom.enable())
+  mapEl.value.addEventListener('mouseleave', () => leafletMap.scrollWheelZoom.disable())
+
+  const marker = L.marker(VILLAGE_CENTER)
+    .addTo(leafletMap)
+    .bindPopup('<b>Kalurahan Bimomartani</b><br/>Kapanewon Ngemplak, Kabupaten Sleman')
+
+  mapReady.value = true
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), BOUNDARY_FETCH_TIMEOUT_MS)
+
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&polygon_geojson=1&limit=1&q=${encodeURIComponent(
+        VILLAGE_QUERY
+      )}`,
+      { signal: controller.signal }
+    )
+    if (!res.ok) throw new Error('Failed to reach the map service')
+    const data = await res.json()
+
+    if (data && data[0] && data[0].geojson) {
+      const boundary = L.geoJSON(data[0].geojson, {
+        style: {
+          color: '#059669',
+          weight: 3,
+          fillColor: '#059669',
+          fillOpacity: 0.08,
+        },
+      }).addTo(leafletMap)
+
+      leafletMap.fitBounds(boundary.getBounds(), { padding: [24, 24] })
+      marker.setLatLng(boundary.getBounds().getCenter())
+      boundaryStatus.value = 'ok'
+    } else {
+      boundaryStatus.value = 'no-boundary'
+    }
+  } catch (e) {
+    console.warn('Failed to load the boundary polygon from OpenStreetMap:', e)
+    boundaryStatus.value = 'error'
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+</script>
+
+<template>
+  <div class="bg-white text-slate-800">
+    <!-- ===== HERO ===== -->
+    <section class="relative px-4 py-6 md:px-6 md:py-8">
+      <div class="relative isolate mx-auto max-w-6xl overflow-hidden rounded-3xl shadow-2xl">
+  
+        <div
+          class="absolute inset-x-0 -top-14 bottom-0 -z-20 overflow-hidden bg-slate-900 motion-reduce:!transform-none"
+          :style="{ transform: `translateY(${heroOffset}px)` }"
+        >
+          <div
+            class="h-[145%] w-[125%] -m-[10%] bg-cover bg-[center_30%] blur-md transition-transform duration-[3000ms] ease-out motion-reduce:transition-none"
+            :class="mounted ? 'scale-100' : 'scale-110'"
+            :style="{ backgroundImage: `url(${heroImageUrl})` }"
+          />
+          <img
+            :src="heroImageUrl"
+            alt=""
+            class="hidden"
+            @load="heroImageLoaded = true"
+            @error="heroImageLoaded = false"
+          />
+        </div>
+
+        <div
+          class="absolute inset-0 -z-20 bg-gradient-to-br from-[#0a0f1c] via-[#101a2e] to-[#0d1526] transition-opacity duration-700"
+          :class="heroImageLoaded ? 'opacity-0' : 'opacity-100'"
+        />
+        <div class="absolute inset-0 -z-10 bg-gradient-to-r from-[rgba(5,9,20,0.92)] via-[rgba(5,9,20,0.55)] to-[rgba(5,9,20,0.1)]" />
+        <div class="absolute inset-0 -z-10 bg-gradient-to-b from-[rgba(5,9,20,0.45)] via-transparent to-[rgba(5,9,20,0.55)]" />
+
+        <div class="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(rgba(255,255,255,0.5)_1px,transparent_1px)] bg-[length:22px_22px] opacity-20" />
+
+        <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl motion-safe:animate-[pulse_6s_ease-in-out_infinite]" />
+        <div class="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-amber-400/10 blur-3xl motion-safe:animate-[pulse_9s_ease-in-out_infinite]" />
+
+        <div class="relative flex min-h-[440px] items-center px-6 py-14 md:min-h-[520px] md:px-14 md:py-20">
+          <div class="max-w-xl">
+            <div
+              class="inline-flex items-center gap-3 transition-all duration-500 ease-out motion-reduce:transition-none"
+              :class="mounted ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2'"
+            >
+              <span class="h-2.5 w-2.5 flex-none rotate-45 bg-gradient-to-br from-sky-400 to-violet-500 motion-safe:animate-pulse" />
+              <span class="text-xs font-semibold uppercase tracking-[0.3em] bg-gradient-to-r from-sky-300 to-violet-300 bg-clip-text text-transparent">
+                Tentang Kami
+              </span>
+            </div>
+
+            <h1 class="mt-5 text-3xl font-bold leading-tight tracking-tight md:text-5xl">
+              <span
+                v-for="(word, i) in heroTitleWords"
+                :key="i"
+                class="inline-block text-slate-100 [text-shadow:0_2px_24px_rgba(15,23,42,0.35)] transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!blur-none motion-reduce:!translate-y-0"
+                :class="[
+                  mounted ? 'opacity-100 translate-y-0 blur-none' : 'opacity-0 translate-y-8 blur-sm',
+                  i === heroTitleWords.length - 1
+                    ? '!bg-gradient-to-r !from-sky-400 !via-indigo-500 !to-purple-500 !bg-clip-text !text-transparent drop-shadow-[0_2px_18px_rgba(99,102,241,0.45)]'
+                    : '',
+                ]"
+                :style="{ transitionDelay: `${150 + i * 90}ms` }"
+              >
+                {{ word }}<span v-if="i !== heroTitleWords.length - 1">&nbsp;</span>
+              </span>
+            </h1>
+
+            <span
+              class="mt-4 block h-[3px] w-16 origin-left rounded-full bg-gradient-to-r from-sky-400 via-indigo-500 to-violet-500 transition-transform duration-700 ease-out motion-reduce:transition-none"
+              :class="mounted ? 'scale-x-100' : 'scale-x-0'"
+              style="transition-delay: 500ms"
+            />
+
+            <p
+              class="mt-5 text-sm leading-relaxed !text-slate-200 md:text-base transition-all duration-700 ease-out motion-reduce:transition-none"
+              :class="mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
+              style="transition-delay: 450ms"
+            >
+              Mengenal lebih dekat sejarah, visi misi, dan potensi wilayah desa kami
+              yang kaya akan warisan budaya dan keindahan alam.
+            </p>
+
+            <div
+              class="mt-4 flex items-center gap-2 text-xs font-medium !text-slate-300 transition-all duration-700 ease-out motion-reduce:transition-none"
+              :class="mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
+              style="transition-delay: 550ms"
+            >
+              <span class="h-px w-6 bg-blue-400/50" />
+              Kapanewon Ngemplak, Kabupaten Sleman, Daerah Istimewa Yogyakarta
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== STICKY ANCHOR NAV (PrimeVue Tabs, scroll-spy) ===== -->
+    <nav class="sticky top-0 z-20 border-b border-slate-100 bg-white/80 backdrop-blur-md">
+      <div class="mx-auto max-w-4xl px-6">
+        <Tabs :value="activeSection" @update:value="onTabChange" :pt="{ root: { class: 'bg-transparent' } }">
+          <TabList
+            :pt="{
+              root: { class: 'border-none bg-transparent' },
+              tabList: { class: 'gap-1 flex-nowrap overflow-x-auto border-none' },
+              activeBar: { class: '!bg-blue-600 !h-0.5' },
+            }"
+          >
+            <Tab
+              v-for="s in sections"
+              :key="s.id"
+              :value="s.id"
+              :pt="{
+                root: ({ context }) => ({
+                  class: [
+                    'border-none bg-transparent px-3 py-4 text-sm font-medium whitespace-nowrap',
+                    context.active ? 'text-blue-600' : 'text-slate-500',
+                  ],
+                }),
+              }"
+            >
+              {{ s.label }}
+            </Tab>
+          </TabList>
+        </Tabs>
+      </div>
+    </nav>
+
+    <!-- ===== HISTORY (amber / heritage tone) ===== -->
+    <section id="history" data-section="history" class="relative overflow-hidden bg-gradient-to-b from-amber-50 to-white px-6 py-20">
+      <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(#fcd34d_1px,transparent_1px)] bg-[length:20px_20px] opacity-25" />
+      <span class="pointer-events-none absolute -right-4 top-6 select-none text-[9rem] font-extrabold leading-none text-amber-500 opacity-[0.08]">
+        {{ history?.year_founded ?? '—' }}
+      </span>
+
+      <div class="relative mx-auto max-w-4xl">
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex items-center gap-3">
+          <span class="h-px w-8 bg-amber-500" />
+          <span class="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-amber-700">
+            Sejak {{ history?.year_founded ?? '—' }}
+          </span>
+        </div>
+        <h2 class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-2 text-2xl font-semibold text-slate-900">
+          {{ history?.title ?? 'Sejarah Kalurahan Bimomartani' }}
+        </h2>
+
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-6 space-y-5 border-l-2 border-amber-200 pl-6 text-slate-600 leading-relaxed">
+          <p v-for="(point, index) in historyPoints" :key="`${index}-${point}`" class="relative">
+            <span class="absolute -left-[2.05rem] top-2 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-[0_0_0_2px_#f59e0b]" />
+            {{ point }}
+          </p>
+          <p v-if="!historyPoints.length" class="text-sm text-slate-400">Data sejarah belum tersedia.</p>
+        </div>
+
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Card
+            class="!rounded-xl overflow-hidden !border !border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_24px_rgba(217,119,6,0.14)]"
+            :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }"
+          >
+            <template #content>
+              <Image
+                v-if="profileMediaUrl(historyPhotos[0])"
+                :src="profileMediaUrl(historyPhotos[0])"
+                alt="Foto Balai Desa"
+                :pt="{ image: { class: 'h-40 w-full object-cover' } }"
+              />
+              <div v-else class="flex h-40 items-center justify-center gap-2 text-sm text-amber-600/70">
+                <i class="pi pi-camera" /> Foto Balai Desa
+              </div>
+            </template>
+          </Card>
+          <Card
+            class="!rounded-xl overflow-hidden !border !border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_24px_rgba(217,119,6,0.14)]"
+            :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }"
+          >
+            <template #content>
+              <Image
+                v-if="profileMediaUrl(historyPhotos[1])"
+                :src="profileMediaUrl(historyPhotos[1])"
+                alt="Foto Kegiatan Warga"
+                :pt="{ image: { class: 'h-40 w-full object-cover' } }"
+              />
+              <div v-else class="flex h-40 items-center justify-center gap-2 text-sm text-amber-600/70">
+                <i class="pi pi-camera" /> Foto Kegiatan Warga
+              </div>
+            </template>
+          </Card>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== VISION & MISSION (indigo / violet tone) ===== -->
+    <section id="vision-mission" data-section="vision-mission" class="relative overflow-hidden bg-gradient-to-b from-violet-50 via-indigo-50 to-white px-6 py-20">
+      <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(#c4b5fd_1px,transparent_1px)] bg-[length:20px_20px] opacity-25" />
+
+      <div class="relative mx-auto max-w-4xl text-center">
+        <Card
+          class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 relative mx-auto max-w-2xl !rounded-2xl !border-0 bg-gradient-to-b from-white to-violet-50/40 !shadow-[0_16px_40px_rgba(124,58,237,0.14)]"
+          :pt="{ content: { class: '!p-8 relative' } }"
+        >
+          <template #content> 
+            <span class="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-violet-600 to-blue-600" />
+            <span class="block font-serif text-5xl leading-none bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
+              &ldquo;
+            </span>
+            <h2 class="mt-1 text-2xl font-semibold text-slate-900">Visi</h2>
+            <p class="mx-auto mt-3 text-slate-600">
+              {{ visionMission?.vision || 'Data visi belum tersedia.' }}
+            </p>
+          </template>
+        </Card>
+
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-14 flex items-center justify-center gap-3">
+          <span class="h-px w-8 bg-violet-600" />
+          <span class="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-violet-700">Arah Kami</span>
+        </div>
+        <h2 class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-2 text-2xl font-semibold text-slate-900">
+          Misi
+        </h2>
+
+        <div class="mt-6 space-y-3 text-left">
+          <Card
+            v-for="(item, i) in missionsData"
+            :key="i"
+            class="js-reveal opacity-0 translate-y-4 transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 !rounded-xl !border !border-slate-100 !border-l-4 bg-gradient-to-r !to-white hover:-translate-y-0.5 hover:shadow-lg"
+            :class="[accentFor(i).border, accentFor(i).soft]"
+            :style="{ transitionDelay: `${i * 60}ms` }"
+            :pt="{ content: { class: '!p-4' } }"
+          >
+            <template #content>
+              <div class="flex items-start gap-4">
+                <Avatar
+                  :label="String(i + 1)"
+                  shape="circle"
+                  class="flex-none !text-white font-semibold text-sm"
+                  :style="{ backgroundColor: accentHexFor(i) }"
+                />
+                <p class="pt-1 text-slate-600">{{ item }}</p>
+              </div>
+            </template>
+          </Card>
+          <p v-if="!missionsData.length" class="text-sm text-slate-400">Data misi belum tersedia.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ORGANIZATION STRUCTURE (blue tone) ===== -->
+    <section id="org-structure" data-section="org-structure" class="relative overflow-hidden bg-gradient-to-b from-blue-50 to-white px-6 py-20">
+      <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(#93c5fd_1px,transparent_1px)] bg-[length:20px_20px] opacity-25" />
+
+      <div class="relative mx-auto max-w-5xl">
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex items-center gap-3">
+          <span class="h-px w-8 bg-blue-600" />
+          <span class="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-blue-700">Tata Kelola</span>
+        </div>
+        <h2 class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-2 text-2xl font-semibold text-slate-900">
+          Struktur Organisasi Pemerintah Kalurahan
+        </h2>
+
+        <div class="mt-10">
+          <p v-if="!orgStructure.length" class="text-sm text-slate-400">Data struktur organisasi belum tersedia.</p>
+          <div v-for="(level, li) in orgStructure" :key="level.level" :class="li > 0 ? 'mt-10' : ''">
+            <div v-if="li > 0" class="relative mx-auto mb-8 h-8 w-px bg-blue-300">
+              <span class="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-blue-500" />
+            </div>
+
+            <div v-if="!level.pimpinan" class="mb-5 flex items-center gap-2">
+              <span class="h-2 w-2 flex-none rounded-full bg-blue-600" />
+              <p class="text-xs font-bold uppercase tracking-widest text-blue-700/80">{{ level.level }}</p>
+            </div>
+
+            <div v-if="level.pimpinan" class="flex flex-col items-center gap-5">
+              <Card
+                v-for="(p, pi) in level.people"
+                :key="p.title + p.name"
+                class="js-reveal opacity-0 translate-y-4 w-full max-w-4xl overflow-hidden !rounded-2xl !border-0 !bg-gradient-to-br !from-[#0d2c4d] !to-[#12395f] !shadow-lg transition-all duration-300 hover:-translate-y-1 hover:!shadow-xl motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0"
+                :style="{ transitionDelay: `${pi * 90}ms` }"
+                :pt="{ content: { class: '!p-6 sm:!p-8' } }"
+              >
+                <template #content>
+                  <div class="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-center sm:text-left">
+                    <Avatar
+                      v-if="profileMediaUrl(p.photo)"
+                      :image="profileMediaUrl(p.photo)"
+                      shape="square"
+                      size="xlarge"
+                      class="mx-auto !aspect-square !h-auto !w-48 sm:!mx-0 sm:!w-56 flex-none !overflow-hidden !rounded-xl"
+                      :pt="{ image: { class: '!h-full !w-full !object-cover' } }"
+                    />
+                    <Avatar
+                      v-else
+                      icon="pi pi-user"
+                      shape="square"
+                      size="xlarge"
+                      class="mx-auto !aspect-square !h-auto !w-48 sm:!mx-0 sm:!w-56 flex-none !rounded-xl !bg-amber-200 !text-7xl !text-amber-700"
+                    />
+                    <div class="flex flex-col items-center justify-center text-center sm:items-start sm:text-left">
+                      <span class="text-sm font-bold uppercase tracking-wider text-amber-400">{{ level.level }} Kalurahan Bimomartani</span>
+                      <h3 class="mt-2 text-2xl font-bold leading-tight text-white sm:text-3xl">{{ p.name }}</h3>
+                      <p class="mt-3 text-base leading-relaxed text-blue-100/80">{{ p.desc }}</p>
+                    </div>
+                  </div>
+                </template>
+              </Card>
+            </div>
+
+            <div
+              v-else-if="level.slider"
+              class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex snap-x snap-proximity gap-4 overflow-x-auto scroll-pl-4 pb-3 justify-start [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-blue-200"
+            >
+              <div
+                v-for="(p, pi) in level.people"
+                :key="p.title + p.name"
+                class="flex w-44 flex-none flex-col snap-start overflow-hidden rounded-xl border-2 bg-white text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg sm:w-48"
+                :class="orgAccentFor(pi).cardBorder"
+              >
+                <Avatar
+                  v-if="profileMediaUrl(p.photo)"
+                  :image="profileMediaUrl(p.photo)"
+                  shape="square"
+                  size="xlarge"
+                  class="!aspect-square !h-auto !w-full !flex-none !overflow-hidden !rounded-none"
+                  :pt="{ image: { class: '!h-full !w-full !object-cover' } }"
+                />
+                <Avatar
+                  v-else
+                  icon="pi pi-image"
+                  shape="square"
+                  size="xlarge"
+                  class="!aspect-square !h-auto !w-full !flex-none !rounded-none !text-3xl !text-white"
+                  :class="orgAccentFor(pi).avatarBg"
+                />
+                <div class="flex flex-1 flex-col items-center px-3 py-3 text-center">
+                  <p class="text-sm font-bold leading-tight text-slate-900">{{ p.name }}</p>
+                  <p class="mt-1 text-xs font-semibold uppercase tracking-wide" :class="orgAccentFor(pi).titleText">{{ p.title }}</p>
+                  <p class="mt-2 text-[11px] leading-snug text-slate-400 line-clamp-2">{{ p.desc }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              v-else
+              class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex snap-x snap-proximity gap-4 overflow-x-auto scroll-pl-4 pb-3 [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-blue-200 sm:flex-wrap sm:justify-center sm:overflow-x-visible sm:snap-none sm:pb-0"
+            >
+              <div
+                v-for="(p, pi) in level.people"
+                :key="p.title + p.name"
+                class="flex w-44 flex-none snap-start flex-col overflow-hidden rounded-xl border-2 bg-white text-center shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg sm:w-48 sm:snap-align-none"
+                :class="orgAccentFor(pi).cardBorder"
+              >
+                <Avatar
+                  v-if="profileMediaUrl(p.photo)"
+                  :image="profileMediaUrl(p.photo)"
+                  shape="square"
+                  size="xlarge"
+                  class="!aspect-square !h-auto !w-full !flex-none !overflow-hidden !rounded-none"
+                  :pt="{ image: { class: '!h-full !w-full !object-cover' } }"
+                />
+                <Avatar
+                  v-else
+                  icon="pi pi-image"
+                  shape="square"
+                  size="xlarge"
+                  class="!aspect-square !h-auto !w-full !flex-none !rounded-none !text-3xl !text-white"
+                  :class="orgAccentFor(pi).avatarBg"
+                />
+                <div class="flex flex-1 flex-col items-center px-3 py-3 text-center">
+                  <p class="text-sm font-bold leading-tight text-slate-900">{{ p.name }}</p>
+                  <p class="mt-1 text-xs font-semibold uppercase tracking-wide" :class="orgAccentFor(pi).titleText">{{ p.title }}</p>
+                  <p class="mt-2 text-[11px] leading-snug text-slate-400 line-clamp-2">{{ p.desc }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== REGION & DEMOGRAPHICS (emerald / green tone) ===== -->
+    <section id="wilayah" data-section="wilayah" class="relative overflow-hidden bg-gradient-to-b from-emerald-50 to-white px-6 py-20">
+      <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(#6ee7b7_1px,transparent_1px)] bg-[length:20px_20px] opacity-25" />
+
+      <div class="relative mx-auto max-w-4xl">
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex items-center gap-3">
+          <span class="h-px w-8 bg-emerald-600" />
+          <span class="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-emerald-700">Fakta &amp; Angka</span>
+        </div>
+        <h2 class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-2 text-2xl font-semibold text-slate-900">
+          Data Wilayah &amp; Demografi
+        </h2>
+
+        <div
+          class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-6 grid grid-cols-2 gap-4 md:grid-cols-4"
+          data-trigger="stats"
+        >
+          <Card
+            v-for="(s, i) in stats"
+            :key="s.label"
+            class="group !rounded-xl border bg-gradient-to-br to-white transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+            :class="accentFor(i).statBorder"
+            :style="{ transitionDelay: `${i * 70}ms` }"
+            :pt="{ content: { class: '!p-5' } }"
+          >
+            <template #content>
+              <Avatar
+                :icon="s.icon"
+                shape="circle"
+                class="text-lg transition-all duration-300 group-hover:!text-white group-hover:scale-110"
+                :class="[accentFor(i).statIconBg, accentFor(i).statIconText, accentFor(i).statHover]"
+              />
+              <p class="mt-4 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                {{ s.label }}
+              </p>
+              <p class="mt-1 text-2xl font-bold text-slate-900">
+                {{ s.value.toLocaleString('id-ID') }}<span class="text-base font-semibold text-slate-400">{{ s.suffix }}</span>
+              </p>
+            </template>
+          </Card>
+        </div>
+
+        <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 my-10 h-px w-full bg-emerald-100" />
+
+        <!-- ===== INTERACTIVE MAP ===== -->
+        <Card
+          class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 isolate overflow-hidden !rounded-2xl !border !border-emerald-200 !shadow-[0_14px_32px_rgba(5,150,105,0.1)]"
+          :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }"
+        >
+          <template #content>
+            <div class="relative h-80 w-full">
+              <div ref="mapEl" data-trigger="map" class="h-full w-full" />
+
+              <div
+                v-if="!mapReady"
+                class="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/70 backdrop-blur-[1px]"
+              >
+                <span class="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-medium text-slate-500 shadow">
+                  <ProgressSpinner class="h-4 w-4" stroke-width="6" />
+                  Memuat peta...
+                </span>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 border-t border-emerald-100 px-4 py-3">
+              <div class="flex items-center gap-2">
+                <span class="inline-block h-2.5 w-4 rounded-sm bg-emerald-600/80" />
+                <p class="text-xs text-slate-400">
+                  Garis hijau menunjukkan batas administratif Kalurahan Bimomartani (data OpenStreetMap).
+                </p>
+              </div>
+              <Tag v-if="boundaryStatus === 'no-boundary'" severity="warn" value="Poligon batas belum tersedia — menampilkan titik lokasi saja." class="!text-xs" />
+              <Tag v-else-if="boundaryStatus === 'error'" severity="danger" value="Gagal memuat data batas wilayah." class="!text-xs" />
+            </div>
+          </template>
+        </Card>
+      </div>
+    </section>
+  </div>
+</template>
