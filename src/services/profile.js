@@ -43,14 +43,13 @@ function isPublished(item) {
   return String(item?.status ?? '').trim().toLowerCase() === 'published'
 }
 
-const backendOrigin = String(api.defaults.baseURL || '')
-  .replace(/\/api\/?$/, '')
+const backendOrigin = String(api.defaults.baseURL || '').replace(/\/api\/?$/, '')
 
 export function profileMediaUrl(path) {
   if (!path || typeof path !== 'string') return null
   if (/^https?:\/\//i.test(path)) return path
-  if (path.startsWith('/storage/')) return `${backendOrigin}${path}`
-  return path
+  const clean = path.replace(/^storage\//, '')
+  return `${backendOrigin}/storage/${clean}`
 }
 
 export async function getHistories() {
