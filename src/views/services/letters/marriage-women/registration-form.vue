@@ -1,17 +1,28 @@
 <script>
-// sections & documents di-export supaya juga dibaca paket surat (data/letterBundles.js) dan halaman register.
-// Ubah isian surat ini di sini saja; paket & register ikut berubah.
 // Data Isian Pendaftaran Nikah
-// Template PDF: letters/marriage-women/letters/registration-form.blade.php
-// 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
-// Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { DOC, akad, calonIstri, calonSuami } from "@/data/letterFields";
+import { DOC, N7, akad, calonIstri, calonSuami, f, opt, ortuNikah, person } from "@/data/letterFields";
 
-// Langkah 1: isian sesuai surat yang diajukan
-export const sections = [akad(), calonSuami(), calonIstri()];
+export const sections = [
+  akad(),
+  calonSuami(N7),
+  calonIstri(N7),
+  { title: "Status Calon Istri", fields: [f.select("brideStatus", "Status", ["Perawan", "Janda"])] },
+  person("exHusband", "Data Suami Terdahulu (isi jika janda)", N7, [
+    f.text("exHusbandBin", "Bin (nama ayah)"),
+    f.date("exHusbandDiedAt", "Tanggal meninggal"),
+    f.text("exHusbandDiedPlace", "Tempat meninggal"),
+  ]),
+  ortuNikah("brideFather", "Data Ayah Calon Istri", "Bin (nama ayah dari ayah)"),
+  ortuNikah("brideMother", "Data Ibu Calon Istri", "Binti (nama ayah dari ibu)"),
+  person("guardian", "Data Wali Nikah (isi jika wali nasab bukan ayah kandung)", N7, [
+    f.text("guardianBin", "Bin (nama ayah dari wali)"),
+    f.text("guardianRelation", "Hubungan wali dengan calon istri"),
+    f.area("guardianReason", "Sebab wali bukan ayah kandung", { span: 2, optional: true }),
+  ]),
+  { title: "Wali Hakim", fields: [f.area("judgeGuardianReason", "Sebab wali hakim (isi jika wali hakim)", { span: 2, optional: true })] },
+];
 
-// Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
-export const documents = [DOC.ktp, DOC.kk, DOC.aktaLahir, DOC.pasFoto];
+export const documents = [DOC.ktp, DOC.kk, DOC.aktaLahir, DOC.pasFoto, opt(DOC.suratKematian)];
 </script>
 
 <script setup>
