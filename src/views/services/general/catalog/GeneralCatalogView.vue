@@ -12,10 +12,12 @@ import { useResidentVerificationStore } from "@/stores/residentVerification";
 
 const router = useRouter();
 
-/* Kategori "Perintah" dan surat SPPD tidak dipakai lagi → disaring di sini, jadi tetap hilang
-   walau masih ada di data/letterCatalog. (Hapus juga dari data itu bila sudah tidak diperlukan.) */
+/* Kategori "Perintah", surat SPPD, dan Perhitungan Selamatan tidak ditampilkan ke publik → disaring di sini,
+   jadi tetap hilang walau masih ada di data/letterCatalog. (Hapus juga dari data itu bila sudah tidak diperlukan.) */
 const isRemovedCategory = (v) => /perintah/i.test(String(v ?? ""));
-const isRemovedService = (s) => isRemovedCategory(s.category) || /sppd|perjalanan dinas|^duty-travel/i.test(`${s.title} ${s.slug}`);
+const isRemovedService = (s) =>
+  isRemovedCategory(s.category) ||
+  /sppd|perjalanan dinas|duty-travel|selamatan|death-commemoration/i.test(`${s.title} ${s.slug}`);
 const CATEGORIES = GENERAL_CATEGORIES.filter((c) => !isRemovedCategory(c.value) && !isRemovedCategory(c.label));
 
 const residentStore = useResidentVerificationStore();
