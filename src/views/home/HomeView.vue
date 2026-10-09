@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import {
   fetchHomeData,
   readHomeCache,
@@ -10,6 +10,8 @@ import Tag from "primevue/tag";
 import AnimateOnScroll from "primevue/animateonscroll";
 import heroImage from "@/assets/hero/hero1.jpeg";
 import SubmissionCheckForm from "@/components/shared/SubmissionCheckForm.vue";
+import HomeSearch from "@/components/shared/HomeSearch.vue";
+import { GENERAL_SERVICES, PERMIT_SERVICES } from "@/data/letterCatalog";
 
 /* Direktif PrimeVue AnimateOnScroll (modifier .once = animasi hanya jalan sekali) */
 const vAnimateonscroll = AnimateOnScroll;
@@ -36,10 +38,32 @@ const pamongList = ref([]);
 const homeLoading = ref(true);
 
 /* ============ HERO SEARCH ============ */
-const searchQuery = ref("");
+const PAGE_SUGGESTIONS = [
+  { title: "Layanan Mandiri (Surat Online)", keywords: ["surat", "ajukan", "layanan"], to: { name: "services" } },
+  { title: "Berita Kalurahan", keywords: ["informasi", "kabar", "artikel"], to: { name: "news" } },
+  { title: "Pengaduan Masyarakat", keywords: ["aduan", "lapor", "keluhan"], to: { name: "complaints" } },
+  { title: "Profil Kalurahan", keywords: ["sejarah", "visi", "misi"], to: { name: "profile" } },
+  { title: "Wilayah (Dusun, RT, RW)", keywords: ["peta", "dusun", "rt", "rw"], to: { name: "profile", hash: "#wilayah" } },
+  { title: "Potensi Kalurahan", keywords: ["bumdes", "umkm", "wisata", "pertanian"], to: { name: "potential" } },
+  { title: "Agenda Kegiatan", keywords: ["jadwal", "kegiatan"], to: { name: "events" } },
+  { title: "Produk Hukum", keywords: ["perkal", "peraturan", "keputusan"], to: { name: "legal-products" } },
+  { title: "Pembangunan", keywords: ["proyek", "infrastruktur"], to: { name: "development" } },
+  { title: "Galeri", keywords: ["foto", "dokumentasi"], to: { name: "gallery" } },
+  { title: "Statistik & Data Kalurahan", keywords: ["data", "penduduk"], to: { name: "data" } },
+];
 
-function handleSearch() {
-  const q = searchQuery.value.trim().toLowerCase();
+const searchItems = computed(() => [
+  ...GENERAL_SERVICES.map((s) => ({ title: s.title, type: "Layanan", keywords: [s.shortCode], to: s.to })),
+  ...PERMIT_SERVICES.map((s) => ({ title: s.title, type: "Perizinan", keywords: [s.shortCode, "izin"], to: s.to })),
+  ...PAGE_SUGGESTIONS.map((p) => ({ ...p, type: "Halaman" })),
+  ...newsList.value.map((n) => ({ title: n.title, type: "Berita", to: { name: "news-detail", params: { slug: n.slug } } })),
+  ...agendaList.value.map((a) => ({ title: a.title, type: "Agenda", to: { name: "events" } })),
+]);
+
+/* Dipanggil saat pengguna menekan Cari/Enter tanpa memilih saran */
+function handleSearch(text) {
+  const raw = String(text ?? "").trim();
+  const q = raw.toLowerCase();
   if (!q) return;
 
   if (/berita|informasi|kabar|artikel/.test(q)) {
@@ -59,7 +83,7 @@ function handleSearch() {
   } else if (/galeri|foto|dokumentasi/.test(q)) {
     router.push({ name: "gallery" });
   } else {
-    router.push({ name: "services", query: { q: searchQuery.value.trim() } });
+    router.push({ name: "services", query: { q: raw } });
   }
 }
 
@@ -235,7 +259,10 @@ function pamongFotoSrc(item) {
 }
 
 function applyHomeData(data) {
-  if (Object.prototype.hasOwnProperty.call(data, "news")) newsList.value = data.news ?? [];
+  if (Object.prototype.hasOwnProperty.call(data, "news")) {
+    newsList.value = data.news ?? [];
+    if (activeNews.value >= newsList.value.length) activeNews.value = 0;
+  }
   if (Object.prototype.hasOwnProperty.call(data, "agendas")) agendaList.value = data.agendas ?? [];
   if (Object.prototype.hasOwnProperty.call(data, "potentials")) potentialList.value = data.potentials ?? [];
   if (Object.prototype.hasOwnProperty.call(data, "galleries")) galleryList.value = data.galleries ?? [];
@@ -264,6 +291,51 @@ async function loadHome() {
   }
 }
 
+/* ============ SLIDER BERITA UTAMA ============
+   Panel besar berganti otomatis; daftar "Berita Terkini" di sampingnya
+   berfungsi sebagai tab (klik = ganti panel besar). */
+const NEWS_DELAY = 5500;
+const activeNews = ref(0);
+const newsPaused = ref(false);
+const newsProgressKey = ref(0); // diganti tiap timer di-reset, supaya progress bar mulai dari 0
+const reducedMotion = ref(false);
+let newsTimer = null;
+
+function stepNews(step = 1) {
+  const n = newsList.value.length;
+  if (!n) return;
+  activeNews.value = (activeNews.value + step + n) % n;
+}
+
+function startNewsTimer() {
+  clearInterval(newsTimer);
+  newsProgressKey.value += 1;
+  if (reducedMotion.value) return;
+  newsTimer = setInterval(() => {
+    if (!newsPaused.value && newsList.value.length > 1) stepNews(1);
+  }, NEWS_DELAY);
+}
+
+function selectNews(i) {
+  activeNews.value = i;
+  startNewsTimer();
+}
+
+function moveNews(step) {
+  stepNews(step);
+  startNewsTimer();
+}
+
+function pauseNews() {
+  newsPaused.value = true;
+}
+
+function resumeNews() {
+  newsPaused.value = false;
+  startNewsTimer();
+}
+
+/* ============ CAROUSEL PAMONG ============ */
 const orgTrackRef = ref(null);
 let orgAutoplayTimer = null;
 let orgAutoplayPaused = false;
@@ -308,8 +380,8 @@ function resumeOrgAutoplay() {
 /* Galeri beranda: geser manual (swipe / tombol), tanpa autoplay */
 const galleryTrackRef = ref(null);
 
-function scrollGallery(direction) {
-  const track = galleryTrackRef.value;
+function scrollTrack(trackRef, direction) {
+  const track = trackRef.value;
   const firstCard = track?.children?.[0];
   if (!track || !firstCard) return;
   const gap = parseFloat(getComputedStyle(track).columnGap || "0");
@@ -321,14 +393,16 @@ onMounted(() => {
 });
 
 onMounted(() => {
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (!prefersReducedMotion) {
+  reducedMotion.value = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  startNewsTimer();
+  if (!reducedMotion.value) {
     orgAutoplayTimer = setInterval(advanceOrgSlide, ORG_AUTOPLAY_DELAY);
   }
 });
 
 onBeforeUnmount(() => {
   if (orgAutoplayTimer) clearInterval(orgAutoplayTimer);
+  clearInterval(newsTimer);
 });
 </script>
 
@@ -336,22 +410,22 @@ onBeforeUnmount(() => {
   <div>
     <!-- ============ HERO (full-width, 1 foto statis) ============ -->
     <section
-      class="relative isolate overflow-hidden flex flex-col items-center justify-center text-center text-white px-6 pt-16 pb-36 sm:pt-20 sm:pb-40 lg:pt-28 lg:pb-48 min-h-[460px] sm:min-h-[520px] lg:min-h-[600px]"
+      class="relative flex flex-col items-center justify-center text-center text-white px-6 pt-16 pb-36 sm:pt-20 sm:pb-40 lg:pt-28 lg:pb-48 min-h-[460px] sm:min-h-[520px] lg:min-h-[600px]"
     >
-      <!-- Foto dibuat sedikit blur supaya tulisan papan di foto tidak
-           bertabrakan dengan teks hero -->
-      <img
-        :src="heroImage"
-        alt="Kalurahan Bimomartani"
-        class="absolute inset-0 -z-30 h-full w-full object-cover scale-105 blur-[3px]"
-      />
-      <!-- Overlay gelap merata -->
-      <div class="absolute inset-0 -z-20 bg-gradient-to-b from-primary-900/80 via-primary-900/70 to-primary-900/90" />
-      <!-- Vignette gelap di tengah, tepat di belakang blok teks -->
-      <div class="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,rgba(6,16,32,0.65)_0%,rgba(6,16,32,0.35)_45%,transparent_75%)]" />
+      <!-- Lapisan background: overflow-hidden & isolate ada di sini (bukan di section)
+           supaya daftar saran pencarian tidak terpotong dan bisa tampil di atas menu cepat -->
+      <div class="absolute inset-0 isolate overflow-hidden" aria-hidden="true">
+        <img
+          :src="heroImage"
+          alt=""
+          class="absolute inset-0 h-full w-full object-cover scale-105 blur-[3px]"
+        />
+        <div class="absolute inset-0 bg-gradient-to-b from-primary-900/80 via-primary-900/70 to-primary-900/90" />
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(6,16,32,0.65)_0%,rgba(6,16,32,0.35)_45%,transparent_75%)]" />
+      </div>
 
-      <div class="relative max-w-[720px] mx-auto flex flex-col items-center">
-        <!-- Badge "Selamat Datang Di": layout pill mengikuti lebar tulisan -->
+      <!-- Konten hero: z-20 agar daftar saran tampil di atas kartu menu cepat (z-10) -->
+      <div class="relative z-20 max-w-[720px] mx-auto flex flex-col items-center">
         <span
           class="hero-in hero-in-down inline-flex items-center gap-2.5 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-[11.5px] sm:text-[13px] font-bold uppercase tracking-[0.18em] text-secondary-300 backdrop-blur-md shadow-lg shadow-black/20 mb-5"
           style="--i: 0"
@@ -384,25 +458,13 @@ onBeforeUnmount(() => {
           digital yang mudah diakses oleh seluruh warga.
         </p>
 
-        <form
-          @submit.prevent="handleSearch"
-          class="hero-in mt-6 sm:mt-7 flex items-center gap-2 rounded-full bg-black/25 backdrop-blur-md border border-white/30 p-1 w-full max-w-[560px] shadow-lg shadow-black/20 focus-within:border-white/60 focus-within:bg-black/30 transition-colors"
+        <!-- Pencarian dengan rekomendasi (autocomplete) -->
+        <HomeSearch
+          :items="searchItems"
+          class="hero-in mt-6 sm:mt-7 w-full max-w-[560px]"
           style="--i: 3"
-        >
-          <i class="pi pi-search text-white/80 text-base pl-3.5 shrink-0" />
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Cari layanan, berita..."
-            class="flex-1 min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/70 focus:outline-none py-1.5"
-          />
-          <button
-            type="submit"
-            class="shrink-0 rounded-full bg-white/20 hover:bg-white/30 border border-white/30 transition-colors text-white text-[13px] font-bold px-4 sm:px-5 py-2"
-          >
-            Cari
-          </button>
-        </form>
+          @search="handleSearch"
+        />
       </div>
     </section>
 
@@ -412,8 +474,6 @@ onBeforeUnmount(() => {
         aria-label="Menu cepat"
         class="relative isolate grid grid-cols-4 gap-y-5 overflow-hidden rounded-2xl border border-border-default bg-surface px-3 py-5 shadow-xl sm:px-6 sm:py-6 lg:grid-cols-8"
       >
-        <!-- Hiasan kartu: blob biru lembut di sudut, wash gradasi tipis,
-             dan pola titik halus di sisi kanan atas -->
         <div class="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br from-transparent via-transparent to-primary-50/80" aria-hidden="true" />
         <div class="pointer-events-none absolute -right-10 -top-12 -z-10 h-40 w-40 rounded-full bg-primary-100/80 blur-2xl" aria-hidden="true" />
         <div class="pointer-events-none absolute -bottom-14 -left-10 -z-10 h-40 w-40 rounded-full bg-sky-200/50 blur-2xl" aria-hidden="true" />
@@ -442,132 +502,41 @@ onBeforeUnmount(() => {
     <!-- ============ ISI HALAMAN ============ -->
     <div class="max-w-[1350px] mx-auto px-4 sm:px-6 md:px-10 lg:px-12 py-8 lg:py-10 flex flex-col gap-10">
 
-    <!-- ============ CEK PENGAJUAN ============ -->
-    <section class="grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
-      <!-- Penjelasan fungsi Cek Pengajuan (kanan di desktop) -->
-      <div v-animateonscroll.once="appear('right')" style="--i: 1" class="relative lg:order-2">
-        <div class="pointer-events-none absolute -top-10 -left-10 h-40 w-40 rounded-full bg-primary-100/70 blur-2xl"></div>
-        <div class="pointer-events-none absolute -bottom-10 right-0 h-32 w-32 rounded-full bg-primary-50 blur-2xl"></div>
-        <i class="pi pi-file-pdf pointer-events-none absolute -top-4 right-2 text-[88px] text-primary-100 rotate-12 hidden sm:block"></i>
-
-        <div class="relative">
-          <span class="inline-flex items-center gap-1.5 rounded-full bg-primary-50 border border-primary-100 px-3 py-1 text-[11.5px] font-bold text-primary-800">
-            <i class="pi pi-download text-[11px]" />
-            Layanan Digital
-          </span>
-          <h2 class="font-heading font-extrabold text-2xl sm:text-3xl text-heading mt-3 mb-2">Cek Pengajuan Surat</h2>
-          <p class="text-[14px] sm:text-[15px] text-muted leading-relaxed max-w-md">
-            Pantau status pengajuan suratmu, apakah sudah diverifikasi, siap diunduh, atau ditolak, lalu lihat dan unduh PDF-nya tanpa perlu datang ke kantor kalurahan.
-          </p>
-
-          <ol class="mt-6 flex flex-col gap-4 m-0 p-0 list-none">
-            <li v-for="(step, i) in documentSteps" :key="step.title" class="flex items-start gap-3.5">
-              <div class="shrink-0 w-10 h-10 rounded-xl bg-primary-800 text-white flex items-center justify-center shadow-sm">
-                <i :class="step.icon" class="pi text-[15px]" />
-              </div>
-              <div class="min-w-0">
-                <h3 class="font-heading font-bold text-[14px] text-heading m-0">
-                  <span class="text-primary-600 mr-1">{{ i + 1 }}.</span>{{ step.title }}
-                </h3>
-                <p class="text-[12.5px] text-muted mt-0.5 leading-snug">{{ step.desc }}</p>
-              </div>
-            </li>
-          </ol>
+    <!-- ============ CEK PENGAJUAN + AGENDA ============
+         Desktop (lg ke atas): baris 1 = form cek pengajuan (kiri) + kartu agenda (kanan), tinggi sama;
+                               baris 2 = tata cara 3 langkah sebagai strip horizontal.
+         Mobile/tablet: wrapper grid dibuat `contents` supaya ketiga kartu menjadi anak langsung
+                        dari kolom flex ini, lalu diurutkan lewat `order-*`:
+                        1) Cek Pengajuan  2) Tata Cara  3) Agenda. -->
+    <section class="flex flex-col gap-6">
+      <div class="contents lg:grid lg:grid-cols-2 lg:items-stretch lg:gap-8">
+        <!-- Form cek pengajuan -->
+        <div v-animateonscroll.once="appear('left')" style="--i: 0" class="order-1 w-full">
+          <SubmissionCheckForm class="w-full lg:[&>div]:mx-0 lg:[&>div]:mr-auto lg:[&>div]:max-w-none" />
         </div>
-      </div>
 
-      <!-- Form cek pengajuan (kiri di desktop) -->
-      <div v-animateonscroll.once="appear('left')" style="--i: 0" class="w-full lg:order-1">
-        <SubmissionCheckForm class="w-full lg:[&>div]:mx-0 lg:[&>div]:mr-auto" />
-      </div>
-    </section>
+        <!-- Agenda Kalurahan -->
+        <div
+          v-animateonscroll.once="appear('right')" style="--i: 1"
+          class="order-3 relative isolate flex flex-col gap-3 overflow-hidden rounded-3xl bg-gradient-to-br from-primary-900 to-primary-800 p-5 sm:p-6"
+        >
+          <div class="pointer-events-none absolute -right-12 -top-12 -z-10 h-44 w-44 rounded-full bg-sky-400/15 blur-2xl" aria-hidden="true" />
+          <div class="pointer-events-none absolute -left-10 bottom-10 -z-10 h-40 w-40 rounded-full bg-violet-400/15 blur-2xl" aria-hidden="true" />
 
-    <!-- ============ BERITA + AGENDA ============ -->
-    <section class="grid lg:grid-cols-3 gap-6 lg:gap-8 items-stretch">
-      <!-- Berita Desa -->
-      <div class="lg:col-span-2 flex flex-col">
-        <div class="flex items-end justify-between mb-1">
-          <div>
-            <span class="text-[11px] font-bold uppercase tracking-wider text-secondary-600">
-              Informasi Terkini
+          <div class="flex items-center gap-3">
+            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white">
+              <i class="pi pi-calendar text-lg" />
             </span>
-            <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-heading m-0">Berita Kalurahan</h2>
+            <div class="min-w-0">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-secondary-300">Jadwal Kegiatan</span>
+              <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-white m-0 leading-tight">Agenda Kalurahan</h2>
+            </div>
           </div>
-          <RouterLink
-            :to="{ name: 'news' }"
-            class="text-[13px] font-bold text-primary-700 hover:text-primary-800 shrink-0 flex items-center gap-1"
-          >
-            Lihat Semua <i class="pi pi-arrow-right text-[10px]" />
-          </RouterLink>
-        </div>
 
-        <div v-if="newsList.length" class="grid sm:grid-cols-2 gap-4 mt-4 flex-1">
-          <RouterLink
-            v-for="(item, idx) in newsList"
-            :key="item.slug"
-            :to="{ name: 'news-detail', params: { slug: item.slug } }"
-            class="relative flex flex-col h-full rounded-2xl border bg-surface overflow-hidden hover:shadow-md transition-all"
-            :class="colorForNewsCategory(item.category).border"
-            v-animateonscroll.once="appear('zoom')" :style="{ '--i': idx }"
-          >
-            <span class="absolute inset-x-0 top-0 z-10 h-1" :class="colorForNewsCategory(item.category).topBar" />
-
-            <div class="relative aspect-[16/10] bg-primary-50 flex items-center justify-center overflow-hidden">
-              <img
-                v-if="item.image"
-                :src="item.image"
-                :alt="item.title"
-                class="w-full h-full object-cover"
-                loading="lazy"
-                @error="handleImgError"
-              />
-              <i v-else class="pi pi-image text-2xl text-primary-200" />
-            </div>
-            <div class="p-4 flex flex-col flex-1">
-              <span
-                class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-bold self-start"
-                :class="colorForNewsCategory(item.category).badge"
-              >
-                <span class="w-1.5 h-1.5 rounded-full" :class="colorForNewsCategory(item.category).dot" />
-                {{ item.category }}
-              </span>
-              <h3 class="font-heading font-extrabold text-[14px] text-heading mt-2.5 leading-snug line-clamp-2">
-                {{ item.title }}
-              </h3>
-              <p class="text-[12px] text-muted mt-1.5 leading-relaxed flex-1">
-                {{ truncateExcerpt(item.excerpt) }}
-              </p>
-              <div class="flex items-center justify-between mt-3 pt-3 border-t border-border-default">
-                <div class="flex items-center gap-1.5 text-[11.5px] text-muted">
-                  <i class="pi pi-calendar text-[10px]" />
-                  {{ item.date }}
-                </div>
-                <i class="pi pi-arrow-right text-[11px] text-muted" />
-              </div>
-            </div>
-          </RouterLink>
-        </div>
-        <div v-else class="mt-4 flex-1 rounded-2xl border border-border-default bg-surface p-6 text-center text-muted">
-          <i class="pi pi-inbox text-2xl text-primary-200" />
-          <p class="mt-2 text-[13px]">{{ homeLoading ? "Memuat berita..." : "Belum ada berita." }}</p>
-        </div>
-      </div>
-
-      <!-- Agenda Desa Terkini: badge tanggal tiap item warnanya bergilir -->
-      <div class="flex flex-col">
-        <div class="mb-1">
-          <span class="text-[11px] font-bold uppercase tracking-wider text-secondary-600">
-            Jadwal Kegiatan
-          </span>
-          <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-heading m-0">Agenda Kalurahan</h2>
-        </div>
-
-        <div class="mt-4 flex-1 flex flex-col gap-3 rounded-2xl bg-gradient-to-br from-primary-900 to-primary-800 p-4">
           <div
             v-for="(item, i) in agendaList"
             :key="item.key"
-            class="flex items-start gap-3 rounded-xl border border-white/15 bg-white/5 p-3 hover:bg-white/10 transition-colors flex-1"
-            v-animateonscroll.once="appear('right')" :style="{ '--i': i + 1 }"
+            class="flex items-start gap-3 rounded-xl border border-white/15 bg-white/5 p-3 hover:bg-white/10 transition-colors"
           >
             <div
               class="shrink-0 w-11 rounded-lg text-white text-center py-1.5 leading-tight bg-gradient-to-br"
@@ -586,21 +555,242 @@ onBeforeUnmount(() => {
               </p>
             </div>
           </div>
-          <div v-if="!agendaList.length" class="rounded-xl border border-white/15 bg-white/5 p-5 text-center text-[13px] text-white/75">
-            {{ homeLoading ? "Memuat agenda..." : "Belum ada agenda mendatang." }}
+
+          <!-- Pengisi sisa ruang (hanya bila agenda < 3), supaya kartu tidak tampak kosong -->
+          <div
+            v-if="agendaList.length < 3"
+            class="relative flex flex-1 min-h-[110px] flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed border-white/20 bg-white/5 px-5 py-5 text-center"
+          >
+            <i class="pi pi-calendar pointer-events-none absolute -bottom-6 -right-4 text-[110px] leading-none text-white/[0.06] -rotate-12" aria-hidden="true" />
+            <span class="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white/90">
+              <i :class="homeLoading ? 'pi pi-spin pi-spinner' : 'pi pi-calendar-plus'" class="text-lg" />
+            </span>
+            <p class="relative mt-2.5 text-[13px] font-bold text-white">
+              {{ homeLoading ? "Memuat agenda..." : agendaList.length ? "Ada kegiatan lain?" : "Belum ada agenda mendatang" }}
+            </p>
+            <p class="relative mt-1 max-w-[260px] text-[11.5px] leading-relaxed text-white/70">
+              {{ agendaList.length ? "Lihat jadwal lengkap kegiatan kalurahan di halaman agenda." : "Jadwal kegiatan akan tampil di sini begitu ditambahkan. Pantau terus ya." }}
+            </p>
           </div>
 
           <RouterLink
             :to="{ name: 'events' }"
-            class="flex items-center justify-center gap-1.5 rounded-xl bg-white text-[13px] font-bold text-primary-700 hover:text-primary-800 py-2.5 shadow-sm hover:shadow transition-shadow"
+            class="mt-auto flex items-center justify-center gap-1.5 rounded-xl bg-white text-[13px] font-bold text-primary-700 hover:text-primary-800 py-2.5 shadow-sm hover:shadow transition-shadow"
           >
             Lihat Semua <i class="pi pi-arrow-right text-[10px]" />
           </RouterLink>
         </div>
       </div>
+
+      <!-- Tata cara cek pengajuan: strip horizontal -->
+      <div
+        v-animateonscroll.once="appear('up')" style="--i: 2"
+        class="order-2 relative overflow-hidden rounded-3xl border border-primary-100 bg-gradient-to-br from-primary-50/70 to-white p-5 sm:p-6"
+      >
+        <div class="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary-100/70 blur-2xl" aria-hidden="true" />
+        <i class="pi pi-file-pdf pointer-events-none absolute right-4 top-2 hidden text-[72px] text-primary-100 rotate-12 sm:block" aria-hidden="true" />
+
+        <div class="relative flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-white border border-primary-100 px-3 py-1 text-[11px] font-bold text-primary-800">
+              <i class="pi pi-download text-[10px]" />
+              Layanan Digital
+            </span>
+            <h2 class="font-heading font-extrabold text-lg sm:text-xl text-heading mt-2 mb-0">Tata Cara Cek Pengajuan Surat</h2>
+          </div>
+          <p class="text-[12.5px] text-muted leading-snug sm:max-w-sm sm:text-right">
+            Pantau status suratmu dan unduh PDF-nya tanpa perlu datang ke kantor kalurahan.
+          </p>
+        </div>
+
+        <ol class="relative mt-4 grid gap-3 m-0 p-0 list-none sm:grid-cols-3">
+          <li
+            v-for="(step, i) in documentSteps"
+            :key="step.title"
+            class="flex items-start gap-3 rounded-2xl border border-white bg-white/80 p-3.5 shadow-sm"
+          >
+            <div class="relative shrink-0 w-10 h-10 rounded-xl bg-primary-800 text-white flex items-center justify-center shadow-sm">
+              <i :class="step.icon" class="pi text-[15px]" />
+              <span class="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-secondary-300 text-[10px] font-extrabold text-primary-900">{{ i + 1 }}</span>
+            </div>
+            <div class="min-w-0">
+              <h3 class="font-heading font-bold text-[13.5px] text-heading m-0">{{ step.title }}</h3>
+              <p class="text-[12px] text-muted mt-0.5 leading-snug">{{ step.desc }}</p>
+            </div>
+          </li>
+        </ol>
+      </div>
     </section>
 
-    <!-- ============ ADUAN MASYARAKAT ============ -->
+    <!-- ============ BERITA: panel utama berganti otomatis + daftar Berita Terkini ============ -->
+    <section v-animateonscroll.once="appear('up')">
+      <div class="flex items-end justify-between mb-4">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-secondary-600">
+            Informasi Terkini
+          </span>
+          <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-heading m-0">Berita Kalurahan</h2>
+        </div>
+        <RouterLink
+          :to="{ name: 'news' }"
+          class="text-[13px] font-bold text-primary-700 hover:text-primary-800 shrink-0 flex items-center gap-1"
+        >
+          Lihat Semua <i class="pi pi-arrow-right text-[10px]" />
+        </RouterLink>
+      </div>
+
+      <div v-if="newsList.length" class="grid gap-4 lg:grid-cols-3 lg:gap-5">
+        <!-- Panel utama -->
+        <div
+          class="relative isolate h-[380px] overflow-hidden rounded-3xl bg-primary-900 shadow-lg shadow-primary-900/10 sm:h-[420px] lg:col-span-2 lg:h-[460px]"
+          @mouseenter="pauseNews"
+          @mouseleave="resumeNews"
+          @touchstart.passive="pauseNews"
+          @touchend="resumeNews"
+          @focusin="pauseNews"
+          @focusout="resumeNews"
+        >
+          <div
+            v-for="(item, i) in newsList"
+            :key="item.slug"
+            class="absolute inset-0 transition-opacity duration-700"
+            :class="i === activeNews ? 'z-10 opacity-100' : 'pointer-events-none z-0 opacity-0'"
+            :aria-hidden="i !== activeNews"
+          >
+            <!-- foto / fallback gradien -->
+            <img
+              v-if="item.image"
+              :src="item.image"
+              :alt="item.title"
+              class="absolute inset-0 h-full w-full object-cover transition-transform ease-out [transition-duration:7000ms]"
+              :class="i === activeNews ? 'scale-105' : 'scale-100'"
+              :loading="i === 0 ? 'eager' : 'lazy'"
+              draggable="false"
+              @error="handleImgError"
+            />
+            <div class="absolute inset-0 -z-10 bg-gradient-to-br from-primary-800 via-primary-900 to-primary-900" />
+            <i class="pi pi-image pointer-events-none absolute right-8 top-6 -z-10 text-[120px] leading-none text-white/[0.06]" aria-hidden="true" />
+
+            <!-- gradasi gelap supaya teks terbaca -->
+            <div class="absolute inset-0 bg-gradient-to-t from-primary-900/95 via-primary-900/45 to-primary-900/5" />
+
+            <div class="absolute inset-x-0 bottom-0 p-5 pb-16 sm:p-7 sm:pb-16">
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[11px] font-bold text-white backdrop-blur-md"
+              >
+                <span class="h-1.5 w-1.5 rounded-full" :class="colorForNewsCategory(item.category).dot" />
+                {{ item.category }}
+              </span>
+              <h3 class="font-heading font-extrabold mt-3 max-w-[640px] text-xl leading-snug text-white sm:text-[26px] line-clamp-3 [text-shadow:0_2px_12px_rgba(0,0,0,0.45)]">
+                {{ item.title }}
+              </h3>
+              <p class="mt-2 max-w-[560px] text-[13px] leading-relaxed text-white/80 line-clamp-2 sm:text-[14px]">
+                {{ truncateExcerpt(item.excerpt, 140) }}
+              </p>
+              <div class="mt-4 flex flex-wrap items-center gap-3">
+                <RouterLink
+                  :to="{ name: 'news-detail', params: { slug: item.slug } }"
+                  :tabindex="i === activeNews ? 0 : -1"
+                  class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[12.5px] font-bold text-primary-800 shadow-sm transition hover:gap-3 hover:shadow"
+                >
+                  Baca selengkapnya <i class="pi pi-arrow-right text-[10px]" />
+                </RouterLink>
+                <span class="inline-flex items-center gap-1.5 text-[12px] text-white/75">
+                  <i class="pi pi-calendar text-[11px]" />
+                  {{ item.date }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- kontrol: nomor + panah -->
+          <div class="absolute bottom-4 right-4 z-20 flex items-center gap-2 sm:bottom-5 sm:right-6">
+            <span class="rounded-full bg-black/30 px-3 py-1.5 text-[11.5px] font-bold text-white backdrop-blur-md">
+              {{ activeNews + 1 }} / {{ newsList.length }}
+            </span>
+            <button
+              type="button"
+              aria-label="Berita sebelumnya"
+              class="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/15 text-white backdrop-blur-md transition hover:bg-white/30"
+              @click="moveNews(-1)"
+            >
+              <i class="pi pi-chevron-left text-[12px]" />
+            </button>
+            <button
+              type="button"
+              aria-label="Berita berikutnya"
+              class="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/15 text-white backdrop-blur-md transition hover:bg-white/30"
+              @click="moveNews(1)"
+            >
+              <i class="pi pi-chevron-right text-[12px]" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Daftar Berita Terkini (berfungsi seperti tab) -->
+        <div class="relative flex max-h-[380px] flex-col overflow-hidden rounded-3xl border border-border-default bg-surface p-4 lg:h-[460px] lg:max-h-none">
+          <div class="mb-2 flex items-center gap-2 px-1">
+            <span class="relative flex h-2.5 w-2.5">
+              <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-70 motion-reduce:animate-none" />
+              <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500" />
+            </span>
+            <h3 class="font-heading font-extrabold text-[15px] text-heading m-0">Berita Terkini</h3>
+          </div>
+
+          <ul class="m-0 flex flex-1 list-none flex-col gap-1.5 overflow-y-auto p-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <li v-for="(item, i) in newsList" :key="item.slug">
+              <button
+                type="button"
+                class="relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border p-2.5 text-left transition-colors"
+                :class="i === activeNews ? 'border-primary-200 bg-primary-50' : 'border-transparent hover:bg-primary-50/60'"
+                :aria-current="i === activeNews ? 'true' : undefined"
+                @click="selectNews(i)"
+              >
+                <div
+                  class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl"
+                  :class="[colorForNewsCategory(item.category).iconBg, colorForNewsCategory(item.category).iconText]"
+                >
+                  <img
+                    v-if="item.image"
+                    :src="item.image"
+                    :alt="item.title"
+                    class="h-full w-full object-cover"
+                    loading="lazy"
+                    draggable="false"
+                    @error="handleImgError"
+                  />
+                  <i v-else class="pi pi-image text-lg" />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="m-0 text-[10.5px] font-bold uppercase tracking-wide" :class="colorForNewsCategory(item.category).iconText">
+                    {{ item.category }}
+                  </p>
+                  <p class="m-0 mt-0.5 text-[13px] font-bold leading-snug text-heading line-clamp-2">{{ item.title }}</p>
+                  <p class="m-0 mt-0.5 flex items-center gap-1 text-[11px] text-muted">
+                    <i class="pi pi-calendar text-[9px]" /> {{ item.date }}
+                  </p>
+                </div>
+
+                <!-- progress bar: menunjukkan kapan berita berganti -->
+                <span v-if="i === activeNews && !reducedMotion" class="absolute inset-x-3 bottom-0 h-0.5 overflow-hidden rounded-full bg-primary-100" aria-hidden="true">
+                  <span
+                    :key="newsProgressKey"
+                    class="news-progress block h-full rounded-full bg-primary-600"
+                    :style="{ animationDuration: NEWS_DELAY + 'ms', animationPlayState: newsPaused ? 'paused' : 'running' }"
+                  />
+                </span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div v-else class="rounded-2xl border border-border-default bg-surface p-6 text-center text-muted">
+        <i class="pi pi-inbox text-2xl text-primary-200" />
+        <p class="mt-2 text-[13px]">{{ homeLoading ? "Memuat berita..." : "Belum ada berita." }}</p>
+      </div>
+    </section>
+
+    <!-- ============ ADUAN MASYARAKAT (3 baris) ============ -->
     <section v-animateonscroll.once="appear('up')">
 
       <div class="flex items-end justify-between mb-4">
@@ -679,27 +869,25 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-   <!-- ============ STRUKTUR ORGANISASI ============ -->
-<section class="flex flex-col gap-6">
-  <div class="flex items-end justify-between mb-1">
-    <div>
-      <span class="text-[11px] font-bold uppercase tracking-wider text-secondary-600">
-        Kepemimpinan &amp; Organisasi
-      </span>
-      <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-heading m-0">
-        Pamong Kalurahan Bimomartani
-      </h2>
-    </div>
-    <RouterLink
-      :to="{ name: 'profile' }"
-      class="text-[13px] font-bold text-primary-700 hover:text-primary-800 shrink-0 flex items-center gap-1"
-    >
-      Lihat Semua <i class="pi pi-arrow-right text-[10px]" />
-    </RouterLink>
-  </div>
+    <!-- ============ STRUKTUR ORGANISASI ============ -->
+    <section class="flex flex-col gap-6">
+      <div class="flex items-end justify-between mb-1">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-secondary-600">
+            Kepemimpinan &amp; Organisasi
+          </span>
+          <h2 class="font-heading font-extrabold text-xl sm:text-2xl text-heading m-0">
+            Pamong Kalurahan Bimomartani
+          </h2>
+        </div>
+        <RouterLink
+          :to="{ name: 'profile' }"
+          class="text-[13px] font-bold text-primary-700 hover:text-primary-800 shrink-0 flex items-center gap-1"
+        >
+          Lihat Semua <i class="pi pi-arrow-right text-[10px]" />
+        </RouterLink>
+      </div>
 
-      <!-- Kartu Lurah: gradient dasar tetap primary, blob dibuat dua warna
-           (bukan putih polos) agar tetap selaras dengan palet section lain -->
       <div
         class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-900 to-primary-800 p-6 sm:p-8 lg:p-10 flex flex-col sm:flex-row items-center gap-6 sm:gap-8 lg:gap-10"
         v-animateonscroll.once="appear('zoom')" style="--i: 0"
@@ -707,7 +895,6 @@ onBeforeUnmount(() => {
         <div class="pointer-events-none absolute -right-16 -top-16 w-56 h-56 rounded-full bg-sky-400/15 blur-2xl" />
         <div class="pointer-events-none absolute -left-10 bottom-[-3rem] w-48 h-48 rounded-full bg-violet-400/15 blur-2xl" />
 
-        
         <div
           class="relative shrink-0 w-50 aspect-[5/6] sm:w-72 lg:w-80 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center overflow-hidden"
         >
@@ -736,9 +923,6 @@ onBeforeUnmount(() => {
             {{ lurah?.desc || "Data struktur organisasi belum tersedia." }}
           </p>
 
-          <!-- Info tambahan: lokasi & jabatan sebagai pill, tempat yang
-               sama bisa dipakai nanti untuk kontak / tautan sosial media
-               Lurah bila datanya sudah tersedia. -->
           <div class="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
             <Tag
               icon="pi pi-map-marker"
@@ -754,7 +938,6 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- Carousel pamong & staf: tiap kartu punya top bar warna bergilir -->
       <div class="relative" v-animateonscroll.once="appear('up')" style="--i: 1">
         <button
           type="button"
@@ -783,9 +966,6 @@ onBeforeUnmount(() => {
           >
             <span class="absolute inset-x-0 top-0 h-1" :class="colorAt(i).topBar" />
 
-            <!-- Foto pamong: ukuran & rasio disamakan dengan kartu Dukuh
-                 di halaman Profil (aspect-square) — object-cover supaya
-                 penuh tanpa ruang kosong. -->
             <div
               class="w-full aspect-square rounded-xl flex items-center justify-center overflow-hidden mb-3.5"
               :class="[colorAt(i).iconBg, colorAt(i).iconText]"
@@ -846,7 +1026,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           aria-label="Foto sebelumnya"
-          @click="scrollGallery(-1)"
+          @click="scrollTrack(galleryTrackRef, -1)"
           class="hidden sm:flex absolute -left-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-surface border border-border-default shadow-sm items-center justify-center text-primary-700 hover:bg-primary-50 transition-colors"
         >
           <i class="pi pi-chevron-left text-[13px]" />
@@ -873,7 +1053,6 @@ onBeforeUnmount(() => {
             />
             <i v-else class="pi pi-image text-2xl text-primary-200" />
 
-            <!-- caption selalu tampil (di layar sentuh tidak ada hover) -->
             <div
               v-if="item.caption"
               class="absolute inset-x-0 bottom-0 flex flex-col justify-end p-3 pt-10 bg-gradient-to-t from-black/65 via-black/25 to-transparent"
@@ -891,7 +1070,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           aria-label="Foto berikutnya"
-          @click="scrollGallery(1)"
+          @click="scrollTrack(galleryTrackRef, 1)"
           class="hidden sm:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-surface border border-border-default shadow-sm items-center justify-center text-primary-700 hover:bg-primary-50 transition-colors"
         >
           <i class="pi pi-chevron-right text-[13px]" />
@@ -948,6 +1127,18 @@ onBeforeUnmount(() => {
   --s: 0.5;
   animation-duration: 600ms;
   animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Progress bar di daftar Berita Terkini: penuh tepat saat berita berganti */
+@keyframes news-progress {
+  from { width: 0; }
+  to { width: 100%; }
+}
+.news-progress {
+  width: 0;
+  animation-name: news-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
