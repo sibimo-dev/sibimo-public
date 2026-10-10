@@ -1,12 +1,25 @@
 import api from "./api";
 
-export const newsCategories = [
+export const defaultNewsCategories = [
   "Pemerintahan",
   "Kegiatan Warga",
   "Pembangunan",
   "Pengumuman",
   "Kesehatan",
 ];
+
+export async function fetchNewsCategories() {
+  try {
+    const response = await api.get("/news-categories");
+    const categories = (response.data?.data || [])
+      .map((item) => item.category_name)
+      .filter(Boolean);
+    return categories.length ? categories : defaultNewsCategories;
+  } catch (error) {
+    console.error("Gagal memuat kategori berita:", error);
+    return defaultNewsCategories;
+  }
+}
 
 const categoryStyles = {
   Pemerintahan: "bg-primary-900 text-white",
