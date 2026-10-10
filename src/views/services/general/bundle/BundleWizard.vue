@@ -82,6 +82,12 @@ const fLetter = computed(() => selectedLetters.value[Math.min(fieldIdx.value, se
 const lastIdx = computed(() => selectedLetters.value.length - 1);
 const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
+// Surat yang sudah ditinjau pemohon (menekan "Lanjut" di surat itu).
+// Centang pada chip hanya muncul bila surat sudah ditinjau DAN isiannya lengkap,
+// jadi data yang terisi otomatis dari verifikasi NIK tidak langsung membuat surat tampak "selesai".
+const reviewed = reactive({});
+const isDone = (l) => !!reviewed[l.id] && !Object.keys(fieldErrorsOf(l)).length;
+
 const groups = computed(() => {
   const map = new Map();
   for (const l of props.bundle.letters) {
@@ -174,13 +180,18 @@ function next() {
       stepAlert.value = `Masih ada isian wajib yang belum lengkap pada surat ${l.code}.`;
       return focusFirstError();
     }
+    reviewed[l.id] = true; // surat ini sudah ditinjau pemohon → chip boleh tercentang
     if (fieldIdx.value < lastIdx.value) return goSub(fieldIdx.value + 1);
-    // surat terakhir: pastikan tidak ada surat sebelumnya yang terlewat (bisa loncat lewat penanda)
-    const bad = selectedLetters.value.findIndex((x) => Object.keys(fieldErrorsOf(x)).length);
+    // surat terakhir: pastikan tidak ada surat sebelumnya yang terlewat / belum ditinjau (bisa loncat lewat penanda)
+    const bad = selectedLetters.value.findIndex((x) => !isDone(x));
     if (bad >= 0) {
+      const miss = selectedLetters.value[bad];
+      const hasErr = Object.keys(fieldErrorsOf(miss)).length > 0;
       goSub(bad);
-      errors.value = { _checked: true };
-      stepAlert.value = `Surat ${selectedLetters.value[bad].code} belum lengkap. Lengkapi dulu sebelum lanjut.`;
+      if (hasErr) errors.value = { _checked: true };
+      stepAlert.value = hasErr
+        ? `Surat ${miss.code} belum lengkap. Lengkapi dulu sebelum lanjut.`
+        : `Surat ${miss.code} belum Anda tinjau. Periksa isiannya, lalu tekan Lanjut.`;
       return focusFirstError();
     }
     return goTo(STEP_DOCS);
@@ -406,12 +417,12 @@ async function copyOne(code) {
             :key="l.id"
             type="button"
             class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors"
-            :class="i === fieldIdx ? h.icon : Object.keys(fieldErrorsOf(l)).length ? 'bg-white border-surface-200 text-[var(--color-text-muted)]' : 'bg-emerald-50 border-emerald-200 text-emerald-700'"
+            :class="i === fieldIdx ? h.icon : isDone(l) ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-surface-200 text-[var(--color-text-muted)]'"
             :aria-current="i === fieldIdx ? 'step' : undefined"
             :title="l.title"
             @click="goSub(i)"
           >
-            <i v-if="i !== fieldIdx && !Object.keys(fieldErrorsOf(l)).length" class="pi pi-check text-[9px]" />
+            <i v-if="i !== fieldIdx && isDone(l)" class="pi pi-check text-[9px]" />
             {{ l.code }}
           </button>
         </div>

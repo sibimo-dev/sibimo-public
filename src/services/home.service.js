@@ -1,7 +1,7 @@
 import api from './api'
 
-// v2: URL gambar & bentuk data berubah, jadi cache lama (v1) tidak dipakai lagi.
-const HOME_CACHE_KEY = 'sibimo-public-home-v2'
+// v3: jumlah berita (4) & aduan (3) berubah, jadi cache lama (v2) tidak dipakai lagi.
+const HOME_CACHE_KEY = 'sibimo-public-home-v4'
 
 const DAY_NAMES = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU']
 const MONTH_NAMES = [
@@ -124,7 +124,7 @@ function normalizeNews(items) {
   return asArray(items)
     .filter((item) => String(item?.status || '').toLowerCase() === 'published')
     .sort((a, b) => new Date(b.published_at || b.created_at) - new Date(a.published_at || a.created_at))
-    .slice(0, 2)
+    .slice(0, 6)
     .map((item) => ({
       slug: item.slug || slugify(item.title, item.news_id),
       title: item.title || 'Tanpa judul',
@@ -216,7 +216,7 @@ function complaintInitials(name) {
 function normalizeComplaints(items) {
   return asArray(items)
     .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at))
-    .slice(0, 5)
+    .slice(0, 3)
     .map((item) => {
       const status = COMPLAINT_STATUS_META[item.status] || {
         label: item.status || 'Diajukan',
