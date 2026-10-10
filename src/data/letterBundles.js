@@ -1,4 +1,3 @@
-
 import { opt } from "./letterFields";
 
 /* Semua berkas surat milik paket (nikah, kelahiran, kematian, Letter C, pindah WNI). Dimuat bersama modul ini. */
@@ -54,6 +53,7 @@ const LETTERS = {
   pck: letter("pck", "death-registration-report", "Pelaporan Pencatatan Kematian", "PCK", "Pengantar & Keterangan", "Pengantar pencatatan kematian dari kelurahan."),
   plm: letter("plm", "death-report", "Laporan Kematian", "PLM", "Pengantar & Keterangan", "Pengantar lapor kematian."),
   kkt: letter("kkt", "death-certificate", "Surat Keterangan Kematian", "KKT", "Pengantar & Keterangan", "Surat keterangan kematian."),
+  // HPK (Perhitungan Selamatan) tidak ditampilkan ke publik: sengaja TIDAK dimasukkan ke MATI_BARU / MATI_LAMA di bawah.
   hpk: letter("hpk", "death-commemoration-calculation", "Perhitungan Selamatan 3 Hari Sampai 1000 Hari", "HPK", "Pengantar & Keterangan", "Perhitungan hari peringatan kematian."),
   pdm: letter("pdm", "death-data-statement", "Surat Pernyataan Tanggung Jawab Mutlak (SPTJM) Kebenaran Data Kematian", "PDM", "Pernyataan & Kuasa", "Pernyataan kebenaran data kematian."),
   pku: letter("pku", "death-general-statement", "Surat Keterangan Mohon Akta Kematian", "PKU", "Pernyataan & Kuasa", "Pernyataan kematian untuk keperluan umum."),
@@ -103,11 +103,12 @@ const ALIAS_LETTER_C = [["letterCOwnerName", "ownerName"]]; // pemilik pada Lett
 // 10 surat (married-man) dan 12 surat (marriage-women), sama dengan daftar di scaffold.
 const NIKAH_LAKI = ["khn", "dpn", "pnk", "skn", "knn", "kbp", "pbm", "kkn", "scm", "sio"];
 const NIKAH_PEREMPUAN = ["n2", "fpn", "n1", "phk", "pnn", "kbm", "pbn", "n6", "n4", "n5", "swn", "swh"];
-// Kelahiran = 10 surat (Lama: semua; Baru: tanpa Keputusan Pencatatan Terlambat). Kematian = 9 surat (Lama: semua; Baru: tanpa SPTJM Data Kematian).
+// Kelahiran = 10 surat (Lama: semua; Baru: tanpa Keputusan Pencatatan Terlambat).
+// Kematian = 7 surat (Baru) / 8 surat (Lama, + SPTJM Data Kematian). "hpk" (Perhitungan Selamatan) tidak dipublikasikan.
 const LAHIR_BARU = ["akl", "lpk", "pcl", "pak", "klh", "pld", "plk", "kak", "sps"];
 const LAHIR_LAMA = ["akl", "lpk", "skt", "pcl", "pak", "klh", "pld", "plk", "kak", "sps"];
-const MATI_BARU = ["akm", "lpm", "pck", "plm", "kkt", "hpk", "pku", "kkm"];
-const MATI_LAMA = ["akm", "lpm", "pck", "plm", "kkt", "hpk", "pdm", "pku", "kkm"];
+const MATI_BARU = ["akm", "lpm", "pck", "plm", "kkt", "pku", "kkm"];
+const MATI_LAMA = ["akm", "lpm", "pck", "plm", "kkt", "pdm", "pku", "kkm"];
 const LETTER_C = ["plc", "klc", "kht", "kat"];
 const PINDAH = ["ppn", "skp"]; // isian kedua surat memakai kunci yang sama → terisi otomatis di surat berikutnya
 
