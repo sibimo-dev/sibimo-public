@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { RouterLink } from "vue-router";
 import InputText from "primevue/inputtext";
 import IconField from "primevue/iconfield";
@@ -8,7 +8,7 @@ import SelectButton from "primevue/selectbutton";
 import Paginator from "primevue/paginator";
 import Tag from "primevue/tag";
 
-import { fetchAllNews, newsCategories } from "@/services/news.js";
+import { fetchAllNews } from "@/services/news.js";
 
 const allNews = ref([]);
 const loading = ref(true);
@@ -29,9 +29,80 @@ const latestNews = computed(() =>
 );
 
 const ALL_CATEGORY_LABEL = "Semua Kategori";
-const categoryOptions = [ALL_CATEGORY_LABEL, ...newsCategories];
+
+/* Kategori diambil dari berita yang tampil di publik, jadi kategori baru yang
+   ditambahkan admin otomatis muncul begitu ada berita terbit di dalamnya
+   (tanpa daftar hardcode). */
+const categoryOptions = computed(() => {
+  const names = new Set();
+  for (const item of allNews.value) {
+    if (item.category && item.category !== "-") names.add(item.category);
+  }
+  return [ALL_CATEGORY_LABEL, ...[...names].sort((a, b) => a.localeCompare(b, "id"))];
+});
 const activeCategory = ref(ALL_CATEGORY_LABEL);
 const searchQuery = ref("");
+
+// Bila kategori yang sedang dipilih hilang (mis. berita terakhirnya dihapus), kembali ke "Semua".
+watch(categoryOptions, (options) => {
+  if (!options.includes(activeCategory.value)) activeCategory.value = ALL_CATEGORY_LABEL;
+});
+
+/* ---------- Deretan kategori yang bisa digeser ----------
+   Ada tombol panah + efek pudar di tepi yang masih punya kelanjutan, supaya jelas bisa digeser. */
+const chipScroller = ref(null);
+const canScrollLeft = ref(false);
+const canScrollRight = ref(false);
+const nextLeftCategory = ref(null);
+const nextRightCategory = ref(null);
+let chipObserver = null;
+
+function updateScrollState() {
+  const el = chipScroller.value;
+  if (!el) return;
+  canScrollLeft.value = el.scrollLeft > 4;
+  canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+
+  // Chip pertama yang masih tersembunyi di kiri/kanan → warnanya dipakai untuk panah.
+  const box = el.getBoundingClientRect();
+  const chips = [...el.querySelectorAll("[data-category]")];
+  nextRightCategory.value = chips.find((c) => c.getBoundingClientRect().right > box.right + 2)?.dataset.category ?? null;
+  nextLeftCategory.value = [...chips].reverse().find((c) => c.getBoundingClientRect().left < box.left - 2)?.dataset.category ?? null;
+}
+
+const arrowStyle = (category) =>
+  category && category !== ALL_CATEGORY_LABEL
+    ? getCategoryStyle(category).activeBadge
+    : "border-transparent bg-primary-800 text-white shadow-lg shadow-primary-900/30";
+
+function scrollChips(direction) {
+  const el = chipScroller.value;
+  if (!el) return;
+  el.scrollBy({ left: direction * Math.max(200, el.clientWidth * 0.6), behavior: "smooth" });
+}
+
+// Pudarkan tepi kiri/kanan hanya bila masih ada chip di sisi itu.
+const chipFadeStyle = computed(() => {
+  const stops = [
+    canScrollLeft.value ? "transparent 0" : "#000 0",
+    canScrollLeft.value ? "#000 48px" : null,
+    canScrollRight.value ? "#000 calc(100% - 64px)" : null,
+    canScrollRight.value ? "transparent 100%" : "#000 100%",
+  ].filter(Boolean);
+  const mask = `linear-gradient(to right, ${stops.join(", ")})`;
+  return { maskImage: mask, WebkitMaskImage: mask };
+});
+
+watch(chipScroller, (el) => {
+  chipObserver?.disconnect();
+  if (!el) return;
+  chipObserver = new ResizeObserver(updateScrollState);
+  chipObserver.observe(el);
+  if (el.firstElementChild) chipObserver.observe(el.firstElementChild);
+  nextTick(updateScrollState);
+});
+watch(categoryOptions, () => nextTick(updateScrollState));
+onBeforeUnmount(() => chipObserver?.disconnect());
 
 const sortOptions = [
   { label: "Terbaru", value: "newest", icon: "pi pi-sort-amount-down" },
@@ -158,7 +229,7 @@ function getCategoryStyle(category) {
 
 <template>
   <div v-if="loading" class="py-20 text-center text-muted">Memuat berita...</div>
-  <div class="relative flex flex-col gap-8 overflow-hidden py-6 lg:py-8">
+  <div v-else class="relative flex flex-col gap-8 overflow-hidden py-6 lg:py-8">
     <!-- Ambient glow, gantinya blob custom keyframes -->
     <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 animate-pulse rounded-full bg-sky-400/10 blur-3xl" />
     <div class="pointer-events-none absolute -right-20 top-64 -z-10 h-64 w-64 animate-pulse rounded-full bg-rose-400/10 blur-3xl [animation-delay:0.4s]" />
@@ -174,15 +245,10 @@ function getCategoryStyle(category) {
       <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div class="flex items-center gap-2">
-  
             <span class="h-2 w-2 rounded-full bg-sky-500" />
-  
             <span class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-sky-500">
-  
               Info Desa
-  
             </span>
-
           </div>
           <h1 class="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
             Berita
@@ -206,53 +272,93 @@ function getCategoryStyle(category) {
       </div>
     </Transition>
 
-    <!-- Filter kategori + urutan -->
+    <!-- Filter kategori (bisa digeser horizontal) + urutan -->
     <Transition
       appear
       enter-active-class="transition-all delay-100 duration-500 ease-out"
       enter-from-class="opacity-0 translate-y-2"
       enter-to-class="opacity-100 translate-y-0"
     >
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="category in categoryOptions"
-            :key="category"
-            type="button"
-            class="flex items-center gap-1.5 rounded-full border px-4 py-2 text-[12.5px] font-bold transition-all duration-200 active:scale-95"
-            :class="
-              activeCategory === category
-                ? category === ALL_CATEGORY_LABEL
-                  ? 'border-transparent bg-gradient-to-r from-primary-800 to-primary-900 text-white shadow-md'
-                  : [getCategoryStyle(category).activeBadge, 'scale-105']
-                : ['border-border-default bg-surface text-default', getCategoryStyle(category).hoverRing]
-            "
-            @click="activeCategory = category"
+      <!-- Grid 3 kolom sama dengan berita unggulan di bawah: kategori berakhir lurus di tepi kanan kartu unggulan
+           (2 kolom), tombol urutan sejajar dengan kolom "Berita Terbaru". -->
+      <div class="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:items-center lg:gap-8">
+        <div class="relative min-w-0 lg:col-span-2">
+          <div
+            ref="chipScroller"
+            class="min-w-0 overflow-x-auto overscroll-x-contain scroll-smooth px-1 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            :style="chipFadeStyle"
+            role="tablist"
+            aria-label="Filter kategori berita"
+            @scroll.passive="updateScrollState"
           >
-            <span
-              v-if="category !== ALL_CATEGORY_LABEL"
-              class="h-1.5 w-1.5 rounded-full"
-              :class="activeCategory === category ? 'bg-white/80' : getCategoryStyle(category).dot"
-            />
-            {{ category }}
+            <div class="flex w-max flex-nowrap gap-2 pr-10">
+              <button
+                v-for="category in categoryOptions"
+                :key="category"
+                type="button"
+                role="tab"
+                :aria-selected="activeCategory === category"
+                :data-category="category"
+                class="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2 text-[12.5px] font-bold transition-all duration-200 active:scale-95"
+                :class="
+                  activeCategory === category
+                    ? category === ALL_CATEGORY_LABEL
+                      ? 'border-transparent bg-gradient-to-r from-primary-800 to-primary-900 text-white shadow-md'
+                      : [getCategoryStyle(category).activeBadge, 'scale-105']
+                    : ['border-border-default bg-surface text-default', getCategoryStyle(category).hoverRing]
+                "
+                @click="activeCategory = category"
+              >
+                <span
+                  v-if="category !== ALL_CATEGORY_LABEL"
+                  class="h-1.5 w-1.5 rounded-full"
+                  :class="activeCategory === category ? 'bg-white/80' : getCategoryStyle(category).dot"
+                />
+                {{ category }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Panah penunjuk: hanya tampil di sisi yang masih punya kelanjutan -->
+          <button
+            v-if="canScrollLeft"
+            type="button"
+            aria-label="Geser kategori ke kiri"
+            class="absolute left-0 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border transition-all hover:scale-110 active:scale-95"
+            :class="arrowStyle(nextLeftCategory)"
+            @click="scrollChips(-1)"
+          >
+            <i class="pi pi-chevron-left text-[11px]" />
+          </button>
+          <button
+            v-if="canScrollRight"
+            type="button"
+            aria-label="Geser kategori ke kanan"
+            class="absolute right-0 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border transition-all hover:scale-110 active:scale-95"
+            :class="arrowStyle(nextRightCategory)"
+            @click="scrollChips(1)"
+          >
+            <i class="pi pi-chevron-right text-[11px]" />
           </button>
         </div>
 
-        <SelectButton
-          v-model="sortOrder"
-          :options="sortOptions"
-          optionLabel="label"
-          optionValue="value"
-          :allowEmpty="false"
-          class="w-fit shrink-0"
-        >
-          <template #option="slotProps">
-            <span class="flex items-center gap-1.5 text-[12px] font-bold">
-              <i :class="slotProps.option.icon" class="text-[11px]" />
-              {{ slotProps.option.label }}
-            </span>
-          </template>
-        </SelectButton>
+        <div class="lg:col-span-1">
+          <SelectButton
+            v-model="sortOrder"
+            :options="sortOptions"
+            optionLabel="label"
+            optionValue="value"
+            :allowEmpty="false"
+            class="w-fit"
+          >
+            <template #option="slotProps">
+              <span class="flex items-center gap-1.5 text-[12px] font-bold">
+                <i :class="slotProps.option.icon" class="text-[11px]" />
+                {{ slotProps.option.label }}
+              </span>
+            </template>
+          </SelectButton>
+        </div>
       </div>
     </Transition>
 
