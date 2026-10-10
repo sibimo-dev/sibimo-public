@@ -111,6 +111,19 @@ function orgAccentFor(i) {
   return orgCardAccents[i % orgCardAccents.length]
 }
 
+function isCarikLevel(level) {
+  const name = String(level?.level ?? '').toLowerCase()
+  if (name.includes('carik')) return true
+  return Array.isArray(level?.people) && level.people.some((p) =>
+    String(p?.title ?? '').toLowerCase().includes('carik'),
+  )
+}
+
+const CENTER_STYLE = { justifyContent: 'center' }
+function carikStyle(level) {
+  return isCarikLevel(level) ? CENTER_STYLE : null
+}
+
 const stats = reactive([
   { icon: 'pi pi-users', label: 'Total Penduduk', target: 0, value: 0, suffix: '' },
   { icon: 'pi pi-home', label: 'Kepala Keluarga', target: 0, value: 0, suffix: '' },
@@ -596,7 +609,11 @@ async function initMap() {
               <span class="absolute -bottom-1 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-blue-500" />
             </div>
 
-            <div v-if="!level.pimpinan" class="mb-5 flex items-center gap-2">
+            <div
+              v-if="!level.pimpinan"
+              class="mb-5 flex items-center gap-2"
+              :style="carikStyle(level)"
+            >
               <span class="h-2 w-2 flex-none rounded-full bg-blue-600" />
               <p class="text-xs font-bold uppercase tracking-widest text-blue-700/80">{{ level.level }}</p>
             </div>
@@ -638,6 +655,7 @@ async function initMap() {
 
             <div
               v-else-if="level.slider"
+              :style="carikStyle(level)"
               class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex snap-x snap-proximity gap-4 overflow-x-auto scroll-pl-4 pb-3 justify-start [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-blue-200"
             >
               <div
@@ -672,6 +690,7 @@ async function initMap() {
 
             <div
               v-else
+              :style="carikStyle(level)"
               class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex snap-x snap-proximity gap-4 overflow-x-auto scroll-pl-4 pb-3 [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-blue-200 sm:flex-wrap sm:justify-center sm:overflow-x-visible sm:snap-none sm:pb-0"
             >
               <div
