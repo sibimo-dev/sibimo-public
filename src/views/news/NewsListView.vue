@@ -8,14 +8,19 @@ import SelectButton from "primevue/selectbutton";
 import Paginator from "primevue/paginator";
 import Tag from "primevue/tag";
 
-import { fetchAllNews } from "@/services/news.js";
+import { defaultNewsCategories, fetchAllNews, fetchNewsCategories } from "@/services/news.js";
 
 const allNews = ref([]);
 const loading = ref(true);
+const ALL_CATEGORY_LABEL = "Semua Kategori";
+const categoryOptions = ref([ALL_CATEGORY_LABEL, ...defaultNewsCategories]);
+const activeCategory = ref(ALL_CATEGORY_LABEL);
 
 onMounted(async () => {
   try {
-    allNews.value = await fetchAllNews();
+    const [news, categories] = await Promise.all([fetchAllNews(), fetchNewsCategories()]);
+    allNews.value = news;
+    categoryOptions.value = [ALL_CATEGORY_LABEL, ...categories];
   } catch (err) {
     console.error("Gagal memuat berita:", err);
   } finally {
@@ -28,19 +33,6 @@ const latestNews = computed(() =>
   [...allNews.value].sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO)).slice(0, 3)
 );
 
-const ALL_CATEGORY_LABEL = "Semua Kategori";
-
-/* Kategori diambil dari berita yang tampil di publik, jadi kategori baru yang
-   ditambahkan admin otomatis muncul begitu ada berita terbit di dalamnya
-   (tanpa daftar hardcode). */
-const categoryOptions = computed(() => {
-  const names = new Set();
-  for (const item of allNews.value) {
-    if (item.category && item.category !== "-") names.add(item.category);
-  }
-  return [ALL_CATEGORY_LABEL, ...[...names].sort((a, b) => a.localeCompare(b, "id"))];
-});
-const activeCategory = ref(ALL_CATEGORY_LABEL);
 const searchQuery = ref("");
 
 // Bila kategori yang sedang dipilih hilang (mis. berita terakhirnya dihapus), kembali ke "Semua".

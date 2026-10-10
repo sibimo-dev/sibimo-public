@@ -5,10 +5,18 @@
 // Template PDF: letters/marriage-women/letters/numpang-nikah.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { DOC, calonIstri, calonSuami } from "@/data/letterFields";
+import { DOC, N7, arrange, calonIstri, calonSuami } from "@/data/letterFields";
 
 // Langkah 1: isian sesuai surat yang diajukan
-export const sections = [calonIstri(), calonSuami()];
+// Calon istri: 9 baris di template (termasuk pendidikan terakhir) -> calonIstri() bawaan.
+// Calon suami: 8 baris di template (tanpa pendidikan) -> calonSuami(N7), N7 = bagian data tanpa pendidikan.
+// Urutan isian di form mengikuti urutan baris di template PDF.
+export const sections = arrange([calonIstri(), calonSuami(N7)], {
+  fields: {
+    "Data Calon Istri": ["brideName", "brideBinti", "brideNik", "brideBirthPlace", "brideBirthDate", "brideNationality", "brideReligion", "brideOccupation", "brideAddress", "brideEducation"],
+    "Data Calon Suami": ["groomName", "groomBin", "groomNik", "groomBirthPlace", "groomBirthDate", "groomNationality", "groomReligion", "groomOccupation", "groomAddress"],
+  },
+});
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [DOC.ktp, DOC.kk, DOC.rt];
