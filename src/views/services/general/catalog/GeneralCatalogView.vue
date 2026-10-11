@@ -9,6 +9,7 @@ import { GENERAL_CATEGORIES, GENERAL_SERVICES } from "@/data/letterCatalog";
 import { BUNDLE_SERVICES, isBundledLetter } from "@/data/letterBundles";
 import { useLetterLauncher } from "@/views/services/layout/useLetterLauncher";
 import { useResidentVerificationStore } from "@/stores/residentVerification";
+import { isOnlineLetter } from "@/data/letterBackendMap";
 
 const router = useRouter();
 
@@ -30,10 +31,12 @@ const permohonanCategory = computed(
     (CATEGORIES.find((c) => /permohonan/i.test(c.value) || /permohonan/i.test(c.label)) ?? CATEGORIES[0])?.value,
 );
 
-/* Surat nikah/kelahiran/kematian yang sudah ada di dalam paket tidak ditampilkan lagi sebagai kartu terpisah. */
+/* Surat online terpilih tetap tersedia sebagai kartu individual maupun paket.
+   Paket nikah laki-laki dikembalikan ke katalog, sementara backend tetap
+   membuat satu request untuk setiap surat yang dipilih di dalam paket. */
 const services = computed(() => [
   ...BUNDLE_SERVICES.map((s) => ({ ...s, category: permohonanCategory.value })),
-  ...GENERAL_SERVICES.filter((s) => !isBundledLetter(s) && !isRemovedService(s)),
+  ...GENERAL_SERVICES.filter((s) => (isOnlineLetter(s.slug) || !isBundledLetter(s)) && !isRemovedService(s)),
 ]);
 
 function changeNik() {

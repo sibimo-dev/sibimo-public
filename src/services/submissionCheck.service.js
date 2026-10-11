@@ -1,11 +1,8 @@
 import publicService from "./publicService";
 
-/* ============ MODE CONTOH (sementara, untuk cek tampilan tanpa backend) ============
-   Aktif otomatis selama `npm run dev` (tidak ikut ke hasil `npm run build`).
-   Kalau sudah selesai mengecek, ubah baris di bawah jadi:
-     const USE_MOCK = false;
-   atau kembalikan file ini ke versi aslinya. */
-const USE_MOCK = import.meta.env.DEV;
+// Pengajuan dan PDF harus selalu membaca data backend. Mock lama sengaja
+// dinonaktifkan agar development tidak menampilkan status/kode palsu.
+const USE_MOCK = false;
 
 const normalizeCode = (value) => String(value ?? "").trim().toUpperCase();
 

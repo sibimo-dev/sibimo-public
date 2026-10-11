@@ -13,7 +13,9 @@ export default {
   // Kalau path di backend berbeda, cukup ubah string path di bawah ini
   // (cek dengan `php artisan route:list --path=public` di folder backend).
   checkCitizenNik: (nik) => api.post('/public/citizens/check-nik', { nik }),
-  submitLetterRequest: (payload) => api.post('/public/letter-requests', payload),
+  submitLetterRequest: (payload) => api.post('/public/letter-requests', payload, {
+    timeout: 30000,
+  }),
   // Cek Pengajuan: POST supaya NIK tidak masuk URL. Endpoint ada di backend (LetterRequestController).
   lookupLetterRequests: ({ nik, requestCode }) =>
     api.post('/public/letter-requests/lookup', { nik, request_code: requestCode }),
