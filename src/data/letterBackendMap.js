@@ -51,6 +51,42 @@ export const ONLINE_LETTER_MAP = {
 
   "general-cover-letter": { code: "SPU" },
   "marriage-certificate-duplicate-letter": { code: "SKDN" },
+
+  // Paket akta kelahiran.
+  "birth-attestation-letter": { code: "SKKL" },
+  "birth-certificate-application-form": { code: "PAK" },
+  "birth-certificate-power-of-attorney": { code: "SKAK" },
+  "birth-certificate-referral-letter": { code: "SPAKL" },
+  "birth-registration-report": { code: "LPKL" },
+  "birth-report-form": { code: "FPK" },
+  "birth-report-statement": { code: "LK" },
+  "late-birth-registration-approval-decree": { code: "PPKT" },
+  "out-of-domicile-birth-report": { code: "LKLD" },
+  "spousal-relationship-responsibility-statement": { code: "SPTJMPSI" },
+
+  // Paket akta kematian. Perhitungan selamatan tetap tidak dipublikasikan.
+  "death-certificate": { code: "SKKM" },
+  "death-certificate-application": { code: "DKA" },
+  "death-data-statement": { code: "DKS" },
+  "death-general-statement": { code: "DKU" },
+  "death-power-of-attorney": { code: "DKP" },
+  "death-registration-report": { code: "DKC" },
+  "death-report": { code: "DKR" },
+  "death-report-form": { code: "DKF" },
+
+  // Paket nikah perempuan.
+  "guardian-statement": { code: "SKWNP" },
+  "health-referral": { code: "SPTKP" },
+  "judge-guardian": { code: "SKWHP" },
+  "marriage-lodging": { code: "SKNNP" },
+  "n1": { code: "N1P" },
+  "n2": { code: "N2P" },
+  "n4": { code: "N4P" },
+  "n5": { code: "N5P" },
+  "n6": { code: "N6P" },
+  "registration-form": { code: "PNP" },
+  "unmarried-certificate": { code: "SKBK2" },
+  "unmarried-statement": { code: "SPBMLP" },
 };
 
 export const getOnlineLetterConfig = (slug) => ONLINE_LETTER_MAP[String(slug ?? "")] ?? null;
