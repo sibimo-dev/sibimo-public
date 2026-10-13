@@ -16,7 +16,7 @@ import FileThumb from "./FileThumb.vue";
 import FilePreviewDialog from "./FilePreviewDialog.vue";
 import { copyText } from "./copyText";
 import WizardStepper from "./WizardStepper.vue";
-import { display, fillForm, makeResidentLookup, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, MAX_FILE_MB } from "./formLogic";
+import { display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, MAX_FILE_MB } from "./formLogic";
 import { hue as getHue, HUES, SECTION_HUES } from "./pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
 import { submitOnlineLetter } from "@/services/onlineLetters";
@@ -63,6 +63,7 @@ const docList = computed(() => normalizeDocs(props.documents));
 
 const form = reactive({});
 fillForm(form, allSections.value, makeResidentLookup(resident));
+seedVerifiedApplicant(form, resident);
 
 const files = reactive({}); // { [indexDokumen]: File }
 const preview = reactive({ open: false, file: null, title: "" });

@@ -17,10 +17,31 @@ export async function getOnlineLetterTypeBySlug(slug) {
   return types.find((type) => type.code === config.code) ?? null;
 }
 
+const PLACEHOLDER_NAMES = new Set(["wargauji"]);
+
+const hasValue = (value) => value !== undefined && value !== null && String(value).trim() !== "";
+
+const isPlaceholderName = (value) => PLACEHOLDER_NAMES.has(normalize(value));
+
 function applicantValue(form, resident, ...keys) {
+  let placeholder = "";
   for (const key of keys) {
-    const value = form?.[key] ?? resident?.[key];
-    if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+    const value = form?.[key];
+    if (!hasValue(value)) continue;
+    // Mode uji backend memakai nama "Warga Uji". Jangan biarkan nilai sintetis
+    // menimpa nama yang benar bila form surat memakai key khusus (groomName,
+    // brideName, reporterName, dan sebagainya).
+    if (isPlaceholderName(value)) {
+      placeholder ||= value;
+      continue;
+    }
+    return value;
+  }
+  if (hasValue(placeholder)) return placeholder;
+
+  for (const key of keys) {
+    const value = resident?.[key];
+    if (hasValue(value)) return value;
   }
   return "";
 }
@@ -60,10 +81,46 @@ export async function submitOnlineLetter({ slug, form, files, documents, residen
   const type = await getOnlineLetterTypeBySlug(slug);
   if (!type) throw new Error("Tipe surat online belum tersedia di server.");
 
-  const applicantName = applicantValue(form, resident, "name", "fullName");
-  const applicantNik = applicantValue(form, resident, "nik", "nationalId");
-  const applicantAddress = applicantValue(form, resident, "address", "ktpAddress");
-  const applicantPhone = applicantValue(form, resident, "whatsapp", "phoneNumber");
+  const applicantName = applicantValue(
+    form,
+    resident,
+    "name",
+    "applicantName",
+    "fullName",
+    "groomName",
+    "brideName",
+    "reporterName",
+    "ownerName",
+    "letterCOwnerName",
+    "headOfFamilyName",
+    "husbandName",
+    "wifeName",
+  );
+  const applicantNik = applicantValue(
+    form,
+    resident,
+    "nik",
+    "nationalId",
+    "applicantNik",
+    "groomNik",
+    "brideNik",
+    "reporterNik",
+    "ownerNik",
+    "letterCOwnerNik",
+  );
+  const applicantAddress = applicantValue(
+    form,
+    resident,
+    "address",
+    "applicantAddress",
+    "ktpAddress",
+    "groomAddress",
+    "brideAddress",
+    "reporterAddress",
+    "ownerAddress",
+    "letterCOwnerAddress",
+  );
+  const applicantPhone = applicantValue(form, resident, "whatsapp", "phone", "applicantPhone", "phoneNumber");
   const formData = cleanFormValue({
     ...form,
     applicant_name: applicantName,

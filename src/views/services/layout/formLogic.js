@@ -48,8 +48,33 @@ export function makeResidentLookup(store) {
       if (role() !== m[1]) return undefined;
       k = m[2];
     }
-    return k === "nik" ? store.nik : store.resident?.[k];
+    return ["nik", "nationalId", "applicantNik"].includes(k) ? store.nik : store.resident?.[k];
   };
+}
+
+/*
+ * Beberapa surat paket tidak memiliki field generik `nik`/`name`; misalnya
+ * surat nikah memakai `groomNik` dan `groomName`. Simpan identitas hasil
+ * verifikasi pada field generik terlebih dahulu supaya alias paket dapat
+ * mengisinya ke field yang sesuai tanpa menimpa isian manual.
+ */
+export function seedVerifiedApplicant(form, store) {
+  const values = {
+    name: store.resident?.fullName,
+    nik: store.nik,
+    birthPlace: store.resident?.birthPlace,
+    birthDate: store.resident?.birthDate,
+    gender: store.resident?.gender,
+    maritalStatus: store.resident?.maritalStatus,
+    religion: store.resident?.religion,
+    occupation: store.resident?.occupation,
+    address: store.resident?.address,
+  };
+
+  for (const [key, value] of Object.entries(values)) {
+    if (!isFilled(form[key]) && isFilled(value)) form[key] = value;
+  }
+  return form;
 }
 
 /* Isi form dari data warga (field.from) / default. Aman dipanggil berkali-kali dan untuk
