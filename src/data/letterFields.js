@@ -291,7 +291,7 @@ export const DOC_PBB = opt("Fotokopi SPPT PBB");
    BUKAN otomatis ayah/ibu si anak. Jangan beri `from:` / alias ke key reporter* di form warga.
 
    Data warga yang terverifikasi (NIK) otomatis mengisi blok AYAH atau IBU, tergantung jenis kelamin NIK tersebut
-   (lihat `from: \"asFather:…\" / \"asMother:…\"` dan makeResidentLookup di views/services/layout/formLogic.js).
+   (lihat `from: "asFather:…" / "asMother:…"` dan makeResidentLookup di views/services/layout/formLogic.js).
    ====================================================================================================== */
 
 export const birthFamily = keluarga;
@@ -450,4 +450,94 @@ export const birthDocumentsChecklist = () => ({
   title: "Dokumen yang Dilampirkan",
   hint: "Centang dokumen yang Anda lampirkan. Akan tercetak sebagai tanda X pada formulir.",
   fields: [f.checks("documents", "Dokumen yang dilampirkan", BIRTH_DOCUMENT_OPTIONS, { cols: 1, optional: true })],
+});
+
+/* ======================================================================================================
+   SURAT KEMATIAN (letters/death/*.blade.php)
+   Sumber isian: xlsx "Form Identifikasi Layanan" (baris 44–60). Tiap surat memilih bagian (parts) sesuai urutan di xlsx.
+   Key: awalan deceased = jenazah, mother / father = ibu / ayah, witnessN = saksi.
+
+   PELAPOR (NIK, nama, TTL, umur, pekerjaan, alamat, no HP, tanggal lapor, tanda tangan) TIDAK menjadi field warga:
+   diisi petugas/admin kalurahan, sama seperti kelahiran (lihat ALIAS_MATI di letterBundles.js).
+   "Yang Bertanda Tangan" (Laporan Kematian, SPTJM, Surat Kuasa) = pemohon, terisi otomatis dari data warga.
+   Umur penandatangan dihitung dari tanggal lahir, jadi bukan field.
+   "Perhitungan Selamatan" (3 hari s.d. 1000 hari) dihitung sistem dari deathDate, bukan field.
+   ====================================================================================================== */
+export const DEATH_CAUSE = ["Sakit biasa/tua", "Wabah penyakit", "Kecelakaan", "Kriminalitas", "Bunuh diri", "Lainnya"];
+export const DEATH_INFORMANT = ["Dokter", "Tenaga Kesehatan", "Kepolisian", "Lainnya"];
+
+/* ---------- Jenazah ---------- */
+const DEATH_DECEASED = {
+  kk: () => [f.kk("familyCardNumber")],
+  nik: () => [f.nik("deceasedNik", "NIK", { optional: true })],
+  name: () => [f.text("deceasedName", "Nama Lengkap")],
+  gender: () => [f.select("deceasedGender", "Jenis Kelamin", OPT.gender)],
+  birthPlace: () => [f.text("deceasedBirthPlace", "Tempat Kelahiran")],
+  birthDate: () => [f.date("deceasedBirthDate", "Tanggal Lahir")],
+  age: () => [f.text("deceasedAge", "Umur (tahun)", { optional: true, placeholder: "Isi bila tanggal lahir tidak diketahui" })],
+  religion: () => [f.select("deceasedReligion", "Agama", OPT.religion)],
+  occupation: () => [f.select("deceasedOccupation", "Pekerjaan", OPT.occupation, { editable: true })],
+  address: () => [f.area("deceasedAddress", "Alamat", { span: 2 })],
+  childOrder: () => [f.text("deceasedChildOrder", "Anak ke- (dengan huruf)", { placeholder: "Contoh: Kedua" })],
+  deathDate: () => [f.date("deathDate", "Tanggal Meninggal", { dayKey: "deathDay" })],
+  deathDay: () => [f.text("deathDay", "Hari Meninggal", { placeholder: "Terisi otomatis dari tanggal" })],
+  deathTime: () => [f.time("deathTime", "Jam Meninggal")],
+  deathCause: () => [f.select("deathCause", "Sebab", DEATH_CAUSE)],
+  deathCauseDetail: () => [f.text("deathCauseDetail", "Rincian Sebab")],
+  deathPlace: () => [f.text("deathPlace", "Tempat Kematian")],
+  deathCity: () => [f.text("deathCity", "Kab/Kota Meninggal")],
+  deathLocation: () => [f.text("deathLocation", "Tempat Meninggal")], // hanya Surat Keterangan Kematian (xlsx memuat Tempat Meninggal DAN Tempat Kematian)
+  informant: () => [f.select("deathInformant", "Yang Menerangkan", DEATH_INFORMANT)],
+};
+/* labels: ganti label per surat bila xlsx memakai istilah lain, mis. { birthPlace: "Tempat Dilahirkan" } */
+export const deathDeceased = (parts, title = "Data Jenazah", labels = {}) => ({
+  title,
+  fields: parts.flatMap((p) => DEATH_DECEASED[p]().map((x) => (labels[p] ? { ...x, label: labels[p] } : x))),
+});
+
+/* Urutan SAMA di Formulir Pelaporan Kematian & Surat Keterangan Kematian */
+export const DEATH_JENAZAH_FORM = ["nik", "name", "gender", "birthPlace", "birthDate", "age", "religion", "occupation", "address", "childOrder", "deathDate", "deathDay", "deathTime", "deathCause", "deathPlace", "informant"];
+
+/* Surat Keterangan Kematian: sama seperti di atas, ditambah "Tempat Meninggal" (no. 11 di xlsx) setelah Hari/Tanggal */
+export const DEATH_JENAZAH_SKK = ["nik", "name", "gender", "birthPlace", "birthDate", "age", "religion", "occupation", "address", "childOrder", "deathDate", "deathDay", "deathLocation", "deathTime", "deathCause", "deathPlace", "informant"];
+
+/* ---------- Ibu / Ayah jenazah ---------- */
+const DEATH_PARENT = {
+  nik: (p) => [f.nik(`${p}Nik`)],
+  name: (p) => [f.text(`${p}Name`, "Nama Lengkap")],
+  birthPlace: (p) => [f.text(`${p}BirthPlace`, "Tempat Lahir")],
+  birthDate: (p) => [f.date(`${p}BirthDate`, "Tanggal Lahir")],
+  age: (p) => [f.text(`${p}Age`, "Umur (tahun)", { optional: true, placeholder: "Isi bila tanggal lahir tidak diketahui" })],
+  occupation: (p) => [f.select(`${p}Occupation`, "Pekerjaan", OPT.occupation, { editable: true })],
+  address: (p) => [f.area(`${p}Address`, "Alamat", { span: 2 })],
+  addressKtp: (p) => [f.area(`${p}Address`, "Alamat (sesuai KTP)", { span: 2 })],
+  nationality: (p) => [f.text(`${p}Nationality`, "Kewarganegaraan", { default: "WNI" })],
+};
+export const deathParent = (prefix, title, parts) => ({ title, fields: parts.flatMap((p) => DEATH_PARENT[p](prefix)) });
+
+/* ---------- Saksi I & II (Formulir/SKK: NIK, nama, umur, alamat. Pencatatan: + tanggal lahir) ---------- */
+const DEATH_WITNESS = {
+  nik: (n) => [f.nik(`witness${n}Nik`)],
+  name: (n) => [f.text(`witness${n}Name`, "Nama Lengkap")],
+  birthDate: (n) => [f.date(`witness${n}BirthDate`, "Tanggal Lahir")],
+  age: (n) => [f.text(`witness${n}Age`, "Umur (tahun)", { placeholder: "Contoh: 40" })],
+  ageOptional: (n) => [f.text(`witness${n}Age`, "Umur (tahun)", { optional: true, placeholder: "Isi bila tanggal lahir tidak diketahui" })],
+  address: (n) => [f.area(`witness${n}Address`, "Alamat", { span: 2 })],
+};
+export const deathWitness = (n, parts = ["nik", "name", "age", "address"]) => ({ title: `Data Saksi ${n}`, fields: parts.flatMap((p) => DEATH_WITNESS[p](n)) });
+
+/* ---------- Yang bertanda tangan / pemohon (terisi otomatis dari data warga) ---------- */
+const DEATH_SIGNER = {
+  nik: () => [f.nik("nik", "NIK", { from: "nik" })],
+  name: () => [f.text("name", "Nama Lengkap", { from: "fullName" })],
+  birthPlace: () => [f.text("birthPlace", "Tempat Lahir", { from: "birthPlace" })],
+  birthDate: () => [f.date("birthDate", "Tanggal Lahir", { from: "birthDate" })],
+  occupation: () => [f.select("occupation", "Pekerjaan", OPT.occupation, { from: "occupation", editable: true })],
+  address: () => [f.area("address", "Alamat", { from: "address", span: 2 })],
+  relation: () => [f.text("deceasedRelation", "Hubungan dengan yang meninggal", { placeholder: "Contoh: Anak, Istri, Saudara" })],
+};
+export const deathSigner = (parts, title = "Yang Bertanda Tangan") => ({
+  title,
+  hint: "Terisi otomatis dari data warga. Koreksi bila ada yang tidak sesuai.",
+  fields: parts.flatMap((p) => DEATH_SIGNER[p]()),
 });

@@ -9,6 +9,7 @@ import { RESIDENT_TYPES, docsForType } from "@/data/registrationDocs";
 import { hue, ENTRY_HUES } from "@/views/services/layout/pastel";
 import { useResidentVerificationStore } from "@/stores/residentVerification";
 import { useRegistrationDraftStore } from "@/stores/registrationDraft";
+import publicService from "@/services/publicService";
 
 const h = hue(ENTRY_HUES.general);
 const route = useRoute();
@@ -31,14 +32,24 @@ async function checkNik() {
   }
 
   isChecking.value = true;
-  residentStore.setNik(nikInput.value.trim());
-  // TODO(BE): ganti simulasi delay ini dengan pemanggilan API kependudukan.
-  await new Promise((resolve) => setTimeout(resolve, 600));
-  const found = residentStore.verifyNik();
-  isChecking.value = false;
-
-  if (found) router.push(route.query.redirect || { name: "general-catalog" });
-  else residentNotFound.value = true;
+  const nik = nikInput.value.trim();
+  residentStore.setNik(nik);
+  try {
+    const response = await publicService.checkCitizenNik(nik);
+    const data = response.data?.data;
+    if (data?.registered && data.resident) {
+      residentStore.setVerifiedResident(data.resident);
+      router.push(route.query.redirect || { name: "general-catalog" });
+    } else {
+      residentStore.setVerifiedResident(null);
+      residentNotFound.value = true;
+    }
+  } catch (error) {
+    residentStore.setVerifiedResident(null);
+    nikError.value = error?.response?.data?.message || "Verifikasi NIK gagal. Coba lagi.";
+  } finally {
+    isChecking.value = false;
+  }
 }
 
 /* Pop-up pilihan jenis pendaftaran (penduduk tetap / penduduk sementara / tinggal sementara). */

@@ -6,6 +6,7 @@ export default {
   getAgendas: () => api.get('/agendas'),
   getVillagePotentials: () => api.get('/village-potentials'),
   getServices: () => api.get('/services'),
+  getFooterSettings: () => api.get('/footer'),
   getGalleries: () => api.get('/galleries'),
   getLetterTypes: () => api.get('/public/letter-types'),
   // Cek NIK (Layanan Mandiri). POST supaya NIK tidak masuk URL.
@@ -13,7 +14,9 @@ export default {
   // Kalau path di backend berbeda, cukup ubah string path di bawah ini
   // (cek dengan `php artisan route:list --path=public` di folder backend).
   checkCitizenNik: (nik) => api.post('/public/citizens/check-nik', { nik }),
-  submitLetterRequest: (payload) => api.post('/public/letter-requests', payload),
+  submitLetterRequest: (payload) => api.post('/public/letter-requests', payload, {
+    timeout: 30000,
+  }),
   // Cek Pengajuan: POST supaya NIK tidak masuk URL. Endpoint ada di backend (LetterRequestController).
   lookupLetterRequests: ({ nik, requestCode }) =>
     api.post('/public/letter-requests/lookup', { nik, request_code: requestCode }),

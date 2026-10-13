@@ -18,6 +18,8 @@ import { copyText } from "./copyText";
 import WizardStepper from "./WizardStepper.vue";
 import { display, fillForm, makeResidentLookup, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, MAX_FILE_MB } from "./formLogic";
 import { hue as getHue, HUES, SECTION_HUES } from "./pastel";
+import { getOnlineLetterConfig } from "@/data/letterBackendMap";
+import { submitOnlineLetter } from "@/services/onlineLetters";
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -36,6 +38,12 @@ const h = computed(() => getHue(hueName.value));
 const route = useRoute();
 const router = useRouter();
 const resident = useResidentVerificationStore();
+const onlineSlug = computed(() => {
+  if (typeof route.query.letter === "string" && route.query.letter) return route.query.letter;
+  return route.path.split("/").filter(Boolean).at(-1) ?? "";
+});
+const onlineConfig = computed(() => getOnlineLetterConfig(onlineSlug.value));
+const isOnlineAvailable = computed(() => Boolean(onlineConfig.value));
 
 const catalogName = computed(() => (route.path.startsWith("/services/permit") ? "permit-catalog" : "general-catalog"));
 // kembali ke katalog dengan tab kategori yang sama (query ?letter= otomatis hilang)
@@ -101,6 +109,15 @@ function next() {
     confirmError.value = true;
     return;
   }
+  if (!isOnlineAvailable.value) {
+    Object.assign(result, {
+      open: true,
+      ok: false,
+      code: "",
+      message: "Surat ini masih dalam tahap persiapan dan belum tersedia untuk pengajuan online.",
+    });
+    return;
+  }
   confirmOpen.value = true; // tanya dulu sebelum benar-benar dikirim
 }
 
@@ -115,21 +132,20 @@ const reviewSections = computed(() =>
 const isSubmitting = ref(false);
 const result = reactive({ open: false, ok: false, code: "", message: "" });
 
-// TODO(BE): ganti dengan request ke backend (kirim `form` + `files`), backend yang membuat kode surat.
-async function sendApplication() {
-  await new Promise((resolve) => setTimeout(resolve, 800));
-  const d = new Date();
-  const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  return { code: `${props.code}-${stamp}-${Math.random().toString(36).slice(2, 6).toUpperCase()}` };
-}
-
 async function submit() {
   isSubmitting.value = true;
   try {
-    const res = await sendApplication();
-    Object.assign(result, { open: true, ok: true, code: res.code, message: "" });
+    const res = await submitOnlineLetter({
+      slug: onlineSlug.value,
+      form: { ...form },
+      files: { ...files },
+      documents: docList.value,
+      resident: resident.resident,
+    });
+    Object.assign(result, { open: true, ok: true, code: res.request_code, message: "" });
   } catch (err) {
-    Object.assign(result, { open: true, ok: false, code: "", message: err?.message || "Terjadi kesalahan saat mengirim pengajuan." });
+    const apiMessage = err?.response?.data?.message || Object.values(err?.response?.data?.errors ?? {}).flat()[0];
+    Object.assign(result, { open: true, ok: false, code: "", message: apiMessage || err?.message || "Terjadi kesalahan saat mengirim pengajuan." });
   } finally {
     isSubmitting.value = false;
   }
@@ -152,6 +168,9 @@ async function copyCode() {
       <span class="pointer-events-none absolute right-16 -bottom-10 h-24 w-24 rounded-full bg-white/60" />
       <p class="relative text-xs font-medium uppercase tracking-wide" :class="h.text">Pengajuan Surat</p>
       <h1 class="relative text-xl font-semibold text-[var(--color-text-h)] mt-1">{{ title }}</h1>
+      <Message v-if="!isOnlineAvailable" severity="warn" :closable="false" class="relative mt-3 text-left">
+        Surat ini masih dapat dilihat, tetapi belum tersedia untuk pengajuan online.
+      </Message>
     </div>
 
     <div class="mt-6 rounded-2xl border bg-white px-4 py-4" :class="h.soft">
@@ -242,6 +261,7 @@ async function copyCode() {
           iconPos="right"
           :class="h.btn"
           :loading="isSubmitting"
+          :disabled="isLast && !isOnlineAvailable"
           @click="next"
         />
       </div>

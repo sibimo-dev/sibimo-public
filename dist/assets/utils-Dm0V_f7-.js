@@ -1,0 +1,1 @@
+import{W as e,u as t,z as n}from"./ripple-BLETvUc8.js";function r(){e({variableName:t(`scrollbar.width`).name})}function i(){n({variableName:t(`scrollbar.width`).name})}export{i as n,r as t};

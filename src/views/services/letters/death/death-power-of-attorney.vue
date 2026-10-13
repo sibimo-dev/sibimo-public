@@ -5,10 +5,14 @@
 // Template PDF: letters/death/death-power-of-attorney.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { DOC, f, pemohon, person } from "@/data/letterFields";
+import { DOC, deathSigner, f, person } from "@/data/letterFields";
 
-// Langkah 1: isian sesuai surat yang diajukan
-export const sections = [pemohon(), person("attorney", "Data Penerima Kuasa", ["name", "occupation", "address"]), { title: "Data Almarhum/ah", fields: [f.text("deceasedName", "Nama Almarhum/ah")] }];
+// Langkah 1: Yang Bertanda Tangan (nama, pekerjaan, alamat), Yang Diberi Kuasa, Nama Yang Akan Diwakilkan
+export const sections = [
+  deathSigner(["name", "occupation", "address"]),
+  person("attorney", "Yang Diberi Kuasa", ["name", "occupation", "address"]),
+  { title: "Yang Akan Diwakilkan", fields: [f.text("deceasedName", "Nama Yang Akan Diwakilkan")] },
+];
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [DOC.ktp, "Fotokopi KTP penerima kuasa", DOC.suratKematian, DOC.kk];

@@ -1,5 +1,4 @@
 import { defineStore } from "pinia";
-import { findResidentByNik } from "@/data/registeredResidents";
 
 const STORAGE_KEY = "sibimo:residentVerification";
 
@@ -45,18 +44,11 @@ export const useResidentVerificationStore = defineStore("residentVerification", 
       this.nik = nik;
       persistState(this);
     },
-    verifyNik() {
-      const found = findResidentByNik(this.nik.trim());
-      if (found) {
-        this.isVerified = true;
-        this.resident = found;
-        persistState(this);
-        return true;
-      }
-      this.isVerified = false;
-      this.resident = null;
+    setVerifiedResident(resident) {
+      this.isVerified = Boolean(resident);
+      this.resident = resident ? { ...resident, nik: resident.nik ?? this.nik } : null;
       persistState(this);
-      return false;
+      return this.isVerified;
     },
     registerNewResident(payload) {
       this.resident = { nik: this.nik, ...payload };

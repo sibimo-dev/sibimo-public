@@ -9,6 +9,7 @@ import Button from "primevue/button";
 import { watch } from "vue";
 import { visible, isFilled, emptyRow, toDate } from "./formLogic";
 import { HUES, SECTION_HUES } from "./pastel";
+import SignaturePad from "./SignaturePad.vue";
 
 const props = defineProps({
   sections: { type: Array, required: true },
@@ -60,7 +61,7 @@ const minRows = (field) => field.min ?? (field.optional ? 0 : 1);
           <div
             v-if="visible(field, form)"
             class="flex flex-col gap-1"
-            :class="field.span === 2 || field.type === 'rows' || field.type === 'checks' ? 'sm:col-span-2' : ''"
+            :class="field.span === 2 || field.type === 'rows' || field.type === 'checks' || field.type === 'signature' ? 'sm:col-span-2' : ''"
           >
             <label :for="`${idPrefix}-${field.key}`" class="text-sm text-[var(--color-text-h)] flex flex-wrap items-center gap-x-2">
               <span>{{ field.label }}<span v-if="field.optional" class="text-[var(--color-text-muted)]"> (opsional)</span></span>
@@ -78,7 +79,11 @@ const minRows = (field) => field.min ?? (field.optional ? 0 : 1);
             <Textarea v-else-if="field.type === 'textarea'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" rows="3" autoResize :placeholder="field.placeholder" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
             <InputText v-else-if="field.type === 'time'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" type="time" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
 
-            <!-- pilihan banyak -->
+            <!-- tanda tangan digital (gambar langsung / upload) -->
+            <div v-else-if="field.type === 'signature'" :class="errors[field.key] ? 'rounded-xl ring-1 ring-red-400 p-1' : ''">
+              <SignaturePad v-model="form[field.key]" @update:modelValue="edit(field.key)" />
+            </div>
+
             <!-- pilihan banyak. Opsi: "teks" | { value, label?, indent? } | { heading: "A. BARU" } (judul, tidak bisa dicentang).
                  field.cols === 1 → satu kolom (untuk daftar bertingkat). -->
             <div v-else-if="field.type === 'checks'" class="grid grid-cols-1 gap-2 rounded-xl border bg-white p-3" :class="[field.cols === 1 ? '' : 'sm:grid-cols-2', errors[field.key] ? 'border-red-400' : 'border-surface-200']">

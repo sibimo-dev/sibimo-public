@@ -9,13 +9,16 @@ import { GENERAL_CATEGORIES, GENERAL_SERVICES } from "@/data/letterCatalog";
 import { BUNDLE_SERVICES, isBundledLetter } from "@/data/letterBundles";
 import { useLetterLauncher } from "@/views/services/layout/useLetterLauncher";
 import { useResidentVerificationStore } from "@/stores/residentVerification";
+import { isOnlineLetter } from "@/data/letterBackendMap";
 
 const router = useRouter();
 
-/* Kategori "Perintah" dan surat SPPD tidak dipakai lagi → disaring di sini, jadi tetap hilang
-   walau masih ada di data/letterCatalog. (Hapus juga dari data itu bila sudah tidak diperlukan.) */
+/* Kategori "Perintah", surat SPPD, dan Perhitungan Selamatan tidak ditampilkan ke publik → disaring di sini,
+   jadi tetap hilang walau masih ada di data/letterCatalog. (Hapus juga dari data itu bila sudah tidak diperlukan.) */
 const isRemovedCategory = (v) => /perintah/i.test(String(v ?? ""));
-const isRemovedService = (s) => isRemovedCategory(s.category) || /sppd|perjalanan dinas|^duty-travel/i.test(`${s.title} ${s.slug}`);
+const isRemovedService = (s) =>
+  isRemovedCategory(s.category) ||
+  /sppd|perjalanan dinas|duty-travel|selamatan|death-commemoration/i.test(`${s.title} ${s.slug}`);
 const CATEGORIES = GENERAL_CATEGORIES.filter((c) => !isRemovedCategory(c.value) && !isRemovedCategory(c.label));
 
 const residentStore = useResidentVerificationStore();
@@ -28,10 +31,12 @@ const permohonanCategory = computed(
     (CATEGORIES.find((c) => /permohonan/i.test(c.value) || /permohonan/i.test(c.label)) ?? CATEGORIES[0])?.value,
 );
 
-/* Surat nikah/kelahiran/kematian yang sudah ada di dalam paket tidak ditampilkan lagi sebagai kartu terpisah. */
+/* Surat online terpilih tetap tersedia sebagai kartu individual maupun paket.
+   Paket nikah laki-laki dikembalikan ke katalog, sementara backend tetap
+   membuat satu request untuk setiap surat yang dipilih di dalam paket. */
 const services = computed(() => [
   ...BUNDLE_SERVICES.map((s) => ({ ...s, category: permohonanCategory.value })),
-  ...GENERAL_SERVICES.filter((s) => !isBundledLetter(s) && !isRemovedService(s)),
+  ...GENERAL_SERVICES.filter((s) => (isOnlineLetter(s.slug) || !isBundledLetter(s)) && !isRemovedService(s)),
 ]);
 
 function changeNik() {

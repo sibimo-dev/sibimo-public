@@ -25,6 +25,8 @@ import { copyText } from "@/views/services/layout/copyText";
 import WizardStepper from "@/views/services/layout/WizardStepper.vue";
 import { applyAliases, buildAliasIndex, display, fillForm, makeResidentLookup, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, MAX_FILE_MB } from "@/views/services/layout/formLogic";
 import { HUES, SECTION_HUES, hue } from "@/views/services/layout/pastel";
+import { getOnlineLetterConfig } from "@/data/letterBackendMap";
+import { submitOnlineLetter } from "@/services/onlineLetters";
 
 const props = defineProps({
   bundle: { type: Object, required: true }, // lihat bundles.js
@@ -81,6 +83,12 @@ const fieldIdx = ref(0);
 const fLetter = computed(() => selectedLetters.value[Math.min(fieldIdx.value, selectedLetters.value.length - 1)] ?? null);
 const lastIdx = computed(() => selectedLetters.value.length - 1);
 const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+
+// Surat yang sudah ditinjau pemohon (menekan "Lanjut" di surat itu).
+// Centang pada chip hanya muncul bila surat sudah ditinjau DAN isiannya lengkap,
+// jadi data yang terisi otomatis dari verifikasi NIK tidak langsung membuat surat tampak "selesai".
+const reviewed = reactive({});
+const isDone = (l) => !!reviewed[l.id] && !Object.keys(fieldErrorsOf(l)).length;
 
 const groups = computed(() => {
   const map = new Map();
@@ -174,13 +182,18 @@ function next() {
       stepAlert.value = `Masih ada isian wajib yang belum lengkap pada surat ${l.code}.`;
       return focusFirstError();
     }
+    reviewed[l.id] = true; // surat ini sudah ditinjau pemohon → chip boleh tercentang
     if (fieldIdx.value < lastIdx.value) return goSub(fieldIdx.value + 1);
-    // surat terakhir: pastikan tidak ada surat sebelumnya yang terlewat (bisa loncat lewat penanda)
-    const bad = selectedLetters.value.findIndex((x) => Object.keys(fieldErrorsOf(x)).length);
+    // surat terakhir: pastikan tidak ada surat sebelumnya yang terlewat / belum ditinjau (bisa loncat lewat penanda)
+    const bad = selectedLetters.value.findIndex((x) => !isDone(x));
     if (bad >= 0) {
+      const miss = selectedLetters.value[bad];
+      const hasErr = Object.keys(fieldErrorsOf(miss)).length > 0;
       goSub(bad);
-      errors.value = { _checked: true };
-      stepAlert.value = `Surat ${selectedLetters.value[bad].code} belum lengkap. Lengkapi dulu sebelum lanjut.`;
+      if (hasErr) errors.value = { _checked: true };
+      stepAlert.value = hasErr
+        ? `Surat ${miss.code} belum lengkap. Lengkapi dulu sebelum lanjut.`
+        : `Surat ${miss.code} belum Anda tinjau. Periksa isiannya, lalu tekan Lanjut.`;
       return focusFirstError();
     }
     return goTo(STEP_DOCS);
@@ -273,6 +286,10 @@ function confirmAndSubmit() {
     incomplete.value.forEach((l) => (reviewOpen[l.id] = true));
     return;
   }
+  if (!canSubmitOnline.value) {
+    stepAlert.value = `Surat berikut belum tersedia untuk pengajuan online: ${unavailableLetters.value.map((letter) => letter.title).join(", ")}.`;
+    return;
+  }
   stepAlert.value = "";
   if (!isOriginal.value) {
     confirmError.value = true;
@@ -285,34 +302,41 @@ function confirmAndSubmit() {
 const isSubmitting = ref(false);
 const result = reactive({ open: false, ok: false, codes: [], message: "" });
 
-// TODO(BE): kirim paket ke backend. Payload per surat = nilai field milik surat itu + file miliknya;
-// backend yang membuat kode surat dan men-generate PDF per surat dari template masing-masing.
-function buildPayload() {
-  return {
-    bundle: props.bundle.slug,
-    letters: selectedLetters.value.map((l) => ({
-      id: l.id,
-      code: l.code,
-      title: l.title,
-      fields: Object.fromEntries(sectionsOf(l).flatMap((s) => s.fields).map((f) => [f.key, form[f.key]])),
-      files: docsOf(l).filter((d) => files[d.id]).map((d) => ({ label: d.label, file: files[d.id] })),
-    })),
-  };
-}
-async function sendApplication(/* payload */) {
-  await new Promise((resolve) => setTimeout(resolve, 900));
-  const d = new Date();
-  const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  const rand = () => Math.random().toString(36).slice(2, 6).toUpperCase();
-  return { codes: selectedLetters.value.map((l) => ({ title: l.title, code: `${l.code}-${stamp}-${rand()}` })) };
+const unavailableLetters = computed(() => selectedLetters.value.filter((letter) => !getOnlineLetterConfig(letter.slug)));
+const canSubmitOnline = computed(() => selectedLetters.value.length > 0 && unavailableLetters.value.length === 0);
+
+async function sendApplication() {
+  if (!canSubmitOnline.value) {
+    throw new Error(`Surat berikut belum tersedia untuk pengajuan online: ${unavailableLetters.value.map((letter) => letter.title).join(", ")}.`);
+  }
+
+  const codes = [];
+  for (const letter of selectedLetters.value) {
+    const letterForm = Object.fromEntries(
+      sectionsOf(letter)
+        .flatMap((section) => section.fields)
+        .map((field) => [field.key, form[field.key]]),
+    );
+    const letterFiles = Object.fromEntries(docsOf(letter).map((document) => [document.id, files[document.id]]).filter(([, file]) => file));
+    const response = await submitOnlineLetter({
+      slug: letter.slug,
+      form: letterForm,
+      files: letterFiles,
+      documents: docsOf(letter),
+      resident: resident.resident,
+    });
+    codes.push({ title: letter.title, code: response.request_code });
+  }
+  return { codes };
 }
 async function submit() {
   isSubmitting.value = true;
   try {
-    const res = await sendApplication(buildPayload());
+    const res = await sendApplication();
     Object.assign(result, { open: true, ok: true, codes: res.codes, message: "" });
   } catch (err) {
-    Object.assign(result, { open: true, ok: false, codes: [], message: err?.message || "Terjadi kesalahan saat mengirim pengajuan." });
+    const apiMessage = err?.response?.data?.message || Object.values(err?.response?.data?.errors ?? {}).flat()[0];
+    Object.assign(result, { open: true, ok: false, codes: [], message: apiMessage || err?.message || "Terjadi kesalahan saat mengirim pengajuan." });
   } finally {
     isSubmitting.value = false;
   }
@@ -395,6 +419,9 @@ async function copyOne(code) {
         </div>
 
         <Message v-if="selectError" severity="warn" :closable="false" class="mt-5">Pilih minimal satu surat untuk melanjutkan.</Message>
+        <Message v-if="unavailableLetters.length" severity="info" :closable="false" class="mt-5">
+          Surat yang belum tersedia online: {{ unavailableLetters.map((letter) => letter.title).join(", ") }}. Surat tersebut tidak dapat dikirim dari paket ini.
+        </Message>
       </div>
 
       <!-- ============ LANGKAH 2: ISIAN — 1 SURAT PER HALAMAN ============ -->
@@ -406,12 +433,12 @@ async function copyOne(code) {
             :key="l.id"
             type="button"
             class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors"
-            :class="i === fieldIdx ? h.icon : Object.keys(fieldErrorsOf(l)).length ? 'bg-white border-surface-200 text-[var(--color-text-muted)]' : 'bg-emerald-50 border-emerald-200 text-emerald-700'"
+            :class="i === fieldIdx ? h.icon : isDone(l) ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-surface-200 text-[var(--color-text-muted)]'"
             :aria-current="i === fieldIdx ? 'step' : undefined"
             :title="l.title"
             @click="goSub(i)"
           >
-            <i v-if="i !== fieldIdx && !Object.keys(fieldErrorsOf(l)).length" class="pi pi-check text-[9px]" />
+            <i v-if="i !== fieldIdx && isDone(l)" class="pi pi-check text-[9px]" />
             {{ l.code }}
           </button>
         </div>
@@ -551,11 +578,12 @@ async function copyOne(code) {
       <div class="flex justify-between gap-3 mt-7 pt-6 border-t border-surface-200">
         <Button :label="current === 0 ? (ui.backLabel ?? 'Kembali ke Katalog') : 'Kembali'" icon="pi pi-arrow-left" severity="secondary" outlined :disabled="isSubmitting" @click="back" />
         <Button
-          :label="nextLabel"
+          :label="isReview && !canSubmitOnline ? 'Belum tersedia online' : nextLabel"
           :icon="isReview ? 'pi pi-send' : 'pi pi-arrow-right'"
           iconPos="right"
           :class="h.btn"
           :loading="isSubmitting"
+          :disabled="isReview && !canSubmitOnline"
           @click="next"
         />
       </div>
