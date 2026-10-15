@@ -16,7 +16,8 @@ const router = useRouter();
 const isRemovedCategory = (v) => /perintah/i.test(String(v ?? ""));
 const isRemovedService = (s) =>
   isRemovedCategory(s.category) ||
-  /sppd|perjalanan dinas|duty-travel|selamatan|death-commemoration/i.test(`${s.title} ${s.slug}`);
+  /sppd|perjalanan dinas|duty-travel|selamatan|death-commemoration/i.test(`${s.title} ${s.slug}`) ||
+  /pindah.*wni|wni.*pindah/i.test(`${s.title} ${s.slug}`);
 const CATEGORIES = GENERAL_CATEGORIES.filter((c) => !isRemovedCategory(c.value) && !isRemovedCategory(c.label));
 
 const HIDDEN_BUNDLE_SLUGS = new Set([
@@ -40,7 +41,7 @@ const permohonanCategory = computed(
 );
 
 const services = computed(() => [
-  ...BUNDLE_SERVICES.filter((s) => !HIDDEN_BUNDLE_SLUGS.has(s.slug)).map((s) => ({ ...s, category: permohonanCategory.value })),
+  ...BUNDLE_SERVICES.filter((s) => !HIDDEN_BUNDLE_SLUGS.has(s.slug) && !isRemovedService(s)).map((s) => ({ ...s, category: permohonanCategory.value })),
   ...GENERAL_SERVICES.filter((s) => (isOnlineLetter(s.slug) || !isBundledLetter(s)) && !isRemovedService(s) && !HIDDEN_LETTER_GROUPS.has(s.group)),
 ]);
 
