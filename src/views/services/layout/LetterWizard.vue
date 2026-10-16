@@ -25,7 +25,7 @@ const props = defineProps({
   title: { type: String, required: true },
   code: { type: String, default: "SRT" }, // awalan kode surat, contoh: SKTM
   sections: { type: Array, required: true }, // lihat letterFields.js
-  documents: { type: Array, default: () => [] }, // "Nama dokumen" atau { label, optional }
+  documents: { type: [Array, Function], default: () => [] }, // "Nama dokumen", { label, optional }, atau fungsi dinamis (form) => []
   hue: { type: String, default: "violet" },
 });
 
@@ -59,11 +59,12 @@ const allSections = computed(() => [
     fields: [{ key: "whatsapp", label: "Nomor WhatsApp", type: "text", from: "phoneNumber", placeholder: "08xx-xxxx-xxxx" }],
   },
 ]);
-const docList = computed(() => normalizeDocs(props.documents));
 
 const form = reactive({});
 fillForm(form, allSections.value, makeResidentLookup(resident));
 seedVerifiedApplicant(form, resident);
+
+const docList = computed(() => normalizeDocs(props.documents, "", form));
 
 const files = reactive({}); // { [indexDokumen]: File }
 const preview = reactive({ open: false, file: null, title: "" });
