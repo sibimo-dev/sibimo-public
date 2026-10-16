@@ -1,7 +1,7 @@
 import api from './api'
 
 // v3: jumlah berita (4) & aduan (3) berubah, jadi cache lama (v2) tidak dipakai lagi.
-const HOME_CACHE_KEY = 'sibimo-public-home-v4'
+const HOME_CACHE_KEY = 'sibimo-public-home-v5'
 
 const DAY_NAMES = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU']
 const MONTH_NAMES = [
@@ -175,8 +175,9 @@ function normalizePotentials(items) {
     .map((item) => {
       const category = normalizePotentialCategory(item.category)
       return {
+        slug: item.slug,
         title: item.title || 'Tanpa judul',
-        desc: item.description || 'Belum ada deskripsi.',
+        desc: item.short_desc || item.description || 'Belum ada deskripsi.',
         category,
         ...POTENTIAL_STYLES[category],
       }

@@ -846,7 +846,7 @@ onBeforeUnmount(() => {
         <RouterLink
           v-for="(item, idx) in potentialList"
           :key="item.title"
-          :to="{ name: 'potential' }"
+          :to="item.slug ? { name: 'potential-detail', params: { slug: item.slug } } : { name: 'potential' }"
           class="group relative overflow-hidden rounded-2xl border border-border-default bg-surface p-4 sm:p-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
           v-animateonscroll.once="appear('zoom')" :style="{ '--i': idx }"
         >
