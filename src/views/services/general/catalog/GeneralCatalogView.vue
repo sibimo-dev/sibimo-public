@@ -6,44 +6,24 @@ import Message from "primevue/message";
 import LetterCatalog from "@/views/services/layout/LetterCatalog.vue";
 import LetterOutlet from "@/views/services/layout/LetterOutlet.vue";
 import { GENERAL_CATEGORIES, GENERAL_SERVICES } from "@/data/letterCatalog";
-import { BUNDLE_SERVICES, isBundledLetter } from "@/data/letterBundles";
+import { isBundledLetter } from "@/data/letterBundles";
 import { useLetterLauncher } from "@/views/services/layout/useLetterLauncher";
 import { useResidentVerificationStore } from "@/stores/residentVerification";
-import { isOnlineLetter } from "@/data/letterBackendMap";
 
 const router = useRouter();
 
 const isRemovedCategory = (v) => /perintah/i.test(String(v ?? ""));
 const isRemovedService = (s) =>
   isRemovedCategory(s.category) ||
-  /sppd|perjalanan dinas|duty-travel|selamatan|death-commemoration/i.test(`${s.title} ${s.slug}`) ||
-  /pindah.*wni|wni.*pindah/i.test(`${s.title} ${s.slug}`);
+  /sppd|perjalanan dinas|duty-travel|selamatan|death-commemoration/i.test(`${s.title} ${s.slug}`);
 const CATEGORIES = GENERAL_CATEGORIES.filter((c) => !isRemovedCategory(c.value) && !isRemovedCategory(c.label));
-
-const HIDDEN_BUNDLE_SLUGS = new Set([
-  "permohonan-nikah-laki-laki",
-  "permohonan-nikah-perempuan",
-  "permohonan-akta-kematian-lama",
-  "permohonan-akta-kematian-baru",
-  "permohonan-akta-kelahiran-lama",
-  "permohonan-akta-kelahiran-baru",
-  "permohonan-data-letter-c",
-]);
-
-const HIDDEN_LETTER_GROUPS = new Set(["birth", "death", "letter-c", "married-man", "marriage-women"]);
 
 const residentStore = useResidentVerificationStore();
 const { openFile, notice, open } = useLetterLauncher("general");
 
-const permohonanCategory = computed(
-  () =>
-    (CATEGORIES.find((c) => /permohonan/i.test(c.value) || /permohonan/i.test(c.label)) ?? CATEGORIES[0])?.value,
+const services = computed(() =>
+  GENERAL_SERVICES.filter((s) => !isBundledLetter(s) && !isRemovedService(s)),
 );
-
-const services = computed(() => [
-  ...BUNDLE_SERVICES.filter((s) => !HIDDEN_BUNDLE_SLUGS.has(s.slug) && !isRemovedService(s)).map((s) => ({ ...s, category: permohonanCategory.value })),
-  ...GENERAL_SERVICES.filter((s) => (isOnlineLetter(s.slug) || !isBundledLetter(s)) && !isRemovedService(s) && !HIDDEN_LETTER_GROUPS.has(s.group)),
-]);
 
 function changeNik() {
   residentStore.reset();
