@@ -13,30 +13,36 @@ import { isOnlineLetter } from "@/data/letterBackendMap";
 
 const router = useRouter();
 
-/* Kategori "Perintah", surat SPPD, dan Perhitungan Selamatan tidak ditampilkan ke publik → disaring di sini,
-   jadi tetap hilang walau masih ada di data/letterCatalog. (Hapus juga dari data itu bila sudah tidak diperlukan.) */
 const isRemovedCategory = (v) => /perintah/i.test(String(v ?? ""));
 const isRemovedService = (s) =>
   isRemovedCategory(s.category) ||
-  /sppd|perjalanan dinas|duty-travel|selamatan|death-commemoration/i.test(`${s.title} ${s.slug}`);
+  /sppd|perjalanan dinas|duty-travel|selamatan|death-commemoration/i.test(`${s.title} ${s.slug}`) ||
+  /pindah.*wni|wni.*pindah/i.test(`${s.title} ${s.slug}`);
 const CATEGORIES = GENERAL_CATEGORIES.filter((c) => !isRemovedCategory(c.value) && !isRemovedCategory(c.label));
+
+const HIDDEN_BUNDLE_SLUGS = new Set([
+  "permohonan-nikah-laki-laki",
+  "permohonan-nikah-perempuan",
+  "permohonan-akta-kematian-lama",
+  "permohonan-akta-kematian-baru",
+  "permohonan-akta-kelahiran-lama",
+  "permohonan-akta-kelahiran-baru",
+  "permohonan-data-letter-c",
+]);
+
+const HIDDEN_LETTER_GROUPS = new Set(["birth", "death", "letter-c", "married-man", "marriage-women"]);
 
 const residentStore = useResidentVerificationStore();
 const { openFile, notice, open } = useLetterLauncher("general");
 
-/* Paket nikah/kelahiran/kematian masuk kategori "Permohonan". Dicari lewat nilai/label kategori
-   supaya tidak bergantung pada penulisan persis; bila tidak ada, jatuh ke kategori pertama. */
 const permohonanCategory = computed(
   () =>
     (CATEGORIES.find((c) => /permohonan/i.test(c.value) || /permohonan/i.test(c.label)) ?? CATEGORIES[0])?.value,
 );
 
-/* Surat online terpilih tetap tersedia sebagai kartu individual maupun paket.
-   Paket nikah laki-laki dikembalikan ke katalog, sementara backend tetap
-   membuat satu request untuk setiap surat yang dipilih di dalam paket. */
 const services = computed(() => [
-  ...BUNDLE_SERVICES.map((s) => ({ ...s, category: permohonanCategory.value })),
-  ...GENERAL_SERVICES.filter((s) => (isOnlineLetter(s.slug) || !isBundledLetter(s)) && !isRemovedService(s)),
+  ...BUNDLE_SERVICES.filter((s) => !HIDDEN_BUNDLE_SLUGS.has(s.slug) && !isRemovedService(s)).map((s) => ({ ...s, category: permohonanCategory.value })),
+  ...GENERAL_SERVICES.filter((s) => (isOnlineLetter(s.slug) || !isBundledLetter(s)) && !isRemovedService(s) && !HIDDEN_LETTER_GROUPS.has(s.group)),
 ]);
 
 function changeNik() {

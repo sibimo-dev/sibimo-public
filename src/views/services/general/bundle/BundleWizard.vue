@@ -23,7 +23,7 @@ import FileThumb from "@/views/services/layout/FileThumb.vue";
 import FilePreviewDialog from "@/views/services/layout/FilePreviewDialog.vue";
 import { copyText } from "@/views/services/layout/copyText";
 import WizardStepper from "@/views/services/layout/WizardStepper.vue";
-import { applyAliases, buildAliasIndex, display, fillForm, makeResidentLookup, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, MAX_FILE_MB } from "@/views/services/layout/formLogic";
+import { applyAliases, buildAliasIndex, display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, MAX_FILE_MB } from "@/views/services/layout/formLogic";
 import { HUES, SECTION_HUES, hue } from "@/views/services/layout/pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
 import { submitOnlineLetter } from "@/services/onlineLetters";
@@ -50,6 +50,7 @@ const aliasIndex = buildAliasIndex(props.bundle.aliases);
 
 const form = reactive({});
 fillForm(form, [...props.bundle.letters.flatMap((l) => l.sections), NOTIF_SECTION], lookup);
+seedVerifiedApplicant(form, resident);
 
 const files = reactive({}); // { "<letterId>::<index>": File }
 const preview = reactive({ open: false, file: null, title: "" });

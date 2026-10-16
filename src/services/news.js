@@ -1,5 +1,27 @@
 import api from "./api";
 
+function resolveNewsImage(path) {
+  if (!path || typeof path !== "string") return null;
+
+  const value = path.trim();
+  if (!value) return null;
+
+  // URL lengkap tidak perlu diubah.
+  if (/^https?:\/\//i.test(value)) return value;
+
+  const backendOrigin = String(api.defaults.baseURL || "")
+    .replace(/\/api\/?$/, "")
+    .replace(/\/+$/, "");
+
+  const cleanPath = value.replace(/^\/+/, "");
+
+  const storagePath = cleanPath.startsWith("storage/")
+    ? `/${cleanPath}`
+    : `/storage/${cleanPath}`;
+
+  return `${backendOrigin}${storagePath}`;
+}
+
 export const defaultNewsCategories = [
   "Pemerintahan",
   "Kegiatan Warga",
@@ -58,7 +80,8 @@ function mapNewsItem(item) {
     title: item.title,
     excerpt: plainText.slice(0, 160) + (plainText.length > 160 ? "..." : ""),
     content: [plainText],
-    image: item.thumbnail,
+    image: resolveNewsImage(item.thumbnail),
+    // image: item.thumbnail,
     popular: false,
     isPinned: false,
   };
