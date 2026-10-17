@@ -60,6 +60,19 @@ const searchItems = computed(() => [
   ...agendaList.value.map((a) => ({ title: a.title, type: "Agenda", to: { name: "events" } })),
 ]);
 
+/* True kalau kata kunci cocok dengan judul/keyword salah satu item pencarian.
+   Dicek per kata, jadi "surat domisili" tetap cocok walau frasa utuhnya tidak ada. */
+function hasMatch(q) {
+  const words = q.split(/\s+/).filter(Boolean);
+  return searchItems.value.some((it) => {
+    const haystack = [it.title, ...(it.keywords || [])]
+      .map((s) => String(s ?? ""))
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(q) || words.some((w) => w.length > 2 && haystack.includes(w));
+  });
+}
+
 /* Dipanggil saat pengguna menekan Cari/Enter tanpa memilih saran */
 function handleSearch(text) {
   const raw = String(text ?? "").trim();
@@ -70,7 +83,7 @@ function handleSearch(text) {
     router.push({ name: "news" });
   } else if (/aduan|lapor|keluhan|pengaduan/.test(q)) {
     router.push({ name: "complaints" });
-  } else if (/wilayah|peta|dusun|rt|rw/.test(q)) {
+  } else if (/wilayah|peta|dusun|\b(rt|rw)\b/.test(q)) {
     router.push({ name: "profile", hash: "#wilayah" });
   } else if (/potensi|bumdes|usaha desa|umkm|wisata|pariwisata|pertanian/.test(q)) {
     router.push({ name: "potential" });
@@ -82,8 +95,15 @@ function handleSearch(text) {
     router.push({ name: "development" });
   } else if (/galeri|foto|dokumentasi/.test(q)) {
     router.push({ name: "gallery" });
-  } else {
+  } else if (hasMatch(q)) {
     router.push({ name: "services", query: { q: raw } });
+  } else {
+    // Tidak ada yang cocok -> 404. pathMatch wajib diisi karena route not-found adalah catch-all.
+    router.push({
+      name: "not-found",
+      params: { pathMatch: ["pencarian"] },
+      query: { q: raw },
+    });
   }
 }
 
