@@ -1,6 +1,7 @@
 <script>
 // Formulir Permohonan Pindah Datang WNI
 import { f, OPT, pemohon, DOC } from "@/data/letterFields";
+import { signerSection } from "@/views/services/layout/signerFields.js";
 const alamatLengkap = (prefix, title, addressLabel = "Alamat") => ({
   title,
   fields: [
@@ -82,6 +83,9 @@ export const sections = [
       ], { max: 6 }),
     ],
   },
+
+  // TTD: Petugas registrasi, Lurah Bimomartani (tetap, diisi sistem), Pemohon (= data pemohon di atas, sudah dicetak)
+  signerSection([["officer", "Nama Petugas Registrasi", "registrationOfficer"]]),
 ];
 
 export const documents = [

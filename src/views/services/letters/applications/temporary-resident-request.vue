@@ -1,6 +1,7 @@
 <script>
 // Surat Permohonan Menjadi Penduduk Sementara / SKTS
 import { f, pemohon, DOC } from "@/data/letterFields";
+import { signerSection } from "@/views/services/layout/signerFields.js";
 
 const wilayah = (prefix) => [
   f.text(`${prefix}Village`, "Desa/Kelurahan"),
@@ -46,6 +47,9 @@ export const sections = [
       ], { max: 5 }),
     ],
   },
+
+  // TTD: Dukuh dan Pemohon (= data pemohon di atas)
+  signerSection(["hamletHead", ["applicant", "Nama Pemohon", "applicantSignerName"]]),
 ];
 
 export const documents = [
