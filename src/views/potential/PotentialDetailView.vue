@@ -1,12 +1,12 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
-  getPotentialBySlug,
+  fetchPotentialBySlug,
   getRelatedPotentials,
   categoryLabel,
   categoryIcon,
-} from '@/views/potential/potentialData.js'
+} from '@/services/potential.service'
 
 // `slug` arrives as a prop because the route is defined with `props: true`
 // (see src/router/index.js).
@@ -14,16 +14,42 @@ const props = defineProps({
   slug: { type: String, required: true },
 })
 
-const item = computed(() => getPotentialBySlug(props.slug))
-const related = computed(() =>
-  item.value ? getRelatedPotentials(item.value.category, item.value.slug) : []
-)
+const item = ref(null)
+const loading = ref(true)
+const related = ref([])
+
+async function loadData(slug) {
+  loading.value = true
+  try {
+    item.value = await fetchPotentialBySlug(slug)
+    if (item.value) {
+      related.value = await getRelatedPotentials(item.value.category, item.value.slug)
+    } else {
+      related.value = []
+    }
+  } catch (error) {
+    console.error('Gagal memuat detail potensi:', error)
+    item.value = null
+    related.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => loadData(props.slug))
+watch(() => props.slug, (newSlug) => loadData(newSlug))
 </script>
 
 <template>
   <div class="py-8">
+    <!-- ===== LOADING ===== -->
+    <div v-if="loading" class="fade-in-up py-20 text-center">
+      <i class="pi pi-spin pi-spinner text-3xl text-primary-500" />
+      <p class="mt-3 text-sm text-muted">Memuat informasi potensi...</p>
+    </div>
+
     <!-- ===== NOT FOUND ===== -->
-    <div v-if="!item" class="fade-in-up py-16 text-center">
+    <div v-else-if="!item" class="fade-in-up py-16 text-center">
       <p class="text-lg font-semibold text-heading">Potensi tidak ditemukan</p>
       <p class="mt-1 text-sm text-muted">
         Data yang kamu cari mungkin sudah dipindahkan atau tidak tersedia.
