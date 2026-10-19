@@ -6,6 +6,7 @@ export default {
   getAgendas: () => api.get('/agendas'),
   getVillagePotentials: () => api.get('/village-potentials'),
   getServices: () => api.get('/services'),
+  getFooterSettings: () => api.get('/public/footer'),
   getGalleries: () => api.get('/galleries'),
   getLetterTypes: () => api.get('/public/letter-types'),
   getLetterStats: () => api.get('/public/letter-stats'),

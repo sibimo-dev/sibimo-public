@@ -7,6 +7,7 @@
 // Kecamatan, Desa, tanggal surat, serta tanda tangan Dukuh, Camat (Mengetahui) dan Lurah.
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
 import { f, DOC, opt } from "@/data/letterFields";
+import { signerSection } from "@/views/services/layout/signerFields.js";
 
 // Langkah 1: urutan mengikuti formulir: jenis permohonan, Nama Lengkap, No KK, NIK, Alamat, RT, RW
 export const sections = [
@@ -23,6 +24,8 @@ export const sections = [
       f.text("rw", "RW"),
     ],
   },
+  // TTD: Pemohon (= Nama Lengkap di atas), Dukuh, Camat, Lurah
+  signerSection(["applicant", "hamletHead", "districtHead", ["villageOfficer", "Nama Lurah"]]),
 ];
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)

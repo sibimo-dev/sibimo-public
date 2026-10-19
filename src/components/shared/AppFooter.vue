@@ -1,12 +1,65 @@
 <script setup>
+import { computed, onMounted, ref } from "vue";
 import villageLogo from "@/assets/logo-kalurahan-placeholder.svg";
+import publicService from "@/services/publicService";
 
-const socialLinks = [
-  { icon: "pi-facebook", href: "#", label: "Facebook" },
-  { icon: "pi-instagram", href: "#", label: "Instagram" },
-  { icon: "pi-youtube", href: "#", label: "YouTube" },
-  { icon: "pi-whatsapp", href: "#", label: "WhatsApp" },
-];
+const defaults = {
+  village_name: "Kalurahan Bimomartani",
+  description:
+    "Website resmi Pemerintah Kalurahan Bimomartani, Kapanewon Ngemplak, Kabupaten Sleman, Provinsi Daerah Istimewa Yogyakarta.",
+  address: "Dusun Krajan, Bimomartani, Ngemplak, Sleman, D.I. Yogyakarta, 55584.",
+  phone: "0812-3456-7890",
+  email: "desa.bimomartani@slemankab.go.id",
+  social_media: [
+    { platform: "Facebook", url: "#" },
+    { platform: "Instagram", url: "#" },
+    { platform: "YouTube", url: "#" },
+    { platform: "WhatsApp", url: "#" },
+  ],
+};
+
+const footer = ref({ ...defaults });
+const apiOrigin = String(import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/api\/?$/, "");
+
+const iconByPlatform = {
+  facebook: "pi-facebook",
+  instagram: "pi-instagram",
+  youtube: "pi-youtube",
+  whatsapp: "pi-whatsapp",
+  twitter: "pi-twitter",
+  x: "pi-twitter",
+  tiktok: "pi-video",
+};
+
+const socialLinks = computed(() => (Array.isArray(footer.value.social_media) ? footer.value.social_media : [])
+  .filter((item) => item?.platform && item?.url)
+  .map((item) => ({
+    ...item,
+    href: item.url,
+    label: item.platform,
+    icon: iconByPlatform[String(item.platform).toLowerCase()] ?? "pi-link",
+  })));
+
+function mediaUrl(value, fallback) {
+  if (!value) return fallback;
+  if (/^https?:\/\//i.test(value)) return value;
+  return `${apiOrigin}${String(value).startsWith("/") ? "" : "/"}${value}`;
+}
+
+onMounted(async () => {
+  try {
+    const response = await publicService.getFooterSettings();
+    const data = response.data?.data;
+    if (!data) return;
+    footer.value = {
+      ...defaults,
+      ...data,
+      social_media: Array.isArray(data.social_media) ? data.social_media : [],
+    };
+  } catch (error) {
+    console.warn("Pengaturan footer belum dapat dimuat, menggunakan fallback.", error);
+  }
+});
 
 const footerLinks = [
   { label: "Profil Kalurahan", to: { name: "profile" } },
@@ -29,16 +82,15 @@ const mapEmbedSrc =
         <div>
           <div class="flex items-center gap-2.5 mb-3.5">
             <img
-              :src="villageLogo"
-              alt="Logo Kalurahan Bimomartani"
+              :src="mediaUrl(footer.logo, villageLogo)"
+              :alt="`Logo ${footer.village_name}`"
               class="w-9 h-9 object-contain shrink-0"
             />
-            <b class="font-heading font-bold tracking-tight text-lg uppercase text-white">Kalurahan Bimomartani</b>
+            <b class="font-heading font-bold tracking-tight text-lg uppercase text-white">{{ footer.village_name }}</b>
           </div>
 
           <p class="text-[15px] text-white leading-relaxed mb-4 max-w-[340px]">
-            Website resmi Pemerintah Kalurahan Bimomartani, Kapanewon Ngemplak,
-            Kabupaten Sleman, Provinsi Daerah Istimewa Yogyakarta.
+            {{ footer.description }}
           </p>
 
           <div class="flex gap-2.5">
@@ -46,6 +98,8 @@ const mapEmbedSrc =
               v-for="social in socialLinks"
               :key="social.icon"
               :href="social.href"
+              target="_blank"
+              rel="noopener noreferrer"
               :aria-label="social.label"
               class="w-[38px] h-[38px] rounded-full border border-white/25 text-white flex items-center justify-center hover:bg-secondary-400 hover:border-secondary-400 hover:text-primary-900 hover:-translate-y-0.5 transition-all duration-200"
             >
@@ -62,17 +116,17 @@ const mapEmbedSrc =
 
           <div class="flex gap-2.5 text-[15px] text-white leading-relaxed mb-3">
             <i class="pi pi-map-marker text-secondary-300 mt-0.5 shrink-0" />
-            Dusun Krajan, Bimomartani, Ngemplak, Sleman, D.I. Yogyakarta, 55584.
+            {{ footer.address }}
           </div>
 
           <div class="flex gap-2.5 text-[15px] text-white leading-relaxed mb-3">
             <i class="pi pi-phone text-secondary-300 mt-0.5 shrink-0" />
-            0812-3456-7890
+            {{ footer.phone }}
           </div>
 
           <div class="flex gap-2.5 text-[15px] text-white leading-relaxed mb-4">
             <i class="pi pi-envelope text-secondary-300 mt-0.5 shrink-0" />
-            desa.bimomartani@slemankab.go.id
+            {{ footer.email }}
           </div>
 
           <div class="rounded-xl overflow-hidden border border-white/15 h-[130px]">
@@ -109,7 +163,7 @@ const mapEmbedSrc =
       <div
         class="mt-9 pt-5 border-t border-dashed border-white/20 flex flex-col md:flex-row flex-wrap items-center justify-center md:justify-between gap-x-4 gap-y-2 text-center text-[14px] text-white"
       >
-        <span class="min-w-0">Hak cipta © 2026 — Pemerintah Kalurahan Bimomartani</span>
+        <span class="min-w-0">Hak cipta © 2026 — {{ footer.village_name }}</span>
         <span class="min-w-0 shrink-0">Dibangun dengan SIBIMO</span>
       </div>
     </div>

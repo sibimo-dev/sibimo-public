@@ -1,14 +1,31 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
-import { potentialCategories, potentials, categoryLabel, categoryIcon } from '@/views/potential/potentialData.js'
+import {
+  potentialCategories,
+  fetchPotentials,
+  categoryLabel,
+  categoryIcon,
+} from '@/services/potential.service'
 
 const activeCategory = ref('all')
+const potentials = ref([])
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    potentials.value = await fetchPotentials()
+  } catch (err) {
+    console.error('Gagal memuat potensi:', err)
+  } finally {
+    loading.value = false
+  }
+})
 
 const filteredPotentials = computed(() =>
   activeCategory.value === 'all'
-    ? potentials
-    : potentials.filter((p) => p.category === activeCategory.value)
+    ? potentials.value
+    : potentials.value.filter((p) => p.category === activeCategory.value)
 )
 
 /* Per-category color identity */
@@ -122,7 +139,12 @@ const allTabActive = 'border-transparent bg-gradient-to-r from-primary-500 via-v
     </div>
 
     <!-- ===== CARD GRID ===== -->
-    <div v-if="filteredPotentials.length === 0" class="fade-in-up empty-state mt-10 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border-default py-14 text-center">
+    <div v-if="loading" class="fade-in-up mt-10 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border-default py-14 text-center">
+      <i class="pi pi-spin pi-spinner text-3xl text-primary-500" />
+      <p class="text-sm text-muted">Memuat data potensi...</p>
+    </div>
+
+    <div v-else-if="filteredPotentials.length === 0" class="fade-in-up empty-state mt-10 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border-default py-14 text-center">
       <i class="pi pi-inbox text-3xl text-muted/40" />
       <p class="text-sm text-muted">Belum ada data potensi untuk kategori ini.</p>
     </div>

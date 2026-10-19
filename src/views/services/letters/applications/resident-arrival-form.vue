@@ -1,6 +1,7 @@
 <script>
 // Formulir Permohonan Pindah Datang WNI
 import { f, OPT, pemohon, DOC } from "@/data/letterFields";
+import { signerSection } from "@/views/services/layout/signerFields.js";
 const alamatLengkap = (prefix, title, addressLabel = "Alamat") => ({
   title,
   fields: [
@@ -82,11 +83,9 @@ export const sections = [
       ], { max: 6 }),
     ],
   },
-<<<<<<< Updated upstream
-=======
 
-  // TTD: Petugas registrasi (diisi lewat otorisasi), Lurah Bimomartani (tetap, diisi sistem), Pemohon (= data pemohon di atas, sudah dicetak). Tidak ada field penandatangan.
->>>>>>> Stashed changes
+  // TTD: Petugas registrasi, Lurah Bimomartani (tetap, diisi sistem), Pemohon (= data pemohon di atas, sudah dicetak)
+  signerSection([["officer", "Nama Petugas Registrasi", "registrationOfficer"]]),
 ];
 
 export const documents = [

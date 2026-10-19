@@ -1,5 +1,6 @@
 <script>
 import { f, pemohon, DOC, opt } from "@/data/letterFields";
+import { signerSection } from "@/views/services/layout/signerFields.js";
 // permohonan tinggal sementara
 
 export const sections = [
@@ -54,6 +55,8 @@ export const sections = [
       f.text("familyMember5Name", "Nama anggota 5", { optional: true }), f.text("familyMember5Nik", "NIK anggota 5", { optional: true }),
     ],
   },
+  // TTD: Dukuh dan Pemohon (= data pemohon di atas)
+  signerSection(["hamletHead", ["applicant", "Nama Pemohon", "applicantSignerName"]]),
 ];
 
 export const documents = [

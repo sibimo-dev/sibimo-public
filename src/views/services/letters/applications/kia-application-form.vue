@@ -6,6 +6,7 @@
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
 import LetterWizard from "@/views/services/layout/LetterWizard.vue";
 import { f, OPT } from "@/data/letterFields";
+import { signerSection } from "@/views/services/layout/signerFields.js";
 
 // Langkah 1: isian sesuai formulir (kunci mengikuti $kia di template PDF)
 // Urutan mengikuti formulir: NIK, Nama, Tempat/Tgl Lahir, Jenis Kelamin, Gol. Darah,
@@ -46,6 +47,8 @@ const sections = [
       f.text("district", "Kecamatan", { default: "Ngemplak" }),
     ],
   },
+  // TTD: Pemohon (orang tua/wali, BUKAN nama anak) dan Petugas
+  signerSection([["applicant", "Nama Pemohon (orang tua/wali)"], "officer"]),
 ];
 
 // Langkah 2: dokumen pendukung (string biasa, keduanya wajib)

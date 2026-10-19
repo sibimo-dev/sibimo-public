@@ -4,6 +4,7 @@
 // Template PDF: letters/heir-power-of-attorney-letter.blade.php
 
 import { f, OPT, person, DOC, opt } from "@/data/letterFields";
+import { signerSection } from "@/views/services/layout/signerFields.js";
 
 // Langkah 1: isian sesuai surat yang diajukan
 export const sections = [
@@ -31,6 +32,8 @@ export const sections = [
       f.text("deceasedDeathPlace", "Meninggal Dunia di", { span: 2 }),
     ],
   },
+  // TTD: Penerima kuasa (= attorney), Pemberi kuasa (= pemohon) sudah dicetak dari isian di atas; Kalurahan/Notaris dari signerSection
+  signerSection([["notary", "Nama Kalurahan/Notaris"]]),
 ];
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
