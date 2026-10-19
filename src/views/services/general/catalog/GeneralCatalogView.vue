@@ -25,12 +25,24 @@ const { openFile, notice, open } = useLetterLauncher("general");
 
 /* Paket nikah/kelahiran/kematian masuk kategori "Permohonan". Dicari lewat nilai/label kategori
    supaya tidak bergantung pada penulisan persis; bila tidak ada, jatuh ke kategori pertama. */
+
 const permohonanCategory = computed(
   () =>
-    (CATEGORIES.find((c) => /permohonan/i.test(c.value) || /permohonan/i.test(c.label)) ?? CATEGORIES[0])?.value,
-const services = computed(() =>
-  GENERAL_SERVICES.filter((s) => !isBundledLetter(s) && !isRemovedService(s)),
+    (
+      CATEGORIES.find(
+        (c) =>
+          /permohonan/i.test(c.value) ||
+          /permohonan/i.test(c.label),
+      ) ?? CATEGORIES[0]
+    )?.value,
 );
+
+const services = computed(() =>
+  GENERAL_SERVICES.filter(
+    (s) => !isBundledLetter(s) && !isRemovedService(s),
+  ),
+);
+
 
 function changeNik() {
   residentStore.reset();
