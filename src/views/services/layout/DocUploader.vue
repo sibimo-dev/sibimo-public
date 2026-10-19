@@ -62,19 +62,27 @@ function reuse(doc, s) {
       </label>
 
       <div
-        class="flex min-h-[140px] flex-col justify-center rounded-xl border-2 border-dashed p-4 transition-colors"
+        class="flex min-h-[140px] flex-col justify-center rounded-xl border-2 border-dashed p-3 transition-colors sm:p-4"
         :class="errorOf(d.id) ? 'border-red-300 bg-red-50' : files[d.id] ? 'border-emerald-300 bg-emerald-50' : 'border-sky-300 bg-sky-50/60'"
       >
-        <div v-if="files[d.id]" class="flex items-center justify-between gap-3">
-          <div class="flex min-w-0 items-center gap-3">
-            <FileThumb :file="files[d.id]" class="h-14 w-14" />
-            <div class="min-w-0">
-              <p class="truncate text-sm font-medium text-[var(--color-text-h)]">{{ files[d.id].name }}</p>
-              <p class="text-xs text-[var(--color-text-muted)]">{{ fileSizeLabel(files[d.id]) }}</p>
-            </div>
+        <!-- File sudah dipilih: selalu satu baris. Info file (kiri, boleh terpotong) + tombol (kanan, tidak mengecil). -->
+        <div v-if="files[d.id]" class="flex items-center gap-2 sm:gap-3">
+          <FileThumb :file="files[d.id]" class="h-11 w-11 sm:h-14 sm:w-14" />
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-medium text-[var(--color-text-h)]">{{ files[d.id].name }}</p>
+            <p class="text-xs text-[var(--color-text-muted)]">{{ fileSizeLabel(files[d.id]) }}</p>
           </div>
-          <div class="flex shrink-0 items-center gap-1">
-            <Button label="Lihat" icon="pi pi-eye" size="small" severity="secondary" outlined @click="openPreview(d)" />
+          <div class="flex shrink-0 items-center gap-0.5 sm:gap-1">
+            <Button
+              label="Lihat"
+              icon="pi pi-eye"
+              size="small"
+              severity="secondary"
+              outlined
+              aria-label="Lihat dokumen"
+              class="whitespace-nowrap !px-2 !text-xs sm:!px-3 sm:!text-sm"
+              @click="openPreview(d)"
+            />
             <Button icon="pi pi-times" text rounded severity="danger" aria-label="Hapus dokumen" @click="emit('remove', d.id)" />
           </div>
         </div>

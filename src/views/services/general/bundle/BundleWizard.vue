@@ -361,9 +361,10 @@ async function copyOne(code) {
 </script>
 
 <template>
-  <div class="p-6 max-w-3xl mx-auto">
+  <!-- RESPONSIF: padding luar dikecilkan di mobile (p-3) supaya konten punya lebih banyak lebar -->
+  <div class="p-3 sm:p-6 max-w-3xl mx-auto">
     <!-- Hero -->
-    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br p-6 sm:p-7 border border-white shadow-sm" :class="h.hero">
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br p-5 sm:p-7 border border-white shadow-sm" :class="h.hero">
       <span class="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full" :class="h.blob" />
       <span class="pointer-events-none absolute right-16 -bottom-10 h-24 w-24 rounded-full bg-white/60" />
       <div class="relative flex items-start gap-4">
@@ -377,11 +378,12 @@ async function copyOne(code) {
     </div>
 
     <!-- Stepper -->
-    <div class="mt-6 rounded-2xl border bg-white px-4 py-4" :class="h.soft">
+    <div class="mt-4 sm:mt-6 rounded-2xl border bg-white px-4 py-4" :class="h.soft">
       <WizardStepper :steps="STEPS" :current="current" :maxReached="maxReached" :hue="hueName" @go="goTo" />
     </div>
 
-    <div class="mt-4 rounded-3xl border border-surface-200 bg-white p-5 sm:p-7 shadow-sm">
+    <!-- RESPONSIF: padding kartu utama p-4 di mobile, p-7 di ≥sm -->
+    <div class="mt-4 rounded-3xl border border-surface-200 bg-white p-4 sm:p-7 shadow-sm">
       <!-- ============ LANGKAH 1: CEKLIS SURAT ============ -->
       <div v-if="isChecklist">
         <h2 class="text-lg font-semibold text-[var(--color-text-h)]">{{ ui.selectTitle ?? "Surat apa saja yang Anda butuhkan?" }}</h2>
@@ -470,7 +472,7 @@ async function copyOne(code) {
           Unggah foto/scan dokumen asli (JPG, PNG, atau PDF, maksimal {{ MAX_FILE_MB }} MB per file). Cukup satu kali unggah, dokumen otomatis dipakai untuk semua surat dalam pengajuan ini.
         </p>
 
-        <section class="mt-5 rounded-2xl border p-4 sm:p-5 bg-gradient-to-br from-sky-50/80 to-white border-sky-100">
+        <section class="mt-5 rounded-2xl border p-3 sm:p-5 bg-gradient-to-br from-sky-50/80 to-white border-sky-100">
           <DocUploader :docs="sharedDocs" :files="files" :errors="fileErrors" @select="onFileSelect" @remove="onFileRemove" />
         </section>
 
@@ -486,7 +488,8 @@ async function copyOne(code) {
           <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="h.pill">{{ selectedLetters.length }} surat</span>
           <span v-if="!incomplete.length && !docsMissing" class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700"><i class="pi pi-check-circle text-[11px]" /> Semua lengkap</span>
           <span v-else class="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800"><i class="pi pi-exclamation-triangle text-[11px]" /> {{ incomplete.length + (docsMissing ? 1 : 0) }} belum lengkap</span>
-          <span class="ml-auto flex gap-1">
+          <!-- RESPONSIF: di mobile turun ke baris sendiri, rata kanan -->
+          <span class="flex w-full justify-end gap-1 sm:ml-auto sm:w-auto">
             <Button label="Buka semua" size="small" text @click="setAllReview(true)" />
             <Button label="Tutup semua" size="small" text severity="secondary" @click="setAllReview(false)" />
           </span>
@@ -494,8 +497,8 @@ async function copyOne(code) {
 
         <div class="mt-4 flex flex-col gap-3">
           <article v-for="(l, li) in selectedLetters" :key="l.id" class="overflow-hidden rounded-2xl border" :class="status[l.id].ok ? HUES[SECTION_HUES[li % SECTION_HUES.length]].soft : 'bg-amber-50 border-amber-300'">
-            <button type="button" class="flex w-full items-center gap-3 px-4 py-3 text-left" :aria-expanded="!!reviewOpen[l.id]" @click="toggleReview(l.id)">
-              <span class="rounded-md px-1.5 py-0.5 text-[10px] font-bold tracking-wide bg-white/80 text-[var(--color-text-h)]">{{ l.code }}</span>
+            <button type="button" class="flex w-full items-center gap-3 px-3 py-3 text-left sm:px-4" :aria-expanded="!!reviewOpen[l.id]" @click="toggleReview(l.id)">
+              <span class="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold tracking-wide bg-white/80 text-[var(--color-text-h)]">{{ l.code }}</span>
               <span class="min-w-0 flex-1">
                 <span class="block truncate text-sm font-semibold text-[var(--color-text-h)]">{{ l.title }}</span>
                 <span class="block text-xs text-[var(--color-text-muted)]">
@@ -503,11 +506,11 @@ async function copyOne(code) {
                   <span v-else class="text-amber-800">{{ status[l.id].fields }} isian belum lengkap</span>
                 </span>
               </span>
-              <i class="pi" :class="status[l.id].ok ? 'pi-check-circle text-emerald-600' : 'pi-exclamation-triangle text-amber-600'" />
-              <i class="pi text-xs text-[var(--color-text-muted)]" :class="reviewOpen[l.id] ? 'pi-chevron-up' : 'pi-chevron-down'" />
+              <i class="pi shrink-0" :class="status[l.id].ok ? 'pi-check-circle text-emerald-600' : 'pi-exclamation-triangle text-amber-600'" />
+              <i class="pi shrink-0 text-xs text-[var(--color-text-muted)]" :class="reviewOpen[l.id] ? 'pi-chevron-up' : 'pi-chevron-down'" />
             </button>
 
-            <div v-if="reviewOpen[l.id]" class="border-t border-white/80 bg-white px-4 py-4">
+            <div v-if="reviewOpen[l.id]" class="border-t border-white/80 bg-white px-3 py-4 sm:px-4">
               <div class="flex justify-end">
                 <Button label="Ubah" icon="pi pi-pencil" text size="small" @click="goTo(STEP_FIELDS, l.id)" />
               </div>
@@ -535,24 +538,37 @@ async function copyOne(code) {
 
         <!-- Dokumen pendukung (gabungan semua surat) -->
         <div class="mt-3 overflow-hidden rounded-2xl border" :class="docsMissing ? 'bg-amber-50 border-amber-300' : 'bg-gradient-to-br from-sky-50/80 to-white border-sky-100'">
-          <div class="flex items-center justify-between gap-3 px-4 py-3">
+          <div class="flex items-center justify-between gap-3 px-3 py-3 sm:px-4">
             <div class="min-w-0">
               <p class="text-sm font-semibold text-[var(--color-text-h)]">Dokumen Pendukung</p>
               <p class="text-xs" :class="docsMissing ? 'text-amber-800' : 'text-[var(--color-text-muted)]'">
                 {{ docsMissing ? `${docsMissing} dokumen wajib belum diunggah` : `${sharedDocs.filter((d) => files[d.id]).length} dokumen terunggah` }}
               </p>
             </div>
-            <Button label="Ubah" icon="pi pi-pencil" text size="small" @click="goTo(STEP_DOCS)" />
+            <Button label="Ubah" icon="pi pi-pencil" text size="small" class="shrink-0" @click="goTo(STEP_DOCS)" />
           </div>
-          <ul class="flex flex-col gap-2 border-t border-white/80 bg-white px-4 py-4 text-sm">
-            <li v-for="d in sharedDocs" :key="d.id" class="flex items-center gap-3">
+
+          <!-- RESPONSIF (perbaikan utama): baris dokumen boleh membungkus.
+               Label punya lebar minimal (basis-40) dan tombol "Lihat" turun ke baris bawah bila tidak muat,
+               jadi tidak lagi menimpa teks. -->
+          <ul class="flex flex-col gap-3 border-t border-white/80 bg-white px-3 py-4 text-sm sm:px-4">
+            <li v-for="d in sharedDocs" :key="d.id" class="flex flex-wrap items-center gap-x-3 gap-y-2">
               <FileThumb v-if="files[d.id]" :file="files[d.id]" class="h-12 w-12" />
-              <i v-else class="pi mx-3.5" :class="d.optional ? 'pi-minus-circle text-[var(--color-text-muted)]' : 'pi-times-circle text-red-500'" />
-              <span class="min-w-0 flex-1 text-[var(--color-text-h)]">
+              <i v-else class="pi mx-3.5 shrink-0" :class="d.optional ? 'pi-minus-circle text-[var(--color-text-muted)]' : 'pi-times-circle text-red-500'" />
+              <span class="min-w-0 flex-1 basis-40 break-words text-[var(--color-text-h)]">
                 {{ d.label }}
                 <span class="block truncate text-xs text-[var(--color-text-muted)]">{{ files[d.id] ? files[d.id].name : d.optional ? "Tidak diunggah (opsional)" : "Belum diunggah" }}</span>
               </span>
-              <Button v-if="files[d.id]" label="Lihat" icon="pi pi-eye" size="small" severity="secondary" outlined @click="openPreview(d)" />
+              <Button
+                v-if="files[d.id]"
+                label="Lihat"
+                icon="pi pi-eye"
+                size="small"
+                severity="secondary"
+                outlined
+                class="ml-auto shrink-0 whitespace-nowrap"
+                @click="openPreview(d)"
+              />
             </li>
           </ul>
         </div>
@@ -613,8 +629,9 @@ async function copyOne(code) {
         <p v-if="ui.doneIntro" class="text-sm text-[var(--color-text-muted)]">{{ ui.doneIntro }}</p>
         <p v-else class="text-sm text-[var(--color-text-muted)]">Paket <b>{{ bundle.title }}</b> berhasil dikirim ({{ result.codes.length }} surat).</p>
         <ul class="w-full rounded-2xl border border-dashed p-3 text-left" :class="h.soft">
-          <li v-for="c in result.codes" :key="c.code" class="flex items-center justify-between gap-3 py-1 text-sm">
-            <span class="truncate text-[var(--color-text-h)]">{{ c.title }}</span>
+          <!-- RESPONSIF: judul surat dan kode boleh membungkus di layar sempit -->
+          <li v-for="c in result.codes" :key="c.code" class="flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 py-1 text-sm">
+            <span class="min-w-0 flex-1 basis-32 break-words text-[var(--color-text-h)]">{{ c.title }}</span>
             <span class="flex shrink-0 items-center gap-1">
               <span class="font-semibold tracking-wide text-[var(--color-text-h)] select-all">{{ c.code }}</span>
               <Button :icon="copiedCode === c.code ? 'pi pi-check' : 'pi pi-copy'" text rounded size="small" severity="secondary" :aria-label="`Salin kode ${c.title}`" @click="copyOne(c.code)" />
