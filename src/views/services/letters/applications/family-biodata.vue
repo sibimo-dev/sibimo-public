@@ -5,6 +5,7 @@
 // tidak diisi pemohon, dibiarkan kosong di PDF dan diisi/diedit admin.
 import LetterWizard from "@/views/services/layout/LetterWizard.vue";
 import { f, OPT, pemohonRingkas, opt } from "@/data/letterFields";
+import { signerSection } from "@/views/services/layout/signerFields.js";
 
 // Opsi tambahan khusus formulir ini
 const ADA_TIDAK = ["Ada", "Tidak Ada"];
@@ -64,6 +65,9 @@ const sections = [
       ], { max: 8 }),
     ],
   },
+
+  // TTD: Petugas kecamatan, Kepala desa, Dukuh, Kepala keluarga (= data kepala keluarga di atas)
+  signerSection(["districtOfficer", "villageHead", "hamletHead", ["applicant", "Nama Kepala Keluarga", "headName"]]),
 ];
 
 // Langkah 2: dokumen pendukung (string biasa, keterangan ditulis di dalam label)
