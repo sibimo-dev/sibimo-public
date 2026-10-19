@@ -82,6 +82,11 @@ export const sections = [
       ], { max: 6 }),
     ],
   },
+<<<<<<< Updated upstream
+=======
+
+  // TTD: Petugas registrasi (diisi lewat otorisasi), Lurah Bimomartani (tetap, diisi sistem), Pemohon (= data pemohon di atas, sudah dicetak). Tidak ada field penandatangan.
+>>>>>>> Stashed changes
 ];
 
 export const documents = [

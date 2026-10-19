@@ -318,13 +318,15 @@ async function sendApplication() {
         .flatMap((section) => section.fields)
         .map((field) => [field.key, form[field.key]]),
     );
-    const letterFiles = Object.fromEntries(docsOf(letter).map((document) => [document.id, files[document.id]]).filter(([, file]) => file));
+    const isNewResident = Boolean(props.bundle?.slug === "pendaftaran-warga-baru" || !resident.isVerified);
     const response = await submitOnlineLetter({
       slug: letter.slug,
-      form: letterForm,
+      form: { ...form, ...letterForm },
       files: letterFiles,
       documents: docsOf(letter),
-      resident: resident.resident,
+      resident: resident.resident || (resident.nik ? { nik: resident.nik } : null),
+      serviceFlow: "general",
+      isNewResident,
     });
     codes.push({ title: letter.title, code: response.request_code });
   }

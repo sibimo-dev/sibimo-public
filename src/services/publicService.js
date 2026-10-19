@@ -8,6 +8,7 @@ export default {
   getServices: () => api.get('/services'),
   getGalleries: () => api.get('/galleries'),
   getLetterTypes: () => api.get('/public/letter-types'),
+  getLetterStats: () => api.get('/public/letter-stats'),
   // Cek NIK (Layanan Mandiri). POST supaya NIK tidak masuk URL.
   // Balasan yang dibaca ServicesView.vue: { data: { registered: boolean, masked_name: string | null } }
   // Kalau path di backend berbeda, cukup ubah string path di bawah ini

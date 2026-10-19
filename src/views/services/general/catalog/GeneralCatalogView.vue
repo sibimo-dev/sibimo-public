@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import Button from "primevue/button";
 import Message from "primevue/message";
@@ -9,7 +9,11 @@ import { GENERAL_CATEGORIES, GENERAL_SERVICES } from "@/data/letterCatalog";
 import { BUNDLE_SERVICES, isBundledLetter } from "@/data/letterBundles";
 import { useLetterLauncher } from "@/views/services/layout/useLetterLauncher";
 import { useResidentVerificationStore } from "@/stores/residentVerification";
+<<<<<<< Updated upstream
 import { isOnlineLetter } from "@/data/letterBackendMap";
+=======
+import publicService from "@/services/publicService";
+>>>>>>> Stashed changes
 
 const router = useRouter();
 
@@ -24,11 +28,29 @@ const CATEGORIES = GENERAL_CATEGORIES.filter((c) => !isRemovedCategory(c.value) 
 const residentStore = useResidentVerificationStore();
 const { openFile, notice, open } = useLetterLauncher("general");
 
+<<<<<<< Updated upstream
 /* Paket nikah/kelahiran/kematian masuk kategori "Permohonan". Dicari lewat nilai/label kategori
    supaya tidak bergantung pada penulisan persis; bila tidak ada, jatuh ke kategori pertama. */
 const permohonanCategory = computed(
   () =>
     (CATEGORIES.find((c) => /permohonan/i.test(c.value) || /permohonan/i.test(c.label)) ?? CATEGORIES[0])?.value,
+=======
+const totalRequests = ref(0);
+
+onMounted(async () => {
+  try {
+    const res = await publicService.getLetterStats();
+    if (res.data?.success && typeof res.data?.data?.total === "number") {
+      totalRequests.value = res.data.data.total;
+    }
+  } catch (err) {
+    console.error("Gagal memuat total permohonan surat:", err);
+  }
+});
+
+const services = computed(() =>
+  GENERAL_SERVICES.filter((s) => !isBundledLetter(s) && !isRemovedService(s)),
+>>>>>>> Stashed changes
 );
 
 /* Surat online terpilih tetap tersedia sebagai kartu individual maupun paket.
@@ -53,7 +75,7 @@ function changeNik() {
     subtitle="Akses cepat dan mudah untuk pengajuan berbagai dokumen kependudukan dan surat keterangan resmi."
     :services="services"
     :categories="CATEGORIES"
-    :total="1248"
+    :total="totalRequests"
     searchPlaceholder="Ketik jenis surat (Cth: SKTM, Domisili, Nikah)..."
     @select="open"
   >
