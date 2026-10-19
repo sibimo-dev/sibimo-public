@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import Button from "primevue/button";
 import Message from "primevue/message";
@@ -9,6 +9,8 @@ import { GENERAL_CATEGORIES, GENERAL_SERVICES } from "@/data/letterCatalog";
 import { isBundledLetter } from "@/data/letterBundles";
 import { useLetterLauncher } from "@/views/services/layout/useLetterLauncher";
 import { useResidentVerificationStore } from "@/stores/residentVerification";
+import { isOnlineLetter } from "@/data/letterBackendMap";
+
 
 const router = useRouter();
 
@@ -21,6 +23,11 @@ const CATEGORIES = GENERAL_CATEGORIES.filter((c) => !isRemovedCategory(c.value) 
 const residentStore = useResidentVerificationStore();
 const { openFile, notice, open } = useLetterLauncher("general");
 
+/* Paket nikah/kelahiran/kematian masuk kategori "Permohonan". Dicari lewat nilai/label kategori
+   supaya tidak bergantung pada penulisan persis; bila tidak ada, jatuh ke kategori pertama. */
+const permohonanCategory = computed(
+  () =>
+    (CATEGORIES.find((c) => /permohonan/i.test(c.value) || /permohonan/i.test(c.label)) ?? CATEGORIES[0])?.value,
 const services = computed(() =>
   GENERAL_SERVICES.filter((s) => !isBundledLetter(s) && !isRemovedService(s)),
 );
@@ -39,7 +46,7 @@ function changeNik() {
     subtitle="Akses cepat dan mudah untuk pengajuan berbagai dokumen kependudukan dan surat keterangan resmi."
     :services="services"
     :categories="CATEGORIES"
-    :total="1248"
+    :total="totalRequests"
     searchPlaceholder="Ketik jenis surat (Cth: SKTM, Domisili, Nikah)..."
     @select="open"
   >

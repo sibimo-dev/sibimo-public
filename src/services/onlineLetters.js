@@ -74,7 +74,7 @@ function resolveDocumentId(label, documents) {
   return fallback?.letter_type_document_id ?? documents[0]?.letter_type_document_id ?? null;
 }
 
-export async function submitOnlineLetter({ slug, form, files, documents, resident }) {
+export async function submitOnlineLetter({ slug, form, files, documents, resident, serviceFlow, isNewResident }) {
   const config = getOnlineLetterConfig(slug);
   if (!config) throw new Error("Surat ini belum tersedia untuk pengajuan online.");
 
@@ -107,7 +107,7 @@ export async function submitOnlineLetter({ slug, form, files, documents, residen
     "reporterNik",
     "ownerNik",
     "letterCOwnerNik",
-  );
+  ) || resident?.nik || "";
   const applicantAddress = applicantValue(
     form,
     resident,
@@ -136,6 +136,8 @@ export async function submitOnlineLetter({ slug, form, files, documents, residen
   payload.append("applicant_phone", String(applicantPhone));
   payload.append("applicant_address", String(applicantAddress));
   payload.append("form_data", JSON.stringify(formData));
+  if (serviceFlow) payload.append("service_flow", String(serviceFlow));
+  if (isNewResident) payload.append("is_new_resident", "1");
 
   for (const document of documents ?? []) {
     const file = files?.[document.id];

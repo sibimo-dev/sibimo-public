@@ -40,6 +40,15 @@ export function normalizeDocs(documents = [], prefix = "", form = null) {
   });
 }
 
+export function formatResidentBirth(store) {
+  const place = store?.resident?.birthPlace;
+  const rawDate = store?.resident?.birthDate;
+  const d = toDate(rawDate);
+  const dateFormatted = d ? fmtDate(d) : rawDate;
+  if (place && dateFormatted) return `${place}, ${dateFormatted}`;
+  return place || dateFormatted || "";
+}
+
 /* Lookup data warga untuk fillForm.
    - "nik"               → NIK yang diverifikasi
    - "asFather:<kunci>"  → nilai warga HANYA bila jenis kelamin = Laki-laki (isi blok Ayah)
@@ -56,7 +65,9 @@ export function makeResidentLookup(store) {
       if (role() !== m[1]) return undefined;
       k = m[2];
     }
-    return ["nik", "nationalId", "applicantNik"].includes(k) ? store.nik : store.resident?.[k];
+    if (["nik", "nationalId", "applicantNik"].includes(k)) return store.nik;
+    if (["birthPlaceDate", "birth", "birth_place_date"].includes(k)) return formatResidentBirth(store);
+    return store.resident?.[k];
   };
 }
 
@@ -67,16 +78,22 @@ export function makeResidentLookup(store) {
  * mengisinya ke field yang sesuai tanpa menimpa isian manual.
  */
 export function seedVerifiedApplicant(form, store) {
+  const birthPlaceDate = formatResidentBirth(store);
   const values = {
     name: store.resident?.fullName,
+    applicantName: store.resident?.fullName,
     nik: store.nik,
+    applicantNik: store.nik,
     birthPlace: store.resident?.birthPlace,
     birthDate: store.resident?.birthDate,
+    birthPlaceDate: birthPlaceDate,
+    birth: birthPlaceDate,
     gender: store.resident?.gender,
     maritalStatus: store.resident?.maritalStatus,
     religion: store.resident?.religion,
     occupation: store.resident?.occupation,
     address: store.resident?.address,
+    applicantAddress: store.resident?.address,
   };
 
   for (const [key, value] of Object.entries(values)) {

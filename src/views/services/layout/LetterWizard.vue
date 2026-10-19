@@ -137,12 +137,14 @@ const result = reactive({ open: false, ok: false, code: "", message: "" });
 async function submit() {
   isSubmitting.value = true;
   try {
+    const isPermit = route.path.startsWith("/services/permit");
     const res = await submitOnlineLetter({
       slug: onlineSlug.value,
       form: { ...form },
       files: { ...files },
       documents: docList.value,
-      resident: resident.resident,
+      resident: resident.resident || (resident.nik ? { nik: resident.nik } : null),
+      serviceFlow: isPermit ? "permit" : "general",
     });
     Object.assign(result, { open: true, ok: true, code: res.request_code, message: "" });
   } catch (err) {
