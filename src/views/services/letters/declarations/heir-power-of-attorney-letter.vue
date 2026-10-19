@@ -31,8 +31,8 @@ export const sections = [
       f.text("deceasedDeathPlace", "Meninggal Dunia di", { span: 2 }),
     ],
   },
-  // TTD: Penerima kuasa (= attorney), Pemberi kuasa (= pemohon) sudah dicetak dari isian di atas; Kalurahan/Notaris dari signerSection
-  signerSection([["notary", "Nama Kalurahan/Notaris"]]),
+  // TTD: Penerima kuasa (= attorney), Pemberi kuasa (= pemohon) sudah dicetak dari isian di atas; Notaris dari signerSection (Lurah tidak dibuatkan field)
+  signerSection([["notary", "Nama Notaris"]]),
 ];
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)

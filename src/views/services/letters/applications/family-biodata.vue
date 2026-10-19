@@ -66,8 +66,8 @@ const sections = [
     ],
   },
 
-  // TTD: Petugas kecamatan, Kepala desa, Dukuh, Kepala keluarga (= data kepala keluarga di atas)
-  signerSection(["districtOfficer", "villageHead", "hamletHead", ["applicant", "Nama Kepala Keluarga", "headName"]]),
+  // TTD: Petugas kecamatan, Dukuh, Kepala keluarga (= data kepala keluarga di atas). Kepala desa (Lurah) tidak dibuatkan field.
+  signerSection(["districtOfficer", "hamletHead", ["applicant", "Nama Kepala Keluarga", "headName"]]),
 ];
 
 // Langkah 2: dokumen pendukung (string biasa, keterangan ditulis di dalam label)

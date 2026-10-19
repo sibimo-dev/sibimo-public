@@ -46,8 +46,13 @@ const sections = [
       f.text("district", "Kecamatan", { default: "Ngemplak" }),
     ],
   },
-  // TTD: Pemohon (orang tua/wali, BUKAN nama anak) dan Petugas
-  signerSection([["applicant", "Nama Pemohon (orang tua/wali)"], "officer"]),
+  // TTD: Pemohon. Yang ttd bisa orang tua/wali atau anaknya, jadi nama & NIK pemohon diisi
+  // MANUAL (tidak otomatis dari data pemohon). Nama Petugas TIDAK ada di form: tempatnya ada di blade
+  // (officer_name) dan diisi lewat otorisasi.
+  signerSection([
+    ["applicantManual", "Nama Pemohon (penandatangan)"],
+    ["applicantNik", "NIK Pemohon (penandatangan)"],
+  ]),
 ];
 
 // Langkah 2: dokumen pendukung (string biasa, keduanya wajib)

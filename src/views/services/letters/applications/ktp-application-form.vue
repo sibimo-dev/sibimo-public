@@ -23,8 +23,8 @@ export const sections = [
       f.text("rw", "RW"),
     ],
   },
-  // TTD: Pemohon (= Nama Lengkap di atas), Dukuh, Camat, Lurah
-  signerSection(["applicant", "hamletHead", "districtHead", ["villageOfficer", "Nama Lurah"]]),
+  // TTD: Pemohon (= Nama Lengkap di atas), Dukuh, Camat. Lurah tidak dibuatkan field.
+  signerSection(["applicant", "hamletHead", "districtHead"]),
 ];
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
