@@ -430,12 +430,12 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
             <div>
               <label class="mb-1.5 block text-xs font-semibold text-slate-500">Lokasi Kejadian</label>
               <div class="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 transition-shadow focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100">
-                <span class="text-rose-500">📍</span>
+                <span class="shrink-0 text-rose-500">📍</span>
                 <input
                   v-model="locationText"
                   type="text"
                   placeholder="Masukkan detail alamat atau patokan lokasi"
-                  class="flex-1 bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                  class="min-w-0 flex-1 truncate bg-transparent text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none"
                 />
                 <button
                   type="button"
@@ -444,7 +444,14 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
                   class="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs font-semibold text-indigo-600 transition-colors hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <span v-if="locatingStatus === 'loading'" class="h-3 w-3 animate-spin rounded-full border-2 border-indigo-300 border-t-indigo-600" />
-                  {{ locatingStatus === 'loading' ? 'Mendeteksi lokasi...' : 'Gunakan Lokasi Saat Ini' }}
+                  <template v-if="locatingStatus === 'loading'">
+                    <span class="sm:hidden">Mencari...</span>
+                    <span class="hidden sm:inline">Mendeteksi lokasi...</span>
+                  </template>
+                  <template v-else>
+                    <span class="sm:hidden">Lokasi Saya</span>
+                    <span class="hidden sm:inline">Gunakan Lokasi Saat Ini</span>
+                  </template>
                 </button>
               </div>
               <p v-if="locatingStatus === 'error'" class="mt-1.5 text-xs text-red-500">{{ locationErrorMessage }}</p>
