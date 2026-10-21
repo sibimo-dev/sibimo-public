@@ -52,7 +52,7 @@ async function checkNik() {
   }
 }
 
-/* Pop-up pilihan jenis pendaftaran (penduduk tetap / penduduk sementara / tinggal sementara). */
+/* Pendaftaran warga baru tetap tersedia untuk NIK yang belum ada di database. */
 const typeDialogOpen = ref(false);
 const hueOfType = (t) => hue(t.hue);
 
@@ -63,12 +63,12 @@ function goToRegistration() {
 function chooseType(type) {
   draft.reset();
   draft.residentType = type.value;
-  // jenis yang hanya punya 1 dokumen (mis. SKTS) langsung terpilih
   const docs = docsForType(type.value);
   if (docs.length === 1) draft.selectedDocs = [docs[0].value];
   typeDialogOpen.value = false;
   router.push({ name: "general-register-select-letters" });
 }
+
 </script>
 
 <template>
@@ -145,5 +145,6 @@ function chooseType(type) {
         </button>
       </div>
     </Dialog>
+
   </div>
 </template>

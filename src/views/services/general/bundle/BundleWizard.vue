@@ -322,7 +322,7 @@ async function sendApplication() {
     const response = await submitOnlineLetter({
       slug: letter.slug,
       form: { ...form, ...letterForm },
-      files: letterFiles,
+      files,
       documents: docsOf(letter),
       resident: resident.resident || (resident.nik ? { nik: resident.nik } : null),
       serviceFlow: "general",
