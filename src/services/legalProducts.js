@@ -2,7 +2,7 @@ import api from './api'
 
 const backendOrigin = String(api.defaults.baseURL || '').replace(/\/api\/?$/, '')
 
-const CATEGORY_LABELS = {
+const CATEGORY_LABELS = { // cadangan kalau category_label tidak ada
   perkal: 'Perkal',
   'sk-lurah': 'SK Lurah',
 }
@@ -25,7 +25,7 @@ function normalize(item) {
     number: item.number ?? null,
     title: item.title ?? '',
     summary: item.description ?? null,
-    type: CATEGORY_LABELS[item.category] ?? item.category ?? '-',
+    type: item.category_label ?? CATEGORY_LABELS[item.category] ?? item.category ?? '-',
     year: Number(item.year) || null,
     date: null,
     file_size: null,

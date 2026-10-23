@@ -102,6 +102,15 @@ function initialsOf(name) {
     .join('')
 }
 
+/* ---------------- Resolution proof (shown to the public when resolved) ----------------
+   Expected backend fields on a complaint:
+   - resolution_description: string
+   - resolution_attachments: array of files (same shape as `attachments`) */
+const isSelectedComplaintResolved = computed(() => selectedComplaint.value?.status === 'Resolved')
+const resolutionDescription = computed(() => selectedComplaint.value?.resolution_description?.trim() || '')
+const resolutionAttachments = computed(() => selectedComplaint.value?.resolution_attachments ?? [])
+const hasResolutionProof = computed(() => !!resolutionDescription.value || resolutionAttachments.value.length > 0)
+
 /* ---------------- Ringkasan statistik ---------------- */
 const totalCount = computed(() => complaints.value.length)
 const submittedCount = computed(() => complaints.value.filter((c) => c.status === 'Submitted').length)
@@ -412,6 +421,83 @@ const tablePt = {
         <div v-else class="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-400">
           <i class="pi pi-image" />
           Tidak ada bukti pendukung yang dilampirkan.
+        </div>
+
+                <!-- ============ Bukti Penyelesaian (hanya muncul jika aduan sudah selesai) ============ -->
+                <div v-if="isSelectedComplaintResolved" class="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+          <div class="flex items-center gap-3">
+            <span class="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-emerald-100 text-lg text-emerald-600">
+              <i class="pi pi-check-circle" />
+            </span>
+            <div class="min-w-0">
+              <p class="text-xs font-bold uppercase tracking-wide text-emerald-700">Bukti Penyelesaian</p>
+              <p class="text-xs text-emerald-600">Aduan ini telah selesai ditangani.</p>
+            </div>
+          </div>
+
+          <template v-if="hasResolutionProof">
+            <div v-if="resolutionDescription" class="rounded-xl bg-white p-4">
+              <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Keterangan Penyelesaian</p>
+              <p class="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-slate-700">{{ resolutionDescription }}</p>
+            </div>
+
+            <div v-if="resolutionAttachments.length">
+              <p class="text-xs font-bold uppercase tracking-wide text-slate-400">Foto Hasil Pengerjaan</p>
+              <div class="mt-2 grid grid-cols-3 gap-2">
+                <template v-for="file in resolutionAttachments" :key="file.attachment_id ?? attachmentUrl(file)">
+                  <a
+                    v-if="getAttachmentKind(file) !== 'link'"
+                    :href="attachmentUrl(file)"
+                    target="_blank"
+                    rel="noopener"
+                    class="group relative aspect-square overflow-hidden rounded-xl border border-emerald-200 bg-slate-100"
+                  >
+                    <video v-if="getAttachmentKind(file) === 'video'" :src="attachmentUrl(file)" class="h-full w-full object-cover" muted />
+                    <img v-else :src="attachmentUrl(file)" :alt="attachmentName(file)" class="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105" />
+                    <span v-if="getAttachmentKind(file) === 'video'" class="absolute inset-0 flex items-center justify-center bg-black/20">
+                      <i class="pi pi-play-circle text-2xl text-white drop-shadow" />
+                    </span>
+                  </a>
+
+                  <a
+                    v-else
+                    :href="attachmentUrl(file)"
+                    target="_blank"
+                    rel="noopener"
+                    class="group flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-emerald-300 bg-white p-2 text-center transition-colors hover:bg-emerald-50"
+                  >
+                    <i class="pi pi-external-link text-lg text-slate-400 group-hover:text-emerald-600" />
+                    <span class="line-clamp-2 break-all text-[11px] font-medium text-slate-500 group-hover:text-emerald-700">
+                      {{ attachmentName(file) }}
+                    </span>
+                  </a>
+                </template>
+              </div>
+            </div>
+          </template>
+          <div v-else class="flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-xs text-slate-400">
+            <i class="pi pi-image" />
+            Bukti penyelesaian belum tersedia.
+          </div>
+        </div>
+
+        <!-- ============ Alasan Penolakan (hanya jika ditolak) ============ -->
+        <div
+          v-if="selectedComplaint.status === 'Rejected' && selectedComplaint.resolution_description?.trim()"
+          class="rounded-2xl border border-rose-200 bg-rose-50/60 p-4"
+        >
+          <div class="flex items-center gap-3">
+            <span class="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-rose-100 text-lg text-rose-600">
+              <i class="pi pi-times-circle" />
+            </span>
+            <div class="min-w-0">
+              <p class="text-xs font-bold uppercase tracking-wide text-rose-700">Alasan Penolakan</p>
+              <p class="text-xs text-rose-600">Aduan ini tidak dapat ditindaklanjuti.</p>
+            </div>
+          </div>
+          <p class="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-700">
+            {{ selectedComplaint.resolution_description }}
+          </p>
         </div>
       </div>
 
