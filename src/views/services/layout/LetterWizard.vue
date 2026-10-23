@@ -3,7 +3,7 @@
    1) Isian surat   2) Dokumen pendukung   3) Cek ulang + pernyataan dokumen asli + kirim
    Setelah kirim muncul pop-up berhasil (kode surat) atau gagal.
    Surat nikah/kelahiran/kematian sekarang diajukan lewat paket (BundleWizard). */
-import { computed, inject, reactive, ref, unref } from "vue";
+import { computed, inject, onMounted, reactive, ref, unref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
@@ -16,10 +16,11 @@ import FileThumb from "./FileThumb.vue";
 import FilePreviewDialog from "./FilePreviewDialog.vue";
 import { copyText } from "./copyText";
 import WizardStepper from "./WizardStepper.vue";
-import { display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, MAX_FILE_MB } from "./formLogic";
+import { display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "./formLogic";
 import { hue as getHue, HUES, SECTION_HUES } from "./pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
-import { submitOnlineLetter } from "@/services/onlineLetters";
+import { documentTypeOf, getOnlineLetterTypeBySlug, getReusableDocuments, submitOnlineLetter } from "@/services/onlineLetters";
+import publicService from "@/services/publicService";
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -61,12 +62,69 @@ const allSections = computed(() => [
 ]);
 
 const form = reactive({});
-fillForm(form, allSections.value, makeResidentLookup(resident));
-seedVerifiedApplicant(form, resident);
+const syncResidentData = () => {
+  // Jalankan lagi setelah hasil verifikasi NIK tersedia/berubah. Form public
+  // dibuka setelah verifikasi, tetapi watcher ini juga menangani navigasi cepat
+  // atau state yang dipulihkan dari sessionStorage.
+  fillForm(form, allSections.value, makeResidentLookup(resident));
+  seedVerifiedApplicant(form, resident);
+};
+syncResidentData();
+watch(
+  [() => resident.nik, () => resident.resident],
+  syncResidentData,
+  { deep: true },
+);
+
+// Session lama bisa menyimpan resident sebelum field tambahan (KK, ayah/ibu,
+// agama, pekerjaan, dan tanggal lahir) dikirim endpoint public. Segarkan sekali
+// saat wizard dibuka agar form tidak bergantung pada cache lama.
+const refreshIncompleteResident = async () => {
+  const current = resident.resident;
+  const requiredKeys = ["birthPlace", "birthDate", "religion", "occupation", "familyCardNumber", "motherName", "fatherName"];
+  const incomplete = !current || requiredKeys.some((key) => !isFilled(current[key]));
+  if (!resident.nik || !resident.isVerified || !incomplete) return;
+
+  try {
+    const response = await publicService.checkCitizenNik(resident.nik);
+    const data = response.data?.data;
+    if (data?.registered && data.resident) resident.setVerifiedResident(data.resident);
+  } catch {
+    // Data cache tetap dipakai bila endpoint sedang tidak tersedia.
+  }
+};
+onMounted(refreshIncompleteResident);
 
 const docList = computed(() => normalizeDocs(props.documents, "", form));
 
 const files = reactive({}); // { [indexDokumen]: File }
+const reusedDocuments = reactive({}); // { [document.id]: citizen document summary }
+const savedDocuments = ref([]);
+const savedDocumentFor = (doc) => savedDocuments.value.find((item) => item.document_type === documentTypeOf(doc.label)) ?? null;
+async function loadSavedDocuments() {
+  if (!resident.nik || !resident.isVerified || !onlineSlug.value) {
+    savedDocuments.value = [];
+    return;
+  }
+  try {
+    const type = await getOnlineLetterTypeBySlug(onlineSlug.value);
+    savedDocuments.value = type?.code ? await getReusableDocuments({ nik: resident.nik, letterTypeCode: type.code }) : [];
+  } catch {
+    savedDocuments.value = [];
+  }
+}
+watch([() => resident.nik, onlineSlug], loadSavedDocuments, { immediate: true });
+const reuseSavedDocument = (id, saved) => {
+  delete files[id];
+  reusedDocuments[id] = saved;
+  const next = { ...fileErrors.value };
+  delete next[id];
+  fileErrors.value = next;
+};
+const onFileRemove = (id) => {
+  delete files[id];
+  delete reusedDocuments[id];
+};
 const preview = reactive({ open: false, file: null, title: "" });
 const openPreview = (d) => Object.assign(preview, { open: true, file: files[d.id], title: d.label });
 const errors = ref({});
@@ -74,6 +132,7 @@ const fileErrors = ref({});
 
 function onFileSelect(id, file) {
   files[id] = file;
+  delete reusedDocuments[id];
   const next = { ...fileErrors.value };
   delete next[id];
   fileErrors.value = next;
@@ -103,7 +162,7 @@ function next() {
     if (Object.keys(errors.value).length) return;
   }
   if (current.value === 1) {
-    fileErrors.value = validateDocs(docList.value, files);
+    fileErrors.value = validateDocs(docList.value, files, reusedDocuments);
     if (Object.keys(fileErrors.value).length) return;
   }
   if (!isLast.value) return goTo(current.value + 1);
@@ -142,6 +201,7 @@ async function submit() {
       slug: onlineSlug.value,
       form: { ...form },
       files: { ...files },
+      reusedDocuments: { ...reusedDocuments },
       documents: docList.value,
       resident: resident.resident || (resident.nik ? { nik: resident.nik } : null),
       serviceFlow: isPermit ? "permit" : "general",
@@ -191,7 +251,7 @@ async function copyCode() {
       <div v-else-if="current === 1">
         <h2 class="text-lg font-semibold text-[var(--color-text-h)]">Dokumen Pendukung</h2>
         <p class="text-sm mt-1 mb-6 text-[var(--color-text-muted)]">Unggah foto/scan dokumen asli (JPG, PNG, atau PDF, maksimal {{ MAX_FILE_MB }} MB per file).</p>
-        <DocUploader :docs="docList" :files="files" :errors="fileErrors" @select="onFileSelect" @remove="(id) => delete files[id]" />
+        <DocUploader :docs="docList" :files="files" :errors="fileErrors" :saved="savedDocumentFor" @select="onFileSelect" @reuseSaved="reuseSavedDocument" @remove="onFileRemove" />
       </div>
 
       <!-- ============ STEP 3: CEK ULANG & KIRIM ============ -->
@@ -232,10 +292,11 @@ async function copyCode() {
             <ul class="mt-2 flex flex-col gap-2 text-sm">
               <li v-for="d in docList" :key="d.id" class="flex items-center gap-3">
                 <FileThumb v-if="files[d.id]" :file="files[d.id]" class="h-12 w-12" />
+                <i v-else-if="reusedDocuments[d.id]" class="pi pi-database mx-3.5 text-emerald-600" />
                 <i v-else class="pi pi-minus-circle mx-3.5 text-[var(--color-text-muted)]" />
                 <span class="min-w-0 flex-1 text-[var(--color-text-h)]">
                   {{ d.label }}
-                  <span class="block truncate text-xs text-[var(--color-text-muted)]">{{ files[d.id] ? files[d.id].name : "Tidak diunggah (opsional)" }}</span>
+                  <span class="block truncate text-xs text-[var(--color-text-muted)]">{{ files[d.id] ? files[d.id].name : reusedDocuments[d.id] ? `Dokumen tersimpan: ${reusedDocuments[d.id].file_name}` : "Tidak diunggah (opsional)" }}</span>
                 </span>
                 <Button v-if="files[d.id]" label="Lihat" icon="pi pi-eye" size="small" severity="secondary" outlined @click="openPreview(d)" />
               </li>

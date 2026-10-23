@@ -57,6 +57,13 @@ const categories = reactive([
     rows: [],
   },
   {
+    key: "blood_type",
+    label: "Golongan Darah",
+    icon: "pi-heart-fill",
+    labels: ["A", "B", "AB", "O", "Tidak diisi"],
+    rows: [],
+  },
+  {
     key: "gender",
     label: "Jenis Kelamin",
     icon: "pi-user",
@@ -105,6 +112,14 @@ const categoryStyles = {
     dot: "bg-emerald-500",
     badge: "bg-emerald-50 text-emerald-700",
     topBar: "bg-gradient-to-r from-emerald-400 to-emerald-600",
+  },
+  blood_type: {
+    sidebarActive: "bg-red-600 text-white shadow-red-600/25",
+    sidebarCount: "bg-white/15 text-white",
+    iconInactive: "text-red-600",
+    dot: "bg-red-500",
+    badge: "bg-red-50 text-red-700",
+    topBar: "bg-gradient-to-r from-red-400 to-red-600",
   },
   gender: {
     sidebarActive: "bg-rose-600 text-white shadow-rose-600/25",
@@ -334,6 +349,7 @@ function applyCitizenStatistics(statistics) {
   applyCategoryRows("education", sourceCategories.education);
   applyCategoryRows("occupation", sourceCategories.occupation);
   applyCategoryRows("religion", sourceCategories.religion);
+  applyCategoryRows("blood_type", sourceCategories.blood_type);
   applyCategoryRows("gender", sourceCategories.gender);
   applyCategoryRows("region", statistics?.regions);
 }
@@ -370,7 +386,7 @@ onMounted(async () => {
       </h1>
       <p class="mt-2 max-w-2xl text-sm text-muted leading-relaxed">
         Data agregat kependudukan Kalurahan Bimomartani berdasarkan kelompok umur, pendidikan,
-        pekerjaan, agama, jenis kelamin, dan wilayah administratif.
+        pekerjaan, agama, golongan darah, jenis kelamin, dan wilayah administratif.
       </p>
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-6 lg:gap-8">

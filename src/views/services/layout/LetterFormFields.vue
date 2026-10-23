@@ -97,10 +97,10 @@ const minRows = (field) => field.min ?? (field.optional ? 0 : 1);
               </span>
             </label>
 
-            <Select v-if="field.type === 'select'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :options="field.options" :editable="field.editable" placeholder="Pilih" :invalid="!!errors[field.key]" class="w-full" @update:modelValue="edit(field.key)" />
-            <DatePicker v-else-if="field.type === 'date'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" showIcon iconDisplay="input" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
-            <AutoComplete v-else-if="field.type === 'hamlet'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :suggestions="hamletSuggestions" dropdown placeholder="Pilih atau ketik nama dusun" :invalid="!!errors[field.key]" class="w-full" inputClass="w-full" @complete="searchHamlets" @update:modelValue="edit(field.key)" />
-            <Textarea v-else-if="field.type === 'textarea'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" rows="3" autoResize :placeholder="field.placeholder" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
+            <Select v-if="field.type === 'select'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :options="field.options" :editable="field.editable" :disabled="field.readonly || field.disabled" placeholder="Pilih" :invalid="!!errors[field.key]" class="w-full" @update:modelValue="edit(field.key)" />
+            <DatePicker v-else-if="field.type === 'date'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" showIcon iconDisplay="input" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :disabled="field.readonly || field.disabled" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
+            <AutoComplete v-else-if="field.type === 'hamlet'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :suggestions="hamletSuggestions" dropdown placeholder="Pilih atau ketik nama dusun" :disabled="field.readonly || field.disabled" :invalid="!!errors[field.key]" class="w-full" inputClass="w-full" @complete="searchHamlets" @update:modelValue="edit(field.key)" />
+            <Textarea v-else-if="field.type === 'textarea'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" rows="3" autoResize :placeholder="field.placeholder" :readonly="field.readonly" :disabled="field.disabled" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
             <InputText v-else-if="field.type === 'time'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" type="time" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
 
             <!-- tanda tangan digital (gambar langsung / upload) -->
@@ -141,7 +141,7 @@ const minRows = (field) => field.min ?? (field.optional ? 0 : 1);
               </div>
             </div>
 
-            <InputText v-else :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :maxlength="field.digits" :inputmode="field.digits ? 'numeric' : undefined" :placeholder="field.placeholder" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
+            <InputText v-else :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :maxlength="field.digits" :inputmode="field.digits ? 'numeric' : undefined" :placeholder="field.placeholder" :readonly="field.readonly" :disabled="field.disabled" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
 
             <small v-if="errors[field.key]" class="text-red-500">{{ errors[field.key] }}</small>
           </div>

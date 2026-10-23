@@ -15,8 +15,8 @@ export const sections = [
       f.area("address", "Alamat (RT/RW, Kalurahan, Kapanewon)", { from: "address", span: 2 }),
       f.text("birthPlace", "Tempat Lahir", { from: "birthPlace" }),
       f.date("birthDate", "Tanggal Lahir", { from: "birthDate" }),
-      f.text("motherName", "Nama Ibu"),
-      f.text("fatherName", "Nama Ayah"),
+      f.text("motherName", "Nama Ibu", { from: "motherName" }),
+      f.text("fatherName", "Nama Ayah", { from: "fatherName" }),
     ],
   },
 ];

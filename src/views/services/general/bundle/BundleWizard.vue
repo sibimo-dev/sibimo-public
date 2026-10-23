@@ -10,7 +10,7 @@
 
    Isian dipakai bersama antar surat: kunci field yang sama (dan pasangan kunci di `bundle.aliases`)
    terisi otomatis dari surat di atasnya, tetap bisa direvisi. */
-import { computed, nextTick, reactive, ref, watch } from "vue";
+import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
@@ -23,10 +23,11 @@ import FileThumb from "@/views/services/layout/FileThumb.vue";
 import FilePreviewDialog from "@/views/services/layout/FilePreviewDialog.vue";
 import { copyText } from "@/views/services/layout/copyText";
 import WizardStepper from "@/views/services/layout/WizardStepper.vue";
-import { applyAliases, buildAliasIndex, display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, MAX_FILE_MB } from "@/views/services/layout/formLogic";
+import { applyAliases, buildAliasIndex, display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "@/views/services/layout/formLogic";
 import { HUES, SECTION_HUES, hue } from "@/views/services/layout/pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
-import { submitOnlineLetter } from "@/services/onlineLetters";
+import { documentTypeOf, getReusableDocuments, submitOnlineLetter } from "@/services/onlineLetters";
+import publicService from "@/services/publicService";
 
 const props = defineProps({
   bundle: { type: Object, required: true }, // lihat bundles.js
@@ -49,10 +50,59 @@ const lookup = makeResidentLookup(resident);
 const aliasIndex = buildAliasIndex(props.bundle.aliases);
 
 const form = reactive({});
-fillForm(form, [...props.bundle.letters.flatMap((l) => l.sections), NOTIF_SECTION], lookup);
-seedVerifiedApplicant(form, resident);
+const allFormSections = () => [...props.bundle.letters.flatMap((l) => l.sections), NOTIF_SECTION];
+const syncResidentData = () => {
+  // Isi seluruh field yang memiliki sumber data warga, termasuk field yang
+  // baru terlihat setelah state verifikasi NIK selesai dipulihkan.
+  fillForm(form, allFormSections(), lookup);
+  seedVerifiedApplicant(form, resident);
+};
+syncResidentData();
+watch(
+  [() => resident.nik, () => resident.resident],
+  syncResidentData,
+  { deep: true },
+);
+
+// Segarkan cache verifikasi lama agar field tambahan dari endpoint public
+// (termasuk nomor KK dan nama ayah/ibu) ikut tersedia di paket surat.
+const refreshIncompleteResident = async () => {
+  const current = resident.resident;
+  const requiredKeys = ["birthPlace", "birthDate", "religion", "occupation", "familyCardNumber", "motherName", "fatherName"];
+  const incomplete = !current || requiredKeys.some((key) => !isFilled(current[key]));
+  if (!resident.nik || !resident.isVerified || !incomplete) return;
+
+  try {
+    const response = await publicService.checkCitizenNik(resident.nik);
+    const data = response.data?.data;
+    if (data?.registered && data.resident) resident.setVerifiedResident(data.resident);
+  } catch {
+    // Data cache tetap dipakai bila endpoint sedang tidak tersedia.
+  }
+};
+onMounted(refreshIncompleteResident);
 
 const files = reactive({}); // { "<letterId>::<index>": File }
+const reusedDocuments = reactive({}); // { [shared document id]: citizen document summary }
+const savedDocuments = ref([]);
+const savedDocumentFor = (doc) => savedDocuments.value.find((item) => item.document_type === documentTypeOf(doc.label)) ?? null;
+async function loadSavedDocuments() {
+  if (!resident.nik || !resident.isVerified || !selectedLetters.value.length) {
+    savedDocuments.value = [];
+    return;
+  }
+  try {
+    const lists = await Promise.all(
+      selectedLetters.value
+        .map((letter) => getOnlineLetterConfig(letter.slug)?.code)
+        .filter(Boolean)
+        .map((letterTypeCode) => getReusableDocuments({ nik: resident.nik, letterTypeCode })),
+    );
+    savedDocuments.value = [...new Map(lists.flat().map((item) => [item.citizen_document_id, item])).values()];
+  } catch {
+    savedDocuments.value = [];
+  }
+}
 const preview = reactive({ open: false, file: null, title: "" });
 const openPreview = (d) => Object.assign(preview, { open: true, file: files[d.id], title: d.label });
 const autoFilled = reactive({}); // { [fieldKey]: true } — penanda "terisi otomatis"
@@ -64,6 +114,7 @@ const stepAlert = ref("");
 const selected = ref([...(props.bundle.ui?.preselected ?? [])].filter((id) => props.bundle.letters.some((l) => l.id === id)));
 const selectError = ref(false);
 const selectedLetters = computed(() => props.bundle.letters.filter((l) => selected.value.includes(l.id)));
+watch([() => resident.nik, selected], loadSavedDocuments, { deep: true, immediate: true });
 const docsOf = (letter) => normalizeDocs(letter.documents, letter.id);
 const sectionsOf = (letter) => (letter.id === selectedLetters.value[0]?.id ? [...letter.sections, NOTIF_SECTION] : letter.sections);
 
@@ -248,14 +299,26 @@ function syncShared() {
 }
 function onFileSelect(id, file) {
   (sharedOf(id)?.ids ?? [id]).forEach((x) => (files[x] = file));
+  (sharedOf(id)?.ids ?? [id]).forEach((x) => delete reusedDocuments[x]);
   const next = { ...fileErrors.value };
   delete next[id];
   fileErrors.value = next;
 }
 function onFileRemove(id) {
   (sharedOf(id)?.ids ?? [id]).forEach((x) => delete files[x]);
+  (sharedOf(id)?.ids ?? [id]).forEach((x) => delete reusedDocuments[x]);
 }
-const docsMissing = computed(() => Object.keys(validateDocs(sharedDocs.value, files)).length);
+function onReuseSaved(id, saved) {
+  const ids = sharedOf(id)?.ids ?? [id];
+  ids.forEach((x) => {
+    delete files[x];
+    reusedDocuments[x] = saved;
+  });
+  const next = { ...fileErrors.value };
+  delete next[id];
+  fileErrors.value = next;
+}
+const docsMissing = computed(() => Object.keys(validateDocs(sharedDocs.value, files, reusedDocuments)).length);
 
 /* ---------- Cek ulang ---------- */
 const reviewOpen = reactive({});
@@ -323,6 +386,7 @@ async function sendApplication() {
       slug: letter.slug,
       form: { ...form, ...letterForm },
       files,
+      reusedDocuments,
       documents: docsOf(letter),
       resident: resident.resident || (resident.nik ? { nik: resident.nik } : null),
       serviceFlow: "general",
@@ -475,7 +539,7 @@ async function copyOne(code) {
         </p>
 
         <section class="mt-5 rounded-2xl border p-3 sm:p-5 bg-gradient-to-br from-sky-50/80 to-white border-sky-100">
-          <DocUploader :docs="sharedDocs" :files="files" :errors="fileErrors" @select="onFileSelect" @remove="onFileRemove" />
+          <DocUploader :docs="sharedDocs" :files="files" :errors="fileErrors" :saved="savedDocumentFor" @select="onFileSelect" @reuseSaved="onReuseSaved" @remove="onFileRemove" />
         </section>
 
         <Message v-if="stepAlert" severity="error" :closable="false" class="mt-5">{{ stepAlert }}</Message>
@@ -556,10 +620,11 @@ async function copyOne(code) {
           <ul class="flex flex-col gap-3 border-t border-white/80 bg-white px-3 py-4 text-sm sm:px-4">
             <li v-for="d in sharedDocs" :key="d.id" class="flex flex-wrap items-center gap-x-3 gap-y-2">
               <FileThumb v-if="files[d.id]" :file="files[d.id]" class="h-12 w-12" />
+              <i v-else-if="reusedDocuments[d.id]" class="pi pi-database mx-3.5 shrink-0 text-emerald-600" />
               <i v-else class="pi mx-3.5 shrink-0" :class="d.optional ? 'pi-minus-circle text-[var(--color-text-muted)]' : 'pi-times-circle text-red-500'" />
               <span class="min-w-0 flex-1 basis-40 break-words text-[var(--color-text-h)]">
                 {{ d.label }}
-                <span class="block truncate text-xs text-[var(--color-text-muted)]">{{ files[d.id] ? files[d.id].name : d.optional ? "Tidak diunggah (opsional)" : "Belum diunggah" }}</span>
+                <span class="block truncate text-xs text-[var(--color-text-muted)]">{{ files[d.id] ? files[d.id].name : reusedDocuments[d.id] ? `Dokumen tersimpan: ${reusedDocuments[d.id].file_name}` : d.optional ? "Tidak diunggah (opsional)" : "Belum diunggah" }}</span>
               </span>
               <Button
                 v-if="files[d.id]"

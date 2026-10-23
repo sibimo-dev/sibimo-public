@@ -13,8 +13,10 @@ const props = defineProps({
   errors: { type: Object, default: () => ({}) },
   /* Opsional: (doc) => ({ title, file }) | null — tawarkan memakai file yang sama dari surat lain. */
   suggest: { type: Function, default: null },
+  /* Opsional: (doc) => saved citizen document summary | null. */
+  saved: { type: Function, default: null },
 });
-const emit = defineEmits(["select", "remove", "reuse"]);
+const emit = defineEmits(["select", "remove", "reuse", "reuseSaved"]);
 
 const localErrors = reactive({});
 const preview = reactive({ open: false, file: null, title: "" });
@@ -47,6 +49,11 @@ function onPick(event) {
 function reuse(doc, s) {
   delete localErrors[doc.id];
   emit("reuse", doc.id, s.file);
+}
+
+function reuseSaved(doc, saved) {
+  delete localErrors[doc.id];
+  emit("reuseSaved", doc.id, saved);
 }
 </script>
 
@@ -101,6 +108,15 @@ function reuse(doc, s) {
           />
           <p class="text-sm text-[var(--color-text-muted)]">Belum ada file dipilih</p>
           <p class="text-xs text-[var(--color-text-muted)]">JPG, PNG, atau PDF · maksimal {{ MAX_FILE_MB }} MB</p>
+          <Button
+            v-if="saved && saved(d)"
+            type="button"
+            size="small"
+            text
+            icon="pi pi-database"
+            :label="`Gunakan ${saved(d).file_name}`"
+            @click="reuseSaved(d, saved(d))"
+          />
           <Button
             v-if="suggest && suggest(d)"
             type="button"

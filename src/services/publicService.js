@@ -15,6 +15,8 @@ export default {
   // Kalau path di backend berbeda, cukup ubah string path di bawah ini
   // (cek dengan `php artisan route:list --path=public` di folder backend).
   checkCitizenNik: (nik) => api.post('/public/citizens/check-nik', { nik }),
+  getReusableCitizenDocuments: ({ nik, letterTypeCode }) =>
+    api.post('/public/citizens/reusable-documents', { nik, letter_type_code: letterTypeCode }),
   submitLetterRequest: (payload) => api.post('/public/letter-requests', payload, {
     timeout: 30000,
   }),
