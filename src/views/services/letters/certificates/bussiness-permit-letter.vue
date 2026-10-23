@@ -30,7 +30,6 @@ export const sections = [
     title: "Keperluan",
     fields: [
       f.text("purpose", "Surat Keterangan ini dipergunakan untuk"),
-      f.text("purposeLocation", "di", { placeholder: "Instansi/tempat tujuan, contoh: Bank BRI" }),
     ],
   },
 ];
