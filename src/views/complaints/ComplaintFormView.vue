@@ -58,15 +58,61 @@ const phoneNumber = ref('')
 
 const title = ref('')
 const description = ref('')
-const MIN_DESCRIPTION_LENGTH = 50
-const descriptionCount = computed(() => description.value.length)
-const isDescriptionValid = computed(() => descriptionCount.value >= MIN_DESCRIPTION_LENGTH)
 
 /* --- Lokasi kejadian: geolocation real-time + reverse geocoding (OpenStreetMap Nominatim) --- */
 const locationText = ref('')
-const locationCoordinates = ref(null) // { lat, lng }
-const locatingStatus = ref('idle') // 'idle' | 'loading' | 'success' | 'error'
+const locationCoordinates = ref(null)
+const locatingStatus = ref('idle')
 const locationErrorMessage = ref('')
+const locationAccuracy = ref(null)
+
+const TARGET_ACCURACY_M = 25
+const MAX_WAIT_MS = 15000
+let watchId = null
+let watchTimer = null
+
+function stopWatching() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId)
+    watchId = null
+  }
+  if (watchTimer) {
+    clearTimeout(watchTimer)
+    watchTimer = null
+  }
+}
+
+function formatAddress(a = {}) {
+  const parts = [
+    a.road,
+    a.neighbourhood || a.hamlet,
+    a.village || a.suburb,
+    a.city_district || a.county,
+    a.city || a.town || a.regency,
+  ]
+  return [...new Set(parts.filter(Boolean))].join(', ')
+}
+
+async function applyPosition(position) {
+  const { latitude, longitude, accuracy } = position.coords
+  const fallback = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+  locationCoordinates.value = { lat: latitude, lng: longitude }
+  locationAccuracy.value = Math.round(accuracy)
+  locationText.value = fallback
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1&accept-language=id`
+    )
+    if (!response.ok) throw new Error('Gagal reverse-geocode')
+    const data = await response.json()
+    locationText.value = formatAddress(data?.address) || data?.display_name || fallback
+  } catch {
+    locationText.value = fallback
+  } finally {
+    locatingStatus.value = 'success'
+  }
+}
 
 function handleUseCurrentLocation() {
   if (!('geolocation' in navigator)) {
@@ -75,41 +121,49 @@ function handleUseCurrentLocation() {
     return
   }
 
+  stopWatching()
   locatingStatus.value = 'loading'
   locationErrorMessage.value = ''
+  locationAccuracy.value = null
 
-  navigator.geolocation.getCurrentPosition(
-    async (position) => {
-      const { latitude, longitude } = position.coords
-      locationCoordinates.value = { lat: latitude, lng: longitude }
+  let best = null
+  let done = false
 
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
-        )
-        if (!response.ok) throw new Error('Gagal reverse-geocode')
-        const data = await response.json()
-        locationText.value = data?.display_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-      } catch {
-        locationText.value = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-      } finally {
-        locatingStatus.value = 'success'
+  const finish = () => {
+    if (done) return
+    done = true
+    stopWatching()
+    if (best) applyPosition(best)
+    else {
+      locatingStatus.value = 'error'
+      locationErrorMessage.value = 'Lokasi tidak dapat dideteksi saat ini.'
+    }
+  }
+
+  watchId = navigator.geolocation.watchPosition(
+    (position) => {
+      if (!best || position.coords.accuracy < best.coords.accuracy) {
+        best = position
+        locationAccuracy.value = Math.round(position.coords.accuracy)
       }
+      if (position.coords.accuracy <= TARGET_ACCURACY_M) finish()
     },
     (error) => {
+      if (best) return finish()
+      done = true
+      stopWatching()
       locatingStatus.value = 'error'
-      if (error.code === error.PERMISSION_DENIED) {
-        locationErrorMessage.value = 'Izin lokasi ditolak. Aktifkan izin lokasi untuk situs ini di pengaturan browser Anda.'
-      } else if (error.code === error.POSITION_UNAVAILABLE) {
-        locationErrorMessage.value = 'Lokasi tidak dapat dideteksi saat ini.'
-      } else if (error.code === error.TIMEOUT) {
-        locationErrorMessage.value = 'Waktu permintaan lokasi habis. Coba lagi.'
-      } else {
-        locationErrorMessage.value = 'Gagal mendapatkan lokasi Anda.'
-      }
+      locationErrorMessage.value =
+        error.code === error.PERMISSION_DENIED
+          ? 'Izin lokasi ditolak. Aktifkan izin lokasi untuk situs ini di pengaturan browser Anda.'
+          : error.code === error.TIMEOUT
+            ? 'Waktu permintaan lokasi habis. Coba lagi.'
+            : 'Lokasi tidak dapat dideteksi saat ini.'
     },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    { enableHighAccuracy: true, timeout: MAX_WAIT_MS, maximumAge: 0 }
   )
+
+  watchTimer = setTimeout(finish, MAX_WAIT_MS)
 }
 
 /* ---------------- 3. Bukti Pendukung (drag & drop upload) ---------------- */
@@ -203,6 +257,7 @@ onMounted(() => {
       title.value = draft.title ?? ''
       description.value = draft.description ?? ''
       locationText.value = draft.locationText ?? ''
+      locationCoordinates.value = draft.locationCoordinates ?? null
     }
   } catch {
     // draft rusak/korup, abaikan saja
@@ -217,6 +272,7 @@ function saveDraft() {
     title: title.value,
     description: description.value,
     locationText: locationText.value,
+    locationCoordinates: locationCoordinates.value,
   }
   localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft))
   isDraftSaved.value = true
@@ -230,7 +286,7 @@ const canSubmit = computed(
   () =>
     !!selectedCategory.value &&
     title.value.trim().length > 0 &&
-    isDescriptionValid.value
+    description.value.trim().length > 0
 )
 const isSubmitting = ref(false)
 const isSubmitSuccess = ref(false)
@@ -283,6 +339,7 @@ function resetForm() {
   locationCoordinates.value = null
   locatingStatus.value = 'idle'
   locationErrorMessage.value = ''
+  locationAccuracy.value = null
   clearFiles()
 }
 
@@ -405,19 +462,16 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
             </div>
 
             <div>
-              <div class="mb-1.5 flex items-center justify-between">
-                <label class="text-xs font-semibold text-slate-500">Deskripsi Laporan</label>
-                <span class="text-xs font-medium transition-colors" :class="isDescriptionValid ? 'text-emerald-600' : 'text-slate-400'">
-                  {{ descriptionCount }}/{{ MIN_DESCRIPTION_LENGTH }} karakter minimal
-                </span>
+              <div>
+                <label class="mb-1.5 block text-xs font-semibold text-slate-500">Deskripsi Laporan</label>
+                <Textarea
+                  v-model="description"
+                  rows="4"
+                  placeholder="Ceritakan secara detail mengenai masalah yang Anda temui. Kapan terjadi? Apa dampaknya?"
+                  class="w-full"
+                />
               </div>
-              <Textarea
-                v-model="description"
-                rows="4"
-                placeholder="Ceritakan secara detail mengenai masalah yang Anda temui. Kapan terjadi? Apa dampaknya?"
-                class="w-full"
-                :class="description.length > 0 && !isDescriptionValid ? '!border-amber-300' : ''"
-              />
+
               <div class="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-slate-100">
                 <div
                   class="h-full rounded-full transition-all duration-300"
@@ -454,10 +508,19 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
                   </template>
                 </button>
               </div>
-              <p v-if="locatingStatus === 'error'" class="mt-1.5 text-xs text-red-500">{{ locationErrorMessage }}</p>
-              <p v-else-if="locatingStatus === 'success' && locationCoordinates" class="mt-1.5 text-xs text-slate-400">
-                Koordinat terdeteksi: {{ locationCoordinates.lat.toFixed(6) }}, {{ locationCoordinates.lng.toFixed(6) }}
+              <p v-if="locatingStatus === 'loading' && locationAccuracy" class="mt-1.5 text-xs text-slate-400">
+                Mengunci sinyal GPS... akurasi saat ini ±{{ locationAccuracy }} m
               </p>
+              <p v-else-if="locatingStatus === 'error'" class="mt-1.5 text-xs text-red-500">{{ locationErrorMessage }}</p>
+              <template v-else-if="locatingStatus === 'success' && locationCoordinates">
+                <p class="mt-1.5 text-xs text-slate-400">
+                  Koordinat: {{ locationCoordinates.lat.toFixed(6) }}, {{ locationCoordinates.lng.toFixed(6) }}
+                  <template v-if="locationAccuracy">(akurasi ±{{ locationAccuracy }} m)</template>
+                </p>
+                <p v-if="locationAccuracy > 100" class="mt-1 text-xs text-amber-600">
+                  Akurasi masih rendah. Coba di tempat terbuka atau dari HP, lalu periksa dan sesuaikan alamat/patokan di atas.
+                </p>
+              </template>
             </div>
           </div>
         </section>
