@@ -86,6 +86,7 @@ const files = reactive({}); // { "<letterId>::<index>": File }
 const reusedDocuments = reactive({}); // { [shared document id]: citizen document summary }
 const savedDocuments = ref([]);
 const savedDocumentFor = (doc) => savedDocuments.value.find((item) => item.document_type === documentTypeOf(doc.label)) ?? null;
+const reusedDocumentFor = (doc) => reusedDocuments[doc.id] ?? null;
 async function loadSavedDocuments() {
   if (!resident.nik || !resident.isVerified || !selectedLetters.value.length) {
     savedDocuments.value = [];
@@ -99,6 +100,7 @@ async function loadSavedDocuments() {
         .map((letterTypeCode) => getReusableDocuments({ nik: resident.nik, letterTypeCode })),
     );
     savedDocuments.value = [...new Map(lists.flat().map((item) => [item.citizen_document_id, item])).values()];
+
   } catch {
     savedDocuments.value = [];
   }
@@ -252,7 +254,7 @@ function next() {
   }
 
   // langkah dokumen (1 halaman untuk semua surat)
-  const de = validateDocs(sharedDocs.value, files);
+  const de = validateDocs(sharedDocs.value, files, reusedDocuments);
   if (Object.keys(de).length) {
     fileErrors.value = de;
     stepAlert.value = `Masih ada ${Object.keys(de).length} dokumen wajib yang belum diunggah.`;
@@ -289,6 +291,19 @@ const sharedDocs = computed(() => {
   }
   return [...map.values()];
 });
+const applySavedDocuments = () => {
+  // Dokumen yang cocok langsung dipakai pada pengajuan berikutnya. Untuk
+  // bundle, satu dokumen tersimpan diterapkan ke seluruh id dokumen yang
+  // memiliki label persyaratan sama.
+  for (const doc of sharedDocs.value) {
+    const saved = savedDocumentFor(doc);
+    if (!saved || doc.ids.some((id) => files[id] || reusedDocuments[id])) continue;
+    doc.ids.forEach((id) => {
+      reusedDocuments[id] = saved;
+    });
+  }
+};
+watch(savedDocuments, applySavedDocuments, { deep: true });
 const sharedOf = (id) => sharedDocs.value.find((d) => d.id === id);
 // samakan file untuk surat yang baru ditambahkan / dipilih ulang
 function syncShared() {
@@ -539,7 +554,7 @@ async function copyOne(code) {
         </p>
 
         <section class="mt-5 rounded-2xl border p-3 sm:p-5 bg-gradient-to-br from-sky-50/80 to-white border-sky-100">
-          <DocUploader :docs="sharedDocs" :files="files" :errors="fileErrors" :saved="savedDocumentFor" @select="onFileSelect" @reuseSaved="onReuseSaved" @remove="onFileRemove" />
+          <DocUploader :docs="sharedDocs" :files="files" :errors="fileErrors" :saved="savedDocumentFor" :reused="reusedDocumentFor" @select="onFileSelect" @reuseSaved="onReuseSaved" @remove="onFileRemove" />
         </section>
 
         <Message v-if="stepAlert" severity="error" :closable="false" class="mt-5">{{ stepAlert }}</Message>

@@ -15,6 +15,8 @@ const props = defineProps({
   suggest: { type: Function, default: null },
   /* Opsional: (doc) => saved citizen document summary | null. */
   saved: { type: Function, default: null },
+  /* Opsional: (doc) => saved document currently selected for this request. */
+  reused: { type: Function, default: null },
 });
 const emit = defineEmits(["select", "remove", "reuse", "reuseSaved"]);
 
@@ -22,6 +24,7 @@ const localErrors = reactive({});
 const preview = reactive({ open: false, file: null, title: "" });
 const openPreview = (doc) => Object.assign(preview, { open: true, file: props.files[doc.id], title: doc.label });
 const errorOf = (id) => localErrors[id] || props.errors[id];
+const reusedOf = (doc) => props.reused?.(doc) ?? null;
 
 /* Satu input file tersembunyi dipakai bersama; `pendingId` menandai dokumen yang sedang dipilih. */
 const picker = ref(null);
@@ -70,7 +73,7 @@ function reuseSaved(doc, saved) {
 
       <div
         class="flex min-h-[140px] flex-col justify-center rounded-xl border-2 border-dashed p-3 transition-colors sm:p-4"
-        :class="errorOf(d.id) ? 'border-red-300 bg-red-50' : files[d.id] ? 'border-emerald-300 bg-emerald-50' : 'border-sky-300 bg-sky-50/60'"
+        :class="errorOf(d.id) ? 'border-red-300 bg-red-50' : files[d.id] || reusedOf(d) ? 'border-emerald-300 bg-emerald-50' : 'border-sky-300 bg-sky-50/60'"
       >
         <!-- File sudah dipilih: selalu satu baris. Info file (kiri, boleh terpotong) + tombol (kanan, tidak mengecil). -->
         <div v-if="files[d.id]" class="flex items-center gap-2 sm:gap-3">
@@ -92,6 +95,18 @@ function reuseSaved(doc, saved) {
             />
             <Button icon="pi pi-times" text rounded severity="danger" aria-label="Hapus dokumen" @click="emit('remove', d.id)" />
           </div>
+        </div>
+
+        <div v-else-if="reusedOf(d)" class="flex items-center gap-2 sm:gap-3">
+          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-200 text-emerald-700 sm:h-14 sm:w-14">
+            <i class="pi pi-database text-xl sm:text-2xl" />
+          </span>
+          <div class="min-w-0 flex-1 text-left">
+            <p class="text-sm font-medium text-emerald-800">Dokumen tersimpan</p>
+            <p class="truncate text-xs text-emerald-700">{{ reusedOf(d).file_name }}</p>
+            <p class="text-xs text-emerald-700">Siap digunakan untuk pengajuan ini</p>
+          </div>
+          <Button icon="pi pi-times" text rounded severity="danger" aria-label="Batalkan dokumen tersimpan" @click="emit('remove', d.id)" />
         </div>
 
         <div v-else class="flex flex-col items-center gap-2 py-2 text-center">

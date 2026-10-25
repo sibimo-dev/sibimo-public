@@ -101,6 +101,7 @@ const files = reactive({}); // { [indexDokumen]: File }
 const reusedDocuments = reactive({}); // { [document.id]: citizen document summary }
 const savedDocuments = ref([]);
 const savedDocumentFor = (doc) => savedDocuments.value.find((item) => item.document_type === documentTypeOf(doc.label)) ?? null;
+const reusedDocumentFor = (doc) => reusedDocuments[doc.id] ?? null;
 async function loadSavedDocuments() {
   if (!resident.nik || !resident.isVerified || !onlineSlug.value) {
     savedDocuments.value = [];
@@ -109,6 +110,16 @@ async function loadSavedDocuments() {
   try {
     const type = await getOnlineLetterTypeBySlug(onlineSlug.value);
     savedDocuments.value = type?.code ? await getReusableDocuments({ nik: resident.nik, letterTypeCode: type.code }) : [];
+
+    // Dokumen yang cocok langsung dipakai pada pengajuan berikutnya. Browser
+    // memang tidak mengizinkan pengisian input file secara programatis, jadi
+    // dokumen tersimpan ditandai sebagai lampiran terpilih untuk dikirim ulang.
+    for (const doc of docList.value) {
+      const saved = savedDocumentFor(doc);
+      if (saved && !files[doc.id] && !reusedDocuments[doc.id]) {
+        reusedDocuments[doc.id] = saved;
+      }
+    }
   } catch {
     savedDocuments.value = [];
   }
@@ -251,7 +262,7 @@ async function copyCode() {
       <div v-else-if="current === 1">
         <h2 class="text-lg font-semibold text-[var(--color-text-h)]">Dokumen Pendukung</h2>
         <p class="text-sm mt-1 mb-6 text-[var(--color-text-muted)]">Unggah foto/scan dokumen asli (JPG, PNG, atau PDF, maksimal {{ MAX_FILE_MB }} MB per file).</p>
-        <DocUploader :docs="docList" :files="files" :errors="fileErrors" :saved="savedDocumentFor" @select="onFileSelect" @reuseSaved="reuseSavedDocument" @remove="onFileRemove" />
+        <DocUploader :docs="docList" :files="files" :errors="fileErrors" :saved="savedDocumentFor" :reused="reusedDocumentFor" @select="onFileSelect" @reuseSaved="reuseSavedDocument" @remove="onFileRemove" />
       </div>
 
       <!-- ============ STEP 3: CEK ULANG & KIRIM ============ -->
