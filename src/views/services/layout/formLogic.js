@@ -67,6 +67,26 @@ export function makeResidentLookup(store) {
     }
     if (["nik", "nationalId", "applicantNik"].includes(k)) return store.nik;
     if (["birthPlaceDate", "birth", "birth_place_date"].includes(k)) return formatResidentBirth(store);
+    const spouseFields = {
+      spouseName: "fullName",
+      spouseNik: "nik",
+      spouseBirthPlace: "birthPlace",
+      spouseBirthDate: "birthDate",
+      spouseBirth: "birthPlaceDate",
+      spouseReligion: "religion",
+      spouseOccupation: "occupation",
+      spouseAddress: "address",
+      spouseGender: "gender",
+      spouseFamilyRelationship: "familyRelationship",
+    };
+    if (spouseFields[k]) {
+      const spouse = store.resident?.spouse;
+      if (!spouse) return undefined;
+      // Reformat data lama dari sessionStorage juga, supaya nilai lama seperti
+      // 28/10/1972 tidak tetap tampil setelah format Indonesia diberlakukan.
+      if (spouseFields[k] === "birthPlaceDate") return formatResidentBirth({ resident: spouse }) || spouse.birthPlaceDate;
+      return spouse[spouseFields[k]];
+    }
     if (k === "rtRw") return [store.resident?.rt, store.resident?.rw].filter(Boolean).join(" / ");
     return store.resident?.[k];
   };
@@ -86,6 +106,7 @@ const RESIDENT_FIELD_SOURCES = Object.freeze({
   applicantNationalId: "nik",
   birthPlace: "birthPlace",
   birthDate: "birthDate",
+  applicantBirth: "birthPlaceDate",
   applicantBirthPlace: "birthPlace",
   applicantBirthDate: "birthDate",
   birthPlaceDate: "birthPlaceDate",

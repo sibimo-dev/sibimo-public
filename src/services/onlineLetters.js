@@ -19,7 +19,9 @@ export function documentTypeOf(value) {
   else if (name.includes("shm") || name.includes("letter c")) base = "letter_c";
   else if (name.includes("rt rw") || name.includes("rt atau rw")) base = "surat_rt_rw";
   else if (name.includes("ktp") || name.includes("kartu tanda penduduk")) base = "ktp";
-  if (!["ktp", "kk", "akta_kelahiran", "akta_perkawinan", "akta_perceraian", "surat_kematian", "paspor"].includes(base)) return base;
+  if (!["ktp", "kk", "akta_kelahiran", "akta_perkawinan", "akta_perceraian", "surat_kematian", "paspor"].includes(base)) {
+    return base === "lainnya" ? `lainnya:${(name.trim() || "dokumen").slice(0, 71)}` : base;
+  }
   const scope = name.includes("pasangan") || name.includes("suami") || name.includes("istri") || name.includes("calon")
     ? "spouse"
     : name.includes("ayah") || name.includes("ibu") || name.includes("orang tua") || name.includes("wali")
@@ -95,14 +97,15 @@ function resolveDocumentId(label, documents) {
   if (exact) return exact.letter_type_document_id;
 
   const aliases = [
-    ["kk", "kk"],
-    ["kartutanda", "ktp"],
-    ["ktp", "ktp"],
-    ["pasfoto", "foto"],
+    { needles: ["kk"], candidates: ["kk"] },
+    { needles: ["kartutanda", "ktp"], candidates: ["ktp", "kartutanda"] },
+    // Backend menggunakan "Pass Photo (3x4)", sedangkan label form publik
+    // menggunakan "Pas foto 3x4". Keduanya harus menunjuk dokumen yang sama.
+    { needles: ["pasfoto", "passfoto", "passphoto", "foto"], candidates: ["pasfoto", "passfoto", "passphoto", "foto", "photo"] },
   ];
-  const alias = aliases.find(([needle]) => normalizedLabel.includes(needle));
+  const alias = aliases.find(({ needles }) => needles.some((needle) => normalizedLabel.includes(needle)));
   if (alias) {
-    const match = documents.find((document) => normalize(document.document_name).includes(alias[1]));
+    const match = documents.find((document) => alias.candidates.some((candidate) => normalize(document.document_name).includes(candidate)));
     if (match) return match.letter_type_document_id;
   }
 
