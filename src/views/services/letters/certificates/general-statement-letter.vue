@@ -40,5 +40,5 @@ import LetterWizard from "@/views/services/layout/LetterWizard.vue";
 </script>
 
 <template>
-  <LetterWizard title="Surat Keterangan Umum (Kop Pemerintah Kalurahan)" code="SPI" :sections="sections" :documents="documents" />
+  <LetterWizard title="Surat Keterangan Umum" code="SPI" :sections="sections" :documents="documents" />
 </template>
