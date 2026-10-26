@@ -48,8 +48,7 @@ export const sections = [
     ],
   },
 
-  // TTD: Dukuh dan Pemohon (= data pemohon di atas)
-  signerSection(["hamletHead", ["applicant", "Nama Pemohon", "applicantSignerName"]]),
+  signerSection(["hamletHead", "districtHead", ["applicant", "Nama Pemohon", "applicantSignerName"]]),
 ];
 
 export const documents = [
