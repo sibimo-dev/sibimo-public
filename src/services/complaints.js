@@ -23,6 +23,8 @@ function mapComplaintItem(item) {
     },
     location: item.location ? { text: item.location, latitude: item.latitude, longitude: item.longitude } : null,
     attachments: item.attachments || [],
+    resolution_description: item.resolution_description || "",
+    resolution_attachments: item.resolution_attachments || [],
   };
 }
 

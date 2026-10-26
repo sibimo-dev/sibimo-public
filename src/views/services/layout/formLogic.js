@@ -67,9 +67,116 @@ export function makeResidentLookup(store) {
     }
     if (["nik", "nationalId", "applicantNik"].includes(k)) return store.nik;
     if (["birthPlaceDate", "birth", "birth_place_date"].includes(k)) return formatResidentBirth(store);
+    const spouseFields = {
+      spouseName: "fullName",
+      spouseNik: "nik",
+      spouseBirthPlace: "birthPlace",
+      spouseBirthDate: "birthDate",
+      spouseBirth: "birthPlaceDate",
+      spouseReligion: "religion",
+      spouseOccupation: "occupation",
+      spouseAddress: "address",
+      spouseGender: "gender",
+      spouseFamilyRelationship: "familyRelationship",
+    };
+    if (spouseFields[k]) {
+      const spouse = store.resident?.spouse;
+      if (!spouse) return undefined;
+      // Reformat data lama dari sessionStorage juga, supaya nilai lama seperti
+      // 28/10/1972 tidak tetap tampil setelah format Indonesia diberlakukan.
+      if (spouseFields[k] === "birthPlaceDate") return formatResidentBirth({ resident: spouse }) || spouse.birthPlaceDate;
+      return spouse[spouseFields[k]];
+    }
+    if (k === "rtRw") return [store.resident?.rt, store.resident?.rw].filter(Boolean).join(" / ");
     return store.resident?.[k];
   };
 }
+
+// Field generik yang sering dipakai surat tetapi belum selalu menuliskan
+// `from` satu per satu. Selama field-nya masih kosong, field-field ini aman
+// diambil dari hasil verifikasi NIK warga.
+const RESIDENT_FIELD_SOURCES = Object.freeze({
+  name: "fullName",
+  applicantName: "fullName",
+  applicantFullName: "fullName",
+  fullName: "fullName",
+  titleCode: "titleCode",
+  nik: "nik",
+  applicantNik: "nik",
+  applicantNationalId: "nik",
+  birthPlace: "birthPlace",
+  birthDate: "birthDate",
+  applicantBirth: "birthPlaceDate",
+  applicantBirthPlace: "birthPlace",
+  applicantBirthDate: "birthDate",
+  birthPlaceDate: "birthPlaceDate",
+  birth: "birthPlaceDate",
+  gender: "gender",
+  applicantGender: "gender",
+  maritalStatus: "maritalStatus",
+  applicantMaritalStatus: "maritalStatus",
+  religion: "religion",
+  applicantReligion: "religion",
+  occupation: "occupation",
+  applicantOccupation: "occupation",
+  education: "education",
+  applicantEducation: "education",
+  nationality: "nationality",
+  applicantNationality: "nationality",
+  address: "address",
+  applicantAddress: "address",
+  ktpAddress: "ktpAddress",
+  applicantKtpAddress: "ktpAddress",
+  phoneNumber: "phoneNumber",
+  applicantPhoneNumber: "phoneNumber",
+  phone: "phoneNumber",
+  whatsapp: "phoneNumber",
+  familyCardNumber: "familyCardNumber",
+  kkNumber: "familyCardNumber",
+  kkmNumber: "familyCardNumber",
+  headOfFamilyName: "headOfFamilyName",
+  headOfFamily: "headOfFamilyName",
+  householdHead: "headOfFamilyName",
+  familyRelationship: "familyRelationship",
+  dusun: "dusun",
+  rt: "rt",
+  rw: "rw",
+  rtHeadName: "rtHeadName",
+  rwHeadName: "rwHeadName",
+  rtRw: "rtRw",
+  village: "village",
+  district: "district",
+  regency: "regency",
+  province: "province",
+  postalCode: "postalCode",
+  age: "age",
+  reporterAge: "age",
+  applicantAge: "age",
+  applicantGender: "gender",
+  bloodType: "bloodType",
+  birthCertificateStatus: "birthCertificateStatus",
+  birthCertificateNumber: "birthCertificateNumber",
+  birthCertNumber: "birthCertificateNumber",
+  marriageCertificateStatus: "marriageCertificateStatus",
+  marriageCertificateNumber: "marriageCertificateNumber",
+  marriageCertNumber: "marriageCertificateNumber",
+  marriageDate: "marriageDate",
+  divorceCertificateStatus: "divorceCertificateStatus",
+  divorceCertificateNumber: "divorceCertificateNumber",
+  divorceDate: "divorceDate",
+  physicalDisability: "physicalDisability",
+  disabilityStatus: "disabilityStatus",
+  beliefOrganization: "beliefOrganization",
+  previousAddress: "previousAddress",
+  passportNumber: "passportNumber",
+  passportExpiryDate: "passportExpiryDate",
+  fatherNik: "fatherNationalId",
+  fatherName: "fatherName",
+  motherNik: "motherNationalId",
+  motherName: "motherName",
+});
+
+const residentSourceFor = (field) => field.from ?? RESIDENT_FIELD_SOURCES[field.key];
 
 /*
  * Beberapa surat paket tidak memiliki field generik `nik`/`name`; misalnya
@@ -82,8 +189,12 @@ export function seedVerifiedApplicant(form, store) {
   const values = {
     name: store.resident?.fullName,
     applicantName: store.resident?.fullName,
+    fullName: store.resident?.fullName,
+    titleCode: store.resident?.titleCode,
     nik: store.nik,
     applicantNik: store.nik,
+    familyCardNumber: store.resident?.familyCardNumber,
+    headOfFamilyName: store.resident?.headOfFamilyName,
     birthPlace: store.resident?.birthPlace,
     birthDate: store.resident?.birthDate,
     birthPlaceDate: birthPlaceDate,
@@ -92,8 +203,44 @@ export function seedVerifiedApplicant(form, store) {
     maritalStatus: store.resident?.maritalStatus,
     religion: store.resident?.religion,
     occupation: store.resident?.occupation,
+    education: store.resident?.education,
+    nationality: store.resident?.nationality,
     address: store.resident?.address,
+    ktpAddress: store.resident?.ktpAddress,
+    phoneNumber: store.resident?.phoneNumber,
     applicantAddress: store.resident?.address,
+    familyRelationship: store.resident?.familyRelationship,
+    dusun: store.resident?.dusun,
+    rt: store.resident?.rt,
+    rw: store.resident?.rw,
+    rtHeadName: store.resident?.rtHeadName,
+    rwHeadName: store.resident?.rwHeadName,
+    rtRw: [store.resident?.rt, store.resident?.rw].filter(Boolean).join(" / "),
+    village: store.resident?.village,
+    district: store.resident?.district,
+    regency: store.resident?.regency,
+    province: store.resident?.province,
+    postalCode: store.resident?.postalCode,
+    age: store.resident?.age,
+    bloodType: store.resident?.bloodType,
+    birthCertificateStatus: store.resident?.birthCertificateStatus,
+    birthCertificateNumber: store.resident?.birthCertificateNumber,
+    marriageCertificateStatus: store.resident?.marriageCertificateStatus,
+    marriageCertificateNumber: store.resident?.marriageCertificateNumber,
+    marriageDate: store.resident?.marriageDate,
+    divorceCertificateStatus: store.resident?.divorceCertificateStatus,
+    divorceCertificateNumber: store.resident?.divorceCertificateNumber,
+    divorceDate: store.resident?.divorceDate,
+    physicalDisability: store.resident?.physicalDisability,
+    disabilityStatus: store.resident?.disabilityStatus,
+    beliefOrganization: store.resident?.beliefOrganization,
+    previousAddress: store.resident?.previousAddress,
+    passportNumber: store.resident?.passportNumber,
+    passportExpiryDate: store.resident?.passportExpiryDate,
+    fatherNik: store.resident?.fatherNationalId,
+    fatherName: store.resident?.fatherName,
+    motherNik: store.resident?.motherNationalId,
+    motherName: store.resident?.motherName,
   };
 
   for (const [key, value] of Object.entries(values)) {
@@ -116,8 +263,9 @@ export function fillForm(form, sections, lookup = () => undefined) {
         continue;
       }
       let value = field.default ?? "";
-      if (field.from) {
-        const fromStore = lookup(field.from);
+      const source = residentSourceFor(field);
+      if (source) {
+        const fromStore = lookup(source);
         if (fromStore) value = field.type === "date" ? toDate(fromStore) : fromStore;
       }
       if (!(field.key in form) || (!isFilled(form[field.key]) && isFilled(value))) form[field.key] = value;
@@ -152,9 +300,9 @@ export function validateFields(sections, form) {
   return e;
 }
 
-export function validateDocs(docs, files) {
+export function validateDocs(docs, files, reused = {}) {
   const e = {};
-  for (const d of docs) if (!files[d.id] && !d.optional) e[d.id] = `${d.label} wajib diunggah.`;
+  for (const d of docs) if (!files[d.id] && !reused[d.id] && !d.optional) e[d.id] = `${d.label} wajib diunggah.`;
   return e;
 }
 

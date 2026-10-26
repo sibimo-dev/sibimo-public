@@ -5,6 +5,39 @@ let typesPromise;
 
 const normalize = (value) => String(value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
+export function documentTypeOf(value) {
+  const name = String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ");
+  let base = "lainnya";
+  if (name.includes("kartu keluarga") || /\bkk\b/.test(name)) base = "kk";
+  else if (name.includes("paspor") || name.includes("passport")) base = "paspor";
+  else if (name.includes("akta kelahiran") || name.includes("akta lahir") || name.includes("surat keterangan lahir")) base = "akta_kelahiran";
+  else if (name.includes("akta perkawinan") || name.includes("buku nikah") || name.includes("akta nikah")) base = "akta_perkawinan";
+  else if (name.includes("akta perceraian") || name.includes("surat cerai") || name.includes("cerai")) base = "akta_perceraian";
+  else if (name.includes("surat kematian") || name.includes("akta kematian") || name.includes("meninggal") || name.includes("almarhum")) base = "surat_kematian";
+  else if (name.includes("pas foto") || name.includes("pass photo") || /\bfoto\b/.test(name)) base = "pas_foto";
+  else if (name.includes("pbb")) base = "pbb";
+  else if (name.includes("shm") || name.includes("letter c")) base = "letter_c";
+  else if (name.includes("rt rw") || name.includes("rt atau rw")) base = "surat_rt_rw";
+  else if (name.includes("ktp") || name.includes("kartu tanda penduduk")) base = "ktp";
+  if (!["ktp", "kk", "akta_kelahiran", "akta_perkawinan", "akta_perceraian", "surat_kematian", "paspor"].includes(base)) {
+    return base === "lainnya" ? `lainnya:${(name.trim() || "dokumen").slice(0, 71)}` : base;
+  }
+  const scope = name.includes("pasangan") || name.includes("suami") || name.includes("istri") || name.includes("calon")
+    ? "spouse"
+    : name.includes("ayah") || name.includes("ibu") || name.includes("orang tua") || name.includes("wali")
+      ? "parent"
+      : name.includes("ahli waris")
+        ? "heir"
+        : name.includes("saksi")
+          ? "witness"
+          : name.includes("penerima kuasa") || name.includes("pemberi kuasa")
+            ? "attorney"
+            : name.includes("kematian") || name.includes("meninggal") || name.includes("almarhum") || name.includes("jenazah")
+              ? "deceased"
+              : "applicant";
+  return `${base}:${scope}`;
+}
+
 export async function getOnlineLetterTypes() {
   typesPromise ??= publicService.getLetterTypes().then((response) => response.data?.data ?? []);
   return typesPromise;
@@ -15,6 +48,11 @@ export async function getOnlineLetterTypeBySlug(slug) {
   if (!config) return null;
   const types = await getOnlineLetterTypes();
   return types.find((type) => type.code === config.code) ?? null;
+}
+
+export async function getReusableDocuments({ nik, letterTypeCode }) {
+  const response = await publicService.getReusableCitizenDocuments({ nik, letterTypeCode });
+  return response.data?.data ?? [];
 }
 
 const PLACEHOLDER_NAMES = new Set(["wargauji"]);
@@ -59,14 +97,15 @@ function resolveDocumentId(label, documents) {
   if (exact) return exact.letter_type_document_id;
 
   const aliases = [
-    ["kk", "kk"],
-    ["kartutanda", "ktp"],
-    ["ktp", "ktp"],
-    ["pasfoto", "foto"],
+    { needles: ["kk"], candidates: ["kk"] },
+    { needles: ["kartutanda", "ktp"], candidates: ["ktp", "kartutanda"] },
+    // Backend menggunakan "Pass Photo (3x4)", sedangkan label form publik
+    // menggunakan "Pas foto 3x4". Keduanya harus menunjuk dokumen yang sama.
+    { needles: ["pasfoto", "passfoto", "passphoto", "foto"], candidates: ["pasfoto", "passfoto", "passphoto", "foto", "photo"] },
   ];
-  const alias = aliases.find(([needle]) => normalizedLabel.includes(needle));
+  const alias = aliases.find(({ needles }) => needles.some((needle) => normalizedLabel.includes(needle)));
   if (alias) {
-    const match = documents.find((document) => normalize(document.document_name).includes(alias[1]));
+    const match = documents.find((document) => alias.candidates.some((candidate) => normalize(document.document_name).includes(candidate)));
     if (match) return match.letter_type_document_id;
   }
 
@@ -74,7 +113,7 @@ function resolveDocumentId(label, documents) {
   return fallback?.letter_type_document_id ?? documents[0]?.letter_type_document_id ?? null;
 }
 
-export async function submitOnlineLetter({ slug, form, files, documents, resident, serviceFlow, isNewResident }) {
+export async function submitOnlineLetter({ slug, form, files, documents, reusedDocuments = {}, resident, serviceFlow, isNewResident }) {
   const config = getOnlineLetterConfig(slug);
   if (!config) throw new Error("Surat ini belum tersedia untuk pengajuan online.");
 
@@ -141,11 +180,14 @@ export async function submitOnlineLetter({ slug, form, files, documents, residen
 
   for (const document of documents ?? []) {
     const file = files?.[document.id];
-    if (!file) continue;
     const documentId = resolveDocumentId(document.label, type.documents ?? []);
     if (!documentId) throw new Error(`Dokumen ${document.label} belum memiliki konfigurasi backend.`);
-    payload.append("attachments[]", file, file.name);
-    payload.append("attachment_document_ids[]", String(documentId));
+    if (file) {
+      payload.append("attachments[]", file, file.name);
+      payload.append("attachment_document_ids[]", String(documentId));
+    } else if (reusedDocuments[document.id]) {
+      payload.append(`reused_document_ids[${documentId}]`, String(reusedDocuments[document.id].citizen_document_id ?? reusedDocuments[document.id]));
+    }
   }
 
   const response = await publicService.submitLetterRequest(payload);

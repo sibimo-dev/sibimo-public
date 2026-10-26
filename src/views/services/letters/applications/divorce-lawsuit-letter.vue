@@ -21,7 +21,11 @@ const sections = [
     title: "Data Orang yang Dihadapkan",
     fields: [
       f.select("applicantGender", "Jenis Kelamin", ["Laki-laki", "Perempuan"]),
-      ...biodata("applicant"),
+      f.text("applicantName", "Nama", { from: "fullName" }),
+      f.text("applicantBirth", "Tempat, Tanggal Lahir", { from: "birthPlaceDate" }),
+      f.text("applicantReligion", "Agama", { from: "religion" }),
+      f.text("applicantOccupation", "Pekerjaan", { from: "occupation" }),
+      f.text("applicantAddress", "Alamat", { from: "address" }),
     ],
   },
 
@@ -29,8 +33,11 @@ const sections = [
   {
     title: "Data Suami/Istri",
     fields: [
-      ...biodata("spouse", { religion: false }),
-      f.text("marriageCertNumber", "Surat Nikah (Nomor)"),
+      f.text("spouseName", "Nama", { from: "spouseName" }),
+      f.text("spouseBirth", "Tempat, Tanggal Lahir", { from: "spouseBirth" }),
+      f.text("spouseOccupation", "Pekerjaan", { from: "spouseOccupation" }),
+      f.text("spouseAddress", "Alamat", { from: "spouseAddress" }),
+      f.text("marriageCertNumber", "Surat Nikah (Nomor)", { from: "marriageCertificateNumber" }),
     ],
   },
 
