@@ -55,8 +55,8 @@ export const sections = [
       f.text("familyMember5Name", "Nama anggota 5", { optional: true }), f.text("familyMember5Nik", "NIK anggota 5", { optional: true }),
     ],
   },
-  // TTD: Dukuh dan Pemohon (= data pemohon di atas)
-  signerSection(["hamletHead", ["applicant", "Nama Pemohon", "applicantSignerName"]]),
+  // TTD: Dukuh, Panewu/Camat, dan Pemohon (= data pemohon di atas)
+  signerSection(["hamletHead", "districtHead", ["applicant", "Nama Pemohon", "applicantSignerName"]]),
 ];
 
 export const documents = [
