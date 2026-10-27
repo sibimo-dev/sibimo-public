@@ -84,10 +84,24 @@ function applicantValue(form, resident, ...keys) {
   return "";
 }
 
-function cleanFormValue(value) {
+const isGenderKey = (key) => /(?:gender|jenis[_-]?kelamin)/i.test(String(key ?? ""));
+const normalizeGenderValue = (value) => {
+  const normalized = String(value ?? "")
+    .replace(/^\s*\d+\s*[.)\-:]\s*/, "")
+    .trim()
+    .toLowerCase();
+  if (normalized === "laki-laki") return "Laki-laki";
+  if (normalized === "perempuan") return "Perempuan";
+  return value;
+};
+
+function cleanFormValue(value, key = "") {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
-  if (Array.isArray(value)) return value.map(cleanFormValue);
-  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, cleanFormValue(item)]));
+  if (isGenderKey(key)) return normalizeGenderValue(value);
+  if (Array.isArray(value)) return value.map((item) => cleanFormValue(item));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([childKey, item]) => [childKey, cleanFormValue(item, childKey)]));
+  }
   return value;
 }
 

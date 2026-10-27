@@ -37,7 +37,7 @@ const sections = [
       f.text("spouseBirth", "Tempat, Tanggal Lahir", { from: "spouseBirth" }),
       f.text("spouseOccupation", "Pekerjaan", { from: "spouseOccupation" }),
       f.text("spouseAddress", "Alamat", { from: "spouseAddress" }),
-      f.text("marriageCertNumber", "Surat Nikah (Nomor)", { from: "spouseMarriageCertificateNumber" }),
+      f.text("marriageCertNumber", "Surat Nikah (Nomor)"),
     ],
   },
 

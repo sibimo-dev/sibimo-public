@@ -5,6 +5,7 @@ import "primeicons/primeicons.css";
 
 import App from "@/App.vue";
 import router from "@/router";
+import { setupResidentIdleTimeout } from "@/services/residentIdleTimeout";
 import { SibimoPreset } from "@/theme/sibimoPreset.js";
 import { vReveal } from "@/directives/reveal.js";
 import "@/style.css";
@@ -55,5 +56,7 @@ app.use(PrimeVue, {
     },
   },
 });
+
+setupResidentIdleTimeout(router);
 
 app.mount("#app");

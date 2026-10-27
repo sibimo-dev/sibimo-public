@@ -95,6 +95,7 @@ function chooseType(type) {
             id="verify-nik"
             v-model="nikInput"
             maxlength="16"
+            autocomplete="off"
             placeholder="16 Digit NIK"
             :invalid="!!nikError"
             class="!border-2 !border-violet-200 focus:!border-violet-400 !rounded-xl !py-3 !bg-white"
