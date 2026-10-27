@@ -5,7 +5,7 @@
 // Template PDF: letters/death/death-general-statement.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { DOC } from "@/data/letterFields";
+import { DOC, GENDER_OPTIONS } from "@/data/letterFields";
 
 // Langkah 1: isian sesuai urutan template surat
 // (Nama pejabat, Jabatan, Nomor surat, dan Keperluan diisi sistem/petugas di Blade, bukan oleh pemohon)
@@ -21,7 +21,7 @@ export const sections = [
         key: "jenis_kelamin",
         label: "Jenis Kelamin",
         type: "select",
-        options: ["Laki-laki", "Perempuan"],
+        options: GENDER_OPTIONS,
         required: true,
       },
       {
