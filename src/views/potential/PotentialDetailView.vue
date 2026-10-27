@@ -99,7 +99,7 @@ watch(() => props.slug, (newSlug) => loadData(newSlug))
             {{ item.location }}
           </div>
 
-          <p class="mt-6 text-sm md:text-[15px] leading-relaxed text-default">
+          <p class="mt-6 text-sm md:text-[15px] leading-relaxed text-default whitespace-pre-line">
             {{ item.longDesc }}
           </p>
         </div>

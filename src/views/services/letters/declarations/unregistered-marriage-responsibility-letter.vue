@@ -6,11 +6,20 @@
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
 import { f, OPT, person, DOC, opt } from "@/data/letterFields";
 
+const ROLE_FROM = { Name: "fullName", Nik: "nik", BirthPlace: "birthPlace", BirthDate: "birthDate", Occupation: "occupation", Address: "address" };
+const spouseRole = (block, prefix, role) => ({
+  ...block,
+  fields: block.fields.map((field) => {
+    const source = ROLE_FROM[field.key.slice(prefix.length)];
+    return source ? { ...field, from: `${role}:${source}` } : field;
+  }),
+});
+
 // Langkah 1: isian sesuai surat yang diajukan
 export const sections = [
   // Surat: Nama, NIK, Tempat & Tanggal Lahir, Pekerjaan, Alamat (suami = Pihak Pertama, istri = Pihak Kedua)
-  person("husband", "Data Suami (Pihak Pertama)", ["name", "nik", "birth", "occupation", "address"]),
-  person("wife", "Data Istri (Pihak Kedua)", ["name", "nik", "birth", "occupation", "address"]),
+  spouseRole(person("husband", "Data Suami (Pihak Pertama)", ["name", "nik", "birth", "occupation", "address"]), "husband", "asHusband"),
+  spouseRole(person("wife", "Data Istri (Pihak Kedua)", ["name", "nik", "birth", "occupation", "address"]), "wife", "asWife"),
   {
     title: "Data Perkawinan",
     fields: [f.date("marriageDate", "Tanggal Perkawinan Dilaksanakan")],

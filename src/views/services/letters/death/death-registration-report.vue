@@ -10,7 +10,7 @@ import { dokJenazah, deathDeceased, deathParent, deathWitness, keluarga } from "
 // Langkah 1: Jenazah (Jenis Kelamin/Anak Ke, Tanggal & Jam Kematian), Ibu & Ayah (TTL/Umur, alamat), Saksi (Tgl Lahir/Umur)
 export const sections = [
   keluarga(),
-  deathDeceased(["nik", "name", "gender", "childOrder", "birthPlace", "birthDate", "age", "religion", "occupation", "address", "deathDate", "deathTime", "deathCause", "deathPlace", "informant"]),
+  deathDeceased(["nik", "name", "gender", "birthPlace", "birthDate", "age", "religion", "occupation", "address", "deathDate", "deathTime", "deathCause", "deathPlace", "informant"]),
   deathParent("mother", "Data Ibu", ["nik", "name", "birthPlace", "birthDate", "age", "address"]),
   deathParent("father", "Data Ayah", ["nik", "name", "birthPlace", "birthDate", "age", "address"]),
   deathWitness(1, ["nik", "name", "birthDate", "ageOptional", "address"]),

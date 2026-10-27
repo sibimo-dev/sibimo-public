@@ -17,7 +17,6 @@ import { OPT, almarhum, arrange, birthWitness, dokJenazah, f, keluarga, ortu, pe
 const deceased = almarhum();
 deceased.fields.push(
   f.text("deceasedAge", "Umur (tahun)", { placeholder: "Contoh: 65" }),
-  f.text("deceasedChildOrder", "Anak ke- (dengan huruf)"),
   f.text("deathCertifiedBy", "Yang Menerangkan"),
 );
 
@@ -37,7 +36,7 @@ export const sections = arrange(
       "Data Keluarga": ["familyCardNumber", "headOfFamilyName"],
       "Data Almarhum/Almarhumah": [
         "deceasedNik", "deceasedName", "deceasedGender", "deceasedBirthPlace", "deceasedBirthDate", "deceasedAge", "deceasedReligion", "deceasedOccupation",
-        "deceasedAddress", "deceasedChildOrder", "deathDate", "deathTime", "deathCause", "deathPlace", "deathCertifiedBy",
+        "deceasedAddress", "deathDate", "deathTime", "deathCause", "deathPlace", "deathCertifiedBy",
       ],
       "Data Ibu Almarhum/ah": ["motherNik", "motherName", "motherBirthPlace", "motherBirthDate", "motherOccupation", "motherAddress", "motherNationality"],
       "Data Ayah Almarhum/ah": ["fatherNik", "fatherName", "fatherBirthPlace", "fatherBirthDate", "fatherOccupation", "fatherAddress", "fatherNationality"],
