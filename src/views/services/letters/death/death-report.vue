@@ -38,7 +38,6 @@ export const sections = [
       f.select("deceasedReligion", "Agama", OPT.religion), // 6
       f.select("deceasedOccupation", "Pekerjaan", OPT.occupation, { editable: true }), // 7
       f.area("deceasedAddress", "Alamat", { span: 2 }), // 8
-      f.text("deceasedChildOrder", "Anak ke (dengan huruf)", { placeholder: "Contoh: Kedua" }), // 9
       f.date("deathDate", "Meninggal Hari/Tanggal"), // 10 (nama hari dihitung di Blade)
       f.time("deathTime", "Jam Meninggal"), // 11 (tulisan "WIB" ditambah di Blade)
       f.text("deathCause", "Sebab"), // 12
