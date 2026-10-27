@@ -1,120 +1,77 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
+import api from '@/services/api'
 
-const categories = [
+const unwrap = (request) => request.then((response) => response.data.data)
+
+const MONTHS = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER']
+const MONTH_LABELS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+
+const loading = ref(true)
+const failed = ref(false)
+const apiCategories = ref([])
+const events = ref([])
+
+function stripHtml(html) {
+  if (!html) return ''
+  return new DOMParser().parseFromString(html, 'text/html').body.textContent.trim()
+}
+
+// event_date dibaca sebagai string (bukan new Date) supaya tidak geser karena timezone
+function toEvent(g) {
+  const date = (g.event_date ?? g.uploaded_at ?? '').slice(0, 10)
+  const [, m, d] = date.split('-')
+  return {
+    id: g.gallery_id,
+    day: d ?? '',
+    month: MONTHS[Number(m) - 1] ?? '',
+    monthKey: date.slice(0, 7),
+    category: g.category,
+    location: g.location,
+    title: g.title,
+    description: stripHtml(g.description),
+    image: g.image,
+  }
+}
+
+onMounted(async () => {
+  try {
+    const [cats, list] = await Promise.all([
+      unwrap(api.get('/gallery-categories')),
+      unwrap(api.get('/galleries')),
+    ])
+    apiCategories.value = cats
+    events.value = list.map(toEvent)
+  } catch (e) {
+    failed.value = true
+  } finally {
+    loading.value = false
+  }
+})
+
+const categories = computed(() => [
   { slug: 'all', label: 'Semua' },
-  { slug: 'musyawarah', label: 'Musyawarah' },
-  { slug: 'kegiatan-sosial', label: 'Kegiatan Sosial' },
-  { slug: 'budaya', label: 'Budaya' },
-]
+  ...apiCategories.value.map((c) => ({ slug: c.slug, label: c.name })),
+])
 
-const timeOptions = [
-  { label: 'Semua Waktu', value: 'all' },
-  { label: 'Agustus 2024', value: '2024-08' },
-  { label: 'Juli 2024', value: '2024-07' },
-  { label: 'Juni 2024', value: '2024-06' },
-  { label: 'Mei 2024', value: '2024-05' },
-  { label: 'April 2024', value: '2024-04' },
-  { label: 'Maret 2024', value: '2024-03' },
-  { label: 'Februari 2024', value: '2024-02' },
-  { label: 'Januari 2024', value: '2024-01' },
-]
+// Opsi waktu dibuat otomatis dari bulan yang benar-benar ada di data
+const timeOptions = computed(() => {
+  const keys = [...new Set(events.value.map((e) => e.monthKey).filter(Boolean))].sort().reverse()
+  return [
+    { label: 'Semua Waktu', value: 'all' },
+    ...keys.map((k) => {
+      const [y, m] = k.split('-')
+      return { label: `${MONTH_LABELS[Number(m) - 1]} ${y}`, value: k }
+    }),
+  ]
+})
 
-const events = [
-  {
-    id: 1,
-    day: '02',
-    month: 'SEPTEMBER',
-    monthKey: '2026-09',
-    category: 'musyawarah',
-    location: 'Balai Kalurahan Bimomartani',
-    title: 'MUSRENBANGKAL 2026',
-    description:
-      'Penyusunan perubahan RPJMKAL dan perpanjangan masa jabatan lurah tahun 2028-2029.',
-    image: '/images/gallery/musrenbangkal.jpeg',
-  },
-  {
-    id: 2,
-    day: '10',
-    month: 'AGUSTUS',
-    monthKey: '2026-08',
-    category: 'kegiatan-sosial',
-    location: 'Balai Kalurahan Bimomartani',
-    title: 'Pemberian PMT Kalurahan Bimomartani',
-    description:
-      'Pemberian PMT bagi ibu hamil dan balita stunting Kalurahan Bimomartani.',
-    image: '/images/gallery/Pemberian PMT.jpeg',
-  },
-  {
-    id: 3,
-    day: '11',
-    month: 'AGUSTUS',
-    monthKey: '2026-08',
-    category: 'kegiatan-sosial',
-    location: 'Balai Kalurahan Bimomartani',
-    title: 'Pemberian Bantuan Alat Kesehatan',
-    description:
-      'Pemberian bantuan alat kesehatan di padukuhan.',
-    image: '/images/gallery/Pemberian bantuan alat kesehatan.jpeg',
-  },
-  {
-    id: 4,
-    day: '28',
-    month: 'MEI',
-    monthKey: '2024-05',
-    category: 'budaya',
-    location: 'Pendopo Kalurahan',
-    title: 'Festival Seni & Budaya Kalurahan',
-    description:
-      'Pentas seni tahunan menampilkan potensi budaya lokal, pameran kerajinan tangan BUMDes, dan pertunjukan wayang kulit semalam suntuk sebagai penutup acara.',
-  },
-  {
-    id: 5,
-    day: '20',
-    month: 'APRIL',
-    monthKey: '2026-04',
-    category: 'kegiatan-sosial',
-    location: 'Balai Kalurahan Bimomartani',
-    title: 'Pembinaan Kader',
-    description:
-      'Pembinaan kader di Kalurahan Bimomartani.',
-    image: '/images/gallery/Pembinaan kader.jpeg',
-  },
-  {
-    id: 6,
-    day: '15',
-    month: 'MARET',
-    monthKey: '2024-03',
-    category: 'musyawarah',
-    location: 'Ruang Rapat Kalurahan',
-    title: 'Rapat Koordinasi RT/RW Se-Kalurahan',
-    description:
-      'Koordinasi rutin seluruh ketua RT dan RW se-Kalurahan Bimomartani membahas pendataan warga, keamanan lingkungan, dan persiapan agenda kalurahan mendatang.',
-    image: '/images/gallery/rapat koordinasi.jpeg',
-  },
-  {
-    id: 8,
-    day: '10',
-    month: 'JANUARI',
-    monthKey: '2024-01',
-    category: 'budaya',
-    location: 'Pendopo Kalurahan',
-    title: 'Pentas Wayang Kulit Semalam Suntuk',
-    description:
-      'Pagelaran wayang kulit semalam suntuk dalam rangka bersih kalurahan, menghadirkan dalang lokal dan diikuti oleh seluruh warga dari 12 padukuhan.',
-  },
-]
-
-// Jumlah per kategori dihitung otomatis dari data events
 const categoryList = computed(() =>
-  categories.map((c) => ({
+  categories.value.map((c) => ({
     ...c,
-    count:
-      c.slug === 'all'
-        ? events.length
-        : events.filter((e) => e.category === c.slug).length,
+    count: c.slug === 'all' ? events.value.length : events.value.filter((e) => e.category === c.slug).length,
   }))
 )
 
@@ -124,7 +81,7 @@ const pageSize = 4
 const visibleCount = ref(pageSize)
 
 const filteredEvents = computed(() =>
-  events.filter((e) => {
+  events.value.filter((e) => {
     const matchesCategory = activeCategory.value === 'all' || e.category === activeCategory.value
     const matchesTime = activeTime.value === 'all' || e.monthKey === activeTime.value
     return matchesCategory && matchesTime
@@ -143,7 +100,7 @@ function loadMore() {
 }
 
 function categoryLabel(slug) {
-  return categories.find((c) => c.slug === slug)?.label ?? slug
+  return categories.value.find((c) => c.slug === slug)?.label ?? slug
 }
 
 const categoryStyles = {
@@ -286,7 +243,17 @@ function styleFor(slug) {
 
       <!-- ===== CARD GRID ===== -->
       <div>
-        <div v-if="filteredEvents.length === 0" class="fade-in-up empty-state flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border-default py-14 text-center">
+        <div v-if="loading" class="py-14 text-center text-sm text-muted">
+          <i class="pi pi-spin pi-spinner mb-3 block text-3xl text-muted/40" />
+          Memuat galeri...
+        </div>
+
+        <div v-else-if="failed" class="py-14 text-center text-sm text-muted">
+          <i class="pi pi-exclamation-circle mb-3 block text-3xl text-muted/40" />
+          Gagal memuat galeri. Coba muat ulang halaman.
+        </div>
+
+        <div v-else-if="filteredEvents.length === 0" class="fade-in-up empty-state flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border-default py-14 text-center">
           <i class="pi pi-calendar-times text-3xl text-muted/40" />
           <p class="text-sm text-muted">Belum ada kegiatan untuk kategori/waktu yang dipilih.</p>
         </div>

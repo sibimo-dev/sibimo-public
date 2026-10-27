@@ -1,13 +1,9 @@
+import { reactive } from 'vue'
 import api from './api'
-import {
-  potentials as fallbackPotentials,
-  potentialCategories as fallbackCategories,
-  categoryLabel as rawCategoryLabel,
-  categoryIcon as rawCategoryIcon,
-} from '@/views/potential/potentialData.js'
 
 const backendOrigin = String(api.defaults.baseURL || '').replace(/\/api\/?$/, '')
 const LOCAL_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+const unwrap = (request) => request.then((response) => response.data.data)
 
 function mediaUrl(value) {
   if (!value || typeof value !== 'string') return null
@@ -31,16 +27,48 @@ function mediaUrl(value) {
   return `${backendOrigin}/storage/${source.replace(/^\/+/, '')}`
 }
 
-export const potentialCategories = fallbackCategories
-export const categoryLabel = rawCategoryLabel
-export const categoryIcon = rawCategoryIcon
+function stripHtml(html) {
+  if (!html) return ''
+  const withBreaks = String(html)
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+  return new DOMParser().parseFromString(withBreaks, 'text/html').body.textContent.trim()
+}
+
+// Ikon tidak disimpan di DB; kategori baru memakai ikon default
+const CATEGORY_ICONS = {
+  umkm: 'pi pi-shop',
+  pertanian: 'pi pi-sun',
+  pariwisata: 'pi pi-map',
+  bumdes: 'pi pi-building',
+}
+
+// reactive supaya template ikut update setelah data dimuat
+export const potentialCategories = reactive([{ slug: 'all', label: 'Semua' }])
+
+export async function loadPotentialCategories() {
+  const list = await unwrap(api.get('/village-potential-categories'))
+  potentialCategories.splice(
+    0,
+    potentialCategories.length,
+    { slug: 'all', label: 'Semua' },
+    ...list.map((c) => ({ slug: c.slug, label: c.name, icon: CATEGORY_ICONS[c.slug] })),
+  )
+}
+
+export function categoryLabel(slug) {
+  return potentialCategories.find((c) => c.slug === slug)?.label ?? slug
+}
+
+export function categoryIcon(slug) {
+  return potentialCategories.find((c) => c.slug === slug)?.icon ?? 'pi pi-tag'
+}
 
 export function mapCategory(cat) {
   const c = String(cat || '').toLowerCase().trim()
-  if (c === 'agriculture' || c === 'pertanian') return 'pertanian'
-  if (c === 'tourism' || c === 'pariwisata') return 'pariwisata'
-  if (c === 'bumdes') return 'bumdes'
-  return 'umkm'
+  // jaga-jaga kalau masih ada data lama berkode Inggris
+  const legacy = { agriculture: 'pertanian', tourism: 'pariwisata' }
+  return legacy[c] ?? c
 }
 
 export function normalizePotential(item) {
@@ -56,9 +84,7 @@ export function normalizePotential(item) {
   }
 
   const category = mapCategory(item.category)
-  const image = item.image
-    ? (item.image.startsWith('/images/') ? item.image : mediaUrl(item.image))
-    : null
+  const image = item.image ? mediaUrl(item.image) : null
 
   return {
     potential_id: item.potential_id,
@@ -66,8 +92,8 @@ export function normalizePotential(item) {
     category,
     name: item.title || item.name || 'Tanpa Judul',
     image,
-    shortDesc: item.short_desc || item.shortDesc || item.description || '',
-    longDesc: item.description || item.longDesc || item.short_desc || '',
+    shortDesc: stripHtml(item.short_desc || item.shortDesc || item.description || ''),
+    longDesc: stripHtml(item.description || item.longDesc || item.short_desc || ''),
     location: item.location || 'Kalurahan Bimomartani',
     contact: item.contact || 'Kalurahan Bimomartani',
     extra: extra && typeof extra === 'object' ? extra : {},
@@ -77,24 +103,14 @@ export function normalizePotential(item) {
 let cachedPotentials = null
 
 export async function fetchPotentials() {
-  try {
-    const res = await api.get('/village-potentials')
-    const rawList = Array.isArray(res.data?.data)
-      ? res.data.data
-      : Array.isArray(res.data)
-      ? res.data
-      : []
+  const res = await api.get('/village-potentials')
+  const rawList = Array.isArray(res.data?.data)
+    ? res.data.data
+    : Array.isArray(res.data)
+    ? res.data
+    : []
 
-    if (rawList.length > 0) {
-      cachedPotentials = rawList.map(normalizePotential)
-      return cachedPotentials
-    }
-  } catch (error) {
-    console.warn('[Potential] Gagal memuat dari API, menggunakan data fallback lokal:', error)
-  }
-
-  // Fallback ke data lokal jika API bermasalah atau kosong
-  cachedPotentials = fallbackPotentials.map(normalizePotential)
+  cachedPotentials = rawList.map(normalizePotential)
   return cachedPotentials
 }
 

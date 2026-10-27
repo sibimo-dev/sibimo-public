@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
   potentialCategories,
+  loadPotentialCategories,
   fetchPotentials,
   categoryLabel,
   categoryIcon,
@@ -12,15 +13,25 @@ const activeCategory = ref('all')
 const potentials = ref([])
 const loading = ref(true)
 
+const failed = ref(false)
+
 onMounted(async () => {
   try {
-    potentials.value = await fetchPotentials()
+    const [list] = await Promise.all([fetchPotentials(), loadPotentialCategories()])
+    potentials.value = list
   } catch (err) {
+    failed.value = true
     console.error('Gagal memuat potensi:', err)
   } finally {
     loading.value = false
   }
 })
+
+const visibleCategories = computed(() =>
+  potentialCategories.filter(
+    (c) => c.slug === 'all' || potentials.value.some((p) => p.category === c.slug),
+  ),
+)
 
 const filteredPotentials = computed(() =>
   activeCategory.value === 'all'
@@ -121,7 +132,7 @@ const allTabActive = 'border-transparent bg-gradient-to-r from-primary-500 via-v
     <!-- ===== FILTER TABS ===== -->
     <div class="fade-in-up mt-6 flex flex-wrap gap-2" style="animation-delay: 60ms">
       <button
-        v-for="c in potentialCategories"
+        v-for="c in visibleCategories"
         :key="c.slug"
         @click="activeCategory = c.slug"
         class="filter-tab flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-200 active:scale-95"
@@ -142,6 +153,11 @@ const allTabActive = 'border-transparent bg-gradient-to-r from-primary-500 via-v
     <div v-if="loading" class="fade-in-up mt-10 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border-default py-14 text-center">
       <i class="pi pi-spin pi-spinner text-3xl text-primary-500" />
       <p class="text-sm text-muted">Memuat data potensi...</p>
+    </div>
+
+    <div v-else-if="failed" class="fade-in-up mt-10 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border-default py-14 text-center">
+      <i class="pi pi-exclamation-circle text-3xl text-muted/40" />
+      <p class="text-sm text-muted">Gagal memuat data potensi. Coba muat ulang halaman.</p>
     </div>
 
     <div v-else-if="filteredPotentials.length === 0" class="fade-in-up empty-state mt-10 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border-default py-14 text-center">
