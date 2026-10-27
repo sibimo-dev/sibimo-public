@@ -62,10 +62,29 @@ const allSections = computed(() => [
 ]);
 
 const form = reactive({});
+const clearUnavailableSpouseFields = () => {
+  const current = resident.resident;
+  const status = String(current?.maritalStatus ?? "").trim().toLowerCase();
+  const relation = String(current?.familyRelationship ?? "").trim().toLowerCase();
+  const hasEligibleSpouse = current?.spouse
+    && status
+    && !/belum|cerai|janda|duda|jejaka|perawan/i.test(status)
+    && /kawin|menikah/i.test(status)
+    && relation
+    && !/anak|menantu|cucu|orang ?tua|saudara|famili/i.test(relation)
+    && /suami|istri|kepala|\bkk\b/i.test(relation);
+  if (hasEligibleSpouse) return;
+  for (const section of allSections.value) {
+    for (const field of section.fields) {
+      if (/^(spouse|husband|wife)/i.test(String(field.key))) form[field.key] = field.default ?? "";
+    }
+  }
+};
 const syncResidentData = () => {
   // Jalankan lagi setelah hasil verifikasi NIK tersedia/berubah. Form public
   // dibuka setelah verifikasi, tetapi watcher ini juga menangani navigasi cepat
   // atau state yang dipulihkan dari sessionStorage.
+  clearUnavailableSpouseFields();
   fillForm(form, allSections.value, makeResidentLookup(resident));
   seedVerifiedApplicant(form, resident);
 };

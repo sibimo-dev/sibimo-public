@@ -58,12 +58,27 @@ export function formatResidentBirth(store) {
 export function makeResidentLookup(store) {
   const gender = () => store.resident?.gender;
   const role = () => (gender() === "Laki-laki" ? "Father" : gender() === "Perempuan" ? "Mother" : null);
+  const eligibleSpouseContext = () => {
+    const resident = store.resident;
+    const status = String(resident?.maritalStatus ?? "").trim().toLowerCase();
+    const relation = String(resident?.familyRelationship ?? "").trim().toLowerCase();
+    if (!resident?.spouse || !status || /belum|cerai|janda|duda|jejaka|perawan/i.test(status) || !/kawin|menikah/i.test(status)) return false;
+    if (!relation || /anak|menantu|cucu|orang ?tua|saudara|famili/i.test(relation)) return false;
+    return /suami|istri|kepala|\bkk\b/i.test(relation);
+  };
   return (k) => {
     if (k === "parentRole") return role() === "Father" ? "Ayah" : role() === "Mother" ? "Ibu" : undefined;
     const m = /^as(Father|Mother):(.+)$/.exec(k);
     if (m) {
       if (role() !== m[1]) return undefined;
       k = m[2];
+    }
+    const couple = /^(asHusband|asWife):(.+)$/.exec(k);
+    if (couple) {
+      if (!eligibleSpouseContext()) return undefined;
+      const requestedRole = couple[1] === "asHusband" ? "Laki-laki" : "Perempuan";
+      const current = gender() === requestedRole ? store.resident : store.resident?.spouse;
+      return current?.[couple[2]];
     }
     if (["nik", "nationalId", "applicantNik"].includes(k)) return store.nik;
     if (["birthPlaceDate", "birth", "birth_place_date"].includes(k)) return formatResidentBirth(store);
