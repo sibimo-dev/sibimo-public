@@ -72,7 +72,11 @@ const syncResidentData = () => {
 syncResidentData();
 watch(
   [() => resident.nik, () => resident.resident],
-  syncResidentData,
+  async () => {
+    syncResidentData();
+    await refreshIncompleteResident();
+    syncResidentData();
+  },
   { deep: true },
 );
 
@@ -93,7 +97,10 @@ const refreshIncompleteResident = async () => {
     // Data cache tetap dipakai bila endpoint sedang tidak tersedia.
   }
 };
-onMounted(refreshIncompleteResident);
+onMounted(async () => {
+  await refreshIncompleteResident();
+  syncResidentData();
+});
 
 const docList = computed(() => normalizeDocs(props.documents, "", form));
 
