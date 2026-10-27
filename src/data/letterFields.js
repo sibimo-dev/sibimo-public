@@ -158,7 +158,10 @@ export const perkawinanOrtu = () => ({
   ],
 });
 
-export const saksi = (n) => person(`witness${n}`, `Data Saksi ${n}`, ["name", "nik", "birth", "address"]);
+export const saksi = (n) => {
+  const section = person(`witness${n}`, `Data Saksi ${n}`, ["name", "nik", "birth", "address"]);
+  return { ...section, fields: section.fields.map((field) => ({ ...field, optional: true })) };
+};
 
 export const almarhum = () => ({
   title: "Data Almarhum/Almarhumah",
@@ -265,10 +268,10 @@ export const calonPengantin = () => ({ title: "Calon Pengantin", fields: [f.text
 export const DOC_LAHIR = "Surat keterangan lahir dari dokter/bidan/penolong kelahiran";
 export const bayi = () => [keluarga(), anak({ detail: true }), ortu("mother", "Data Ibu Kandung"), ortu("father", "Data Ayah Kandung"), perkawinanOrtu(),
   pemohonRingkas([f.text("reporterRelation", "Hubungan pelapor dengan bayi", { placeholder: "Contoh: Ayah, Ibu, Kakek" })]), saksi(1), saksi(2)];
-export const dokBayi = () => [DOC_LAHIR, DOC.kk, "Fotokopi KTP ayah dan ibu", DOC.akta, DOC.ktpSaksi];
+export const dokBayi = () => [DOC_LAHIR, DOC.kk, "Fotokopi KTP ayah dan ibu", DOC.akta, opt(DOC.ktpSaksi)];
 
 export const jenazah = () => [keluarga(), almarhum(), pelaporKematian(), saksi(1), saksi(2)];
-export const dokJenazah = () => [DOC.suratKematian, DOC.kk, "Fotokopi KTP almarhum/almarhumah", "Fotokopi KTP pelapor", DOC.ktpSaksi];
+export const dokJenazah = () => [DOC.suratKematian, DOC.kk, "Fotokopi KTP almarhum/almarhumah", "Fotokopi KTP pelapor", opt(DOC.ktpSaksi)];
 
 export const DOC_LETTER_C = "Fotokopi Letter C / bukti kepemilikan tanah";
 export const DOC_PBB = opt("Fotokopi SPPT PBB");
@@ -389,10 +392,10 @@ export const birthParentsMarriage = (parts = BIRTH_MARRIAGE_RECORD) => ({ title:
 export const birthWitness = (n) => ({
   title: `Data Saksi ${n}`,
   fields: [
-    f.nik(`witness${n}Nik`),
-    f.text(`witness${n}Name`, "Nama Lengkap"),
-    f.text(`witness${n}Age`, "Umur (tahun)", { placeholder: "Contoh: 40" }),
-    f.area(`witness${n}Address`, "Alamat", { span: 2 }),
+    f.nik(`witness${n}Nik`, "NIK", { optional: true }),
+    f.text(`witness${n}Name`, "Nama Lengkap", { optional: true }),
+    f.text(`witness${n}Age`, "Umur (tahun)", { optional: true, placeholder: "Contoh: 40" }),
+    f.area(`witness${n}Address`, "Alamat", { optional: true, span: 2 }),
   ],
 });
 
@@ -535,7 +538,10 @@ const DEATH_WITNESS = {
   ageOptional: (n) => [f.text(`witness${n}Age`, "Umur (tahun)", { optional: true, placeholder: "Isi bila tanggal lahir tidak diketahui" })],
   address: (n) => [f.area(`witness${n}Address`, "Alamat", { span: 2 })],
 };
-export const deathWitness = (n, parts = ["nik", "name", "age", "address"]) => ({ title: `Data Saksi ${n}`, fields: parts.flatMap((p) => DEATH_WITNESS[p](n)) });
+export const deathWitness = (n, parts = ["nik", "name", "age", "address"]) => ({
+  title: `Data Saksi ${n}`,
+  fields: parts.flatMap((p) => DEATH_WITNESS[p](n)).map((field) => ({ ...field, optional: true })),
+});
 
 /* ---------- Yang bertanda tangan / pemohon (terisi otomatis dari data warga) ---------- */
 const DEATH_SIGNER = {

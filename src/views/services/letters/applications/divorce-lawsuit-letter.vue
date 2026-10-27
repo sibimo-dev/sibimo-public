@@ -7,11 +7,11 @@ import { f, DOC, opt } from "@/data/letterFields";
 // Helper: field biodata sesuai urutan di surat
 // Urutan: Nama, Tempat tgl lhr, [Agama], Pekerjaan, Alamat
 const biodata = (prefix, { religion = true } = {}) => [
-  f.text(`${prefix}Name`, "Nama"),
-  f.text(`${prefix}Birth`, "Tempat, Tanggal Lahir"),
-  ...(religion ? [f.text(`${prefix}Religion`, "Agama")] : []),
-  f.text(`${prefix}Occupation`, "Pekerjaan"),
-  f.text(`${prefix}Address`, "Alamat"),
+  f.text(`${prefix}Name`, "Nama", { optional: true }),
+  f.text(`${prefix}Birth`, "Tempat, Tanggal Lahir", { optional: true }),
+  ...(religion ? [f.text(`${prefix}Religion`, "Agama", { optional: true })] : []),
+  f.text(`${prefix}Occupation`, "Pekerjaan", { optional: true }),
+  f.text(`${prefix}Address`, "Alamat", { optional: true }),
 ];
 
 // Langkah 1: isian sesuai surat
