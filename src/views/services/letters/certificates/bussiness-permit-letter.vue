@@ -13,7 +13,7 @@ export const sections = [
       f.text("name", "Nama"),
       f.text("birthPlaceDate", "Tempat/Tgl. Lahir", { placeholder: "Contoh: Sleman, 17 Agustus 1990" }),
       f.text("nik", "NIK"),
-      f.text("gender", "Jenis Kelamin", { placeholder: "Laki-laki / Perempuan" }),
+      f.text("gender", "Jenis Kelamin", { placeholder: "1. Laki-laki / 2. Perempuan" }),
       f.text("maritalStatus", "Status Perkawinan", { placeholder: "Belum Kawin / Kawin / Cerai Hidup / Cerai Mati" }),
       f.text("occupation", "Pekerjaan"),
       f.area("address", "Alamat", { span: 2 }),

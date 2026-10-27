@@ -24,6 +24,7 @@ const emit = defineEmits(["edit"]);
 
 const hueFor = (i) => HUES[SECTION_HUES[i % SECTION_HUES.length]];
 const edit = (key) => emit("edit", key);
+const hasObjectOptions = (options) => Array.isArray(options) && options.some((option) => option && typeof option === "object");
 
 const hamletOptions = ref([]);
 const hamletSuggestions = ref([]);
@@ -97,7 +98,7 @@ const minRows = (field) => field.min ?? (field.optional ? 0 : 1);
               </span>
             </label>
 
-            <Select v-if="field.type === 'select'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :options="field.options" :editable="field.editable" :disabled="field.readonly || field.disabled" placeholder="Pilih" :invalid="!!errors[field.key]" class="w-full" @update:modelValue="edit(field.key)" />
+            <Select v-if="field.type === 'select'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :options="field.options" :optionLabel="hasObjectOptions(field.options) ? 'label' : undefined" :optionValue="hasObjectOptions(field.options) ? 'value' : undefined" :editable="field.editable" :disabled="field.readonly || field.disabled" placeholder="Pilih" :invalid="!!errors[field.key]" class="w-full" @update:modelValue="edit(field.key)" />
             <DatePicker v-else-if="field.type === 'date'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" showIcon iconDisplay="input" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :disabled="field.readonly || field.disabled" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
             <AutoComplete v-else-if="field.type === 'hamlet'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :suggestions="hamletSuggestions" dropdown placeholder="Pilih atau ketik nama dusun" :disabled="field.readonly || field.disabled" :invalid="!!errors[field.key]" class="w-full" inputClass="w-full" @complete="searchHamlets" @update:modelValue="edit(field.key)" />
             <Textarea v-else-if="field.type === 'textarea'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" rows="3" autoResize :placeholder="field.placeholder" :readonly="field.readonly" :disabled="field.disabled" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
@@ -130,7 +131,7 @@ const minRows = (field) => field.min ?? (field.optional ? 0 : 1);
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
                   <div v-for="c in field.columns" :key="c.key" class="flex flex-col gap-1">
                     <label class="text-xs text-[var(--color-text-h)]">{{ c.label }}</label>
-                    <Select v-if="c.type === 'select'" v-model="row[c.key]" :options="c.options" placeholder="Pilih" class="w-full" :invalid="rowInvalid(field, row, c)" />
+                    <Select v-if="c.type === 'select'" v-model="row[c.key]" :options="c.options" :optionLabel="hasObjectOptions(c.options) ? 'label' : undefined" :optionValue="hasObjectOptions(c.options) ? 'value' : undefined" placeholder="Pilih" class="w-full" :invalid="rowInvalid(field, row, c)" />
                     <DatePicker v-else-if="c.type === 'date'" v-model="row[c.key]" showIcon iconDisplay="input" dateFormat="dd/mm/yy" :invalid="rowInvalid(field, row, c)" />
                     <InputText v-else v-model="row[c.key]" :invalid="rowInvalid(field, row, c)" />
                   </div>

@@ -23,6 +23,30 @@ export function display(field, v) {
 
 export const filledRows = (field, form) => form[field.key].filter((r) => Object.values(r).some(isFilled));
 
+const optionValue = (option) => option && typeof option === "object"
+  ? option.value ?? option.label
+  : option;
+const bareOption = (value) => String(value ?? "")
+  .replace(/^\s*\d+\s*[.)\-:]\s*/, "")
+  .trim()
+  .toLowerCase();
+const numberedGender = (value) => {
+  const bare = bareOption(value);
+  if (bare === "laki-laki") return "1. Laki-laki";
+  if (bare === "perempuan") return "2. Perempuan";
+  return value;
+};
+const isGenderField = (field) => {
+  const key = String(field.key ?? "").toLowerCase();
+  const label = String(field.label ?? "").toLowerCase();
+  return field.from === "gender" || key.includes("gender") || key.includes("jeniskelamin") || label.includes("jenis kelamin");
+};
+const selectValue = (field, raw) => {
+  if (field.type !== "select" || !Array.isArray(field.options)) return isGenderField(field) ? numberedGender(raw) : raw;
+  const hit = field.options.find((option) => bareOption(optionValue(option)) === bareOption(raw));
+  return hit === undefined ? (isGenderField(field) ? numberedGender(raw) : raw) : optionValue(hit);
+};
+
 /* Normalisasi daftar dokumen: "Nama" atau { label, optional } → { id, label, optional }.
    Mendukung fungsi dinamis (form) => [] dan prefix unik untuk paket surat. */
 export function normalizeDocs(documents = [], prefix = "", form = null) {
@@ -93,6 +117,7 @@ export function makeResidentLookup(store) {
       spouseAddress: "address",
       spouseGender: "gender",
       spouseFamilyRelationship: "familyRelationship",
+      spouseMarriageCertificateNumber: "marriageCertificateNumber",
     };
     if (spouseFields[k]) {
       const spouse = store.resident?.spouse;
@@ -281,7 +306,7 @@ export function fillForm(form, sections, lookup = () => undefined) {
       const source = residentSourceFor(field);
       if (source) {
         const fromStore = lookup(source);
-        if (fromStore) value = field.type === "date" ? toDate(fromStore) : fromStore;
+        if (fromStore) value = field.type === "date" ? toDate(fromStore) : selectValue(field, fromStore);
       }
       if (!(field.key in form) || (!isFilled(form[field.key]) && isFilled(value))) form[field.key] = value;
     }
