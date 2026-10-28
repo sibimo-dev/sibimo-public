@@ -64,7 +64,7 @@ export const sections = arrange(
 );
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
-export const documents = ["Fotokopi KTP suami dan istri", DOC.kk, DOC.ktpSaksi];
+export const documents = ["Fotokopi KTP suami dan istri", DOC.kk, opt(DOC.ktpSaksi)];
 </script>
 
 <script setup>
