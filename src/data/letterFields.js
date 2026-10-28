@@ -200,7 +200,7 @@ export const akad = () => ({
     f.text("akadPlace", "Tempat Akad Nikah", { span: 2 }),
   ],
 });
-const NIKAH = ["name", "nik", "birth", "nationality", "religion", "occupation", "education", "address"];
+const NIKAH = ["name", "nik", "birth", "gender", "nationality", "religion", "occupation", "education", "address"];
 export const calonSuami = (parts = NIKAH) => person("groom", "Data Calon Suami", parts, [f.text("groomBin", "Bin (nama ayah)")]);
 export const calonIstri = (parts = NIKAH) => person("bride", "Data Calon Istri", parts, [f.text("brideBinti", "Binti (nama ayah)")]);
 export const ortuNikah = (prefix, title, binLabel) =>

@@ -2,16 +2,26 @@
 // Data Isian Pendaftaran Nikah
 import { DOC, N7, akad, calonIstri, calonSuami, f, opt, ortuNikah, person } from "@/data/letterFields";
 
+const onlyWhen = (section, predicate) => ({
+  ...section,
+  fields: section.fields.map((field) => ({
+    ...field,
+    showIf: (form) => predicate(form) && (!field.showIf || field.showIf(form)),
+  })),
+});
+const isDuda = (form) => /^(duda|cerai\s*(hidup|mati))$/i.test(String(form.groomStatus ?? "").trim());
+const isJanda = (form) => /^(janda|cerai\s*(hidup|mati))$/i.test(String(form.brideStatus ?? "").trim());
+
 export const sections = [
   akad(),
   calonSuami(N7),
   calonIstri(N7),
-  { title: "Status Calon Istri", fields: [f.select("brideStatus", "Status", ["Perawan", "Janda"])] },
-  person("exHusband", "Data Suami Terdahulu (isi jika janda)", N7, [
+  { title: "Status Calon Istri", fields: [f.select("brideStatus", "Status", ["Perawan", "Janda"], { from: "maritalStatus" })] },
+  onlyWhen(person("exHusband", "Data Suami Terdahulu (isi jika janda)", N7, [
     f.text("exHusbandBin", "Bin (nama ayah)"),
     f.date("exHusbandDiedAt", "Tanggal meninggal"),
     f.text("exHusbandDiedPlace", "Tempat meninggal"),
-  ]),
+  ]), isJanda),
   ortuNikah("brideFather", "Data Ayah Calon Istri", "Bin (nama ayah dari ayah)"),
   ortuNikah("brideMother", "Data Ibu Calon Istri", "Binti (nama ayah dari ibu)"),
   person("guardian", "Data Wali Nikah (isi jika wali nasab bukan ayah kandung)", N7, [

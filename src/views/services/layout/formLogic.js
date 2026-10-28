@@ -41,7 +41,24 @@ const isGenderField = (field) => {
   const label = String(field.label ?? "").toLowerCase();
   return field.from === "gender" || key.includes("gender") || key.includes("jeniskelamin") || label.includes("jenis kelamin");
 };
+const catinStatusValue = (field, raw) => {
+  const key = String(field.key ?? "").toLowerCase();
+  if (key !== "groomstatus" && key !== "bridestatus") return undefined;
+  const value = bareOption(raw);
+  const isDivorced = /duda|janda|cerai|balu|widow/.test(value);
+  if (key === "groomstatus") {
+    if (isDivorced) return "Duda";
+    if (/kawin|menikah|beristri|married/.test(value)) return "Beristri";
+    if (/belum|lajang|jejaka|perawan|single|unmarried/.test(value)) return "Jejaka";
+  } else {
+    if (isDivorced) return "Janda";
+    if (/belum|lajang|jejaka|perawan|single|unmarried/.test(value)) return "Perawan";
+  }
+  return undefined;
+};
 const selectValue = (field, raw) => {
+  const catinStatus = catinStatusValue(field, raw);
+  if (catinStatus !== undefined) return catinStatus;
   if (field.type !== "select" || !Array.isArray(field.options)) return isGenderField(field) ? numberedGender(raw) : raw;
   const hit = field.options.find((option) => bareOption(optionValue(option)) === bareOption(raw));
   return hit === undefined ? (isGenderField(field) ? numberedGender(raw) : raw) : optionValue(hit);
@@ -390,13 +407,22 @@ export function buildAliasIndex(pairs = []) {
    (termasuk hasil revisi pengguna) tidak pernah ditimpa. Mengembalikan daftar kunci yang terisi. */
 export function applyAliases(form, sections, index) {
   const filled = [];
+  const aliasValue = (field, peer, value) => {
+    if (field.key === "maritalStatus" && /status$/i.test(String(peer))) {
+      const status = bareOption(value);
+      if (/jejaka|perawan|belum|lajang|single|unmarried/.test(status)) return "Belum Kawin";
+      if (/duda|janda|cerai|widow|balu/.test(status)) return "Cerai Hidup";
+      if (/beristri|kawin|menikah|married/.test(status)) return "Kawin";
+    }
+    return value;
+  };
   for (const section of sections) {
     for (const field of section.fields) {
       if (field.type === "rows" || field.type === "checks") continue;
       if (!visible(field, form) || isFilled(form[field.key])) continue;
       const peer = (index[field.key] ?? []).find((k) => k !== field.key && isFilled(form[k]));
       if (!peer) continue;
-      const v = form[peer];
+      const v = aliasValue(field, peer, form[peer]);
       form[field.key] = v instanceof Date ? new Date(v.getTime()) : v;
       filled.push(field.key);
     }
