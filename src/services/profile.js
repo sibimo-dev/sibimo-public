@@ -79,7 +79,12 @@ export async function getVisionMissions() {
 
 export async function getOrganizationalStructures() {
   const data = await unwrap(freshGet('/organizational-structures'))
-  return asRecords(data)
+  return asRecords(data).map((item) => ({
+    ...item,
+    levels: asArray(item.levels),
+    former_officials: asArray(item.former_officials),
+    show_former_officials: [true, 1, '1', 'true'].includes(item.show_former_officials),
+  }))
 }
 
 export async function getRegions() {

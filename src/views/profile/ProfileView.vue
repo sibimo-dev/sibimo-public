@@ -56,6 +56,18 @@ const orgStructure = computed(() => (
   Array.isArray(orgStructureData.value?.levels) ? orgStructureData.value.levels : []
 ))
 
+const formerOfficials = computed(() => {
+  const data = orgStructureData.value
+  if (!data || !data.show_former_officials) return []
+  return Array.isArray(data.former_officials) ? data.former_officials : []
+})
+
+function formatMasaJabatan(item) {
+  if (!item?.start_year && !item?.end_year) return '—'
+  if (item.start_year && !item.end_year) return `${item.start_year} – Sekarang`
+  return `${item.start_year ?? '?'} – ${item.end_year}`
+}
+
 const heroOffset = ref(0)
 let rafId = null
 function onHeroScroll() {
@@ -179,7 +191,9 @@ async function loadProfile() {
   if (cached) {
     history.value = cached.history ?? null
     visionMission.value = cached.visionMission ?? null
-    orgStructureData.value = cached.orgStructure ?? null
+    orgStructureData.value = Array.isArray(cached.orgStructure)
+      ? (cached.orgStructure[0] ?? null)
+      : (cached.orgStructure ?? null)
     regions.value = cached.regions ?? []
     applyRegionStats(regions.value)
     nextTick(observeRevealElements)
@@ -646,6 +660,9 @@ async function initMap() {
                     <div class="flex flex-col items-center justify-center text-center sm:items-start sm:text-left">
                       <span class="text-sm font-bold uppercase tracking-wider text-amber-400">{{ level.level }} Kalurahan Bimomartani</span>
                       <h3 class="mt-2 text-2xl font-bold leading-tight text-white sm:text-3xl">{{ p.name }}</h3>
+                      <p v-if="p.start_year || p.end_year" class="mt-1 text-sm font-semibold text-amber-300">
+                        Masa Jabatan: {{ formatMasaJabatan(p) }}
+                      </p>
                       <p class="mt-3 text-base leading-relaxed text-blue-100/80">{{ p.desc }}</p>
                     </div>
                   </div>
@@ -683,6 +700,9 @@ async function initMap() {
                 <div class="flex flex-1 flex-col items-center px-3 py-3 text-center">
                   <p class="text-sm font-bold leading-tight text-slate-900">{{ p.name }}</p>
                   <p class="mt-1 text-xs font-semibold uppercase tracking-wide" :class="orgAccentFor(pi).titleText">{{ p.title }}</p>
+                  <p v-if="p.start_year || p.end_year" class="mt-1 text-[11px] font-medium text-slate-500">
+                    {{ formatMasaJabatan(p) }}
+                  </p>
                   <p class="mt-2 text-[11px] leading-snug text-slate-400 line-clamp-2">{{ p.desc }}</p>
                 </div>
               </div>
@@ -718,10 +738,51 @@ async function initMap() {
                 <div class="flex flex-1 flex-col items-center px-3 py-3 text-center">
                   <p class="text-sm font-bold leading-tight text-slate-900">{{ p.name }}</p>
                   <p class="mt-1 text-xs font-semibold uppercase tracking-wide" :class="orgAccentFor(pi).titleText">{{ p.title }}</p>
+                  <p v-if="p.start_year || p.end_year" class="mt-1 text-[11px] font-medium text-slate-500">
+                    {{ formatMasaJabatan(p) }}
+                  </p>
                   <p class="mt-2 text-[11px] leading-snug text-slate-400 line-clamp-2">{{ p.desc }}</p>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- ===== PEJABAT TERDAHULU (tampil jika diaktifkan admin) ===== -->
+        <div v-if="formerOfficials.length" class="mt-16">
+          <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 flex items-center gap-3">
+            <span class="h-px w-8 bg-blue-600" />
+            <span class="text-[0.7rem] font-bold uppercase tracking-[0.18em] text-blue-700">Riwayat Kepemimpinan</span>
+          </div>
+          <h2 class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-2 text-2xl font-semibold text-slate-900">
+            Pejabat Terdahulu
+          </h2>
+
+          <div class="js-reveal opacity-0 translate-y-4 transition-all duration-700 ease-out motion-reduce:transition-none motion-reduce:!opacity-100 motion-reduce:!translate-y-0 mt-6 overflow-x-auto rounded-xl border border-blue-100 bg-white shadow-sm">
+            <table class="w-full min-w-[560px] border-collapse text-left text-sm">
+              <thead class="bg-blue-50 text-xs font-bold uppercase tracking-wider text-blue-700">
+                <tr>
+                  <th class="w-12 px-4 py-3">No</th>
+                  <th class="px-4 py-3">Jabatan</th>
+                  <th class="px-4 py-3">Nama</th>
+                  <th class="px-4 py-3">Masa Jabatan</th>
+                  <th class="px-4 py-3">Keterangan</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(o, oi) in formerOfficials"
+                  :key="o.id ?? `${o.jabatan}-${o.nama}-${oi}`"
+                  class="border-t border-slate-100 transition-colors hover:bg-blue-50/40"
+                >
+                  <td class="px-4 py-3 text-slate-400">{{ oi + 1 }}</td>
+                  <td class="px-4 py-3 font-semibold text-blue-700">{{ o.jabatan }}</td>
+                  <td class="px-4 py-3 font-medium text-slate-900">{{ o.nama }}</td>
+                  <td class="whitespace-nowrap px-4 py-3 text-slate-600">{{ formatMasaJabatan(o) }}</td>
+                  <td class="px-4 py-3 text-slate-500">{{ o.desc || '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
