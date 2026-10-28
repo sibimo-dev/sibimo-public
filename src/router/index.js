@@ -15,6 +15,7 @@ const routes = [
   { path: "/my-documents", name: "my-documents", component: () => import("@/views/documents/MyDocumentsView.vue") },
   { path: "/complaints", name: "complaints", component: () => import("@/views/complaints/ComplaintListView.vue") },
   { path: "/complaints/create", name: "complaints-form", component: () => import("@/views/complaints/ComplaintFormView.vue") },
+  { path: "/satisfaction-survey", name: "satisfaction-survey", component: () => import("@/views/survey/SatisfactionSurveyView.vue") },
   { path: "/news", name: "news", component: () => import("@/views/news/NewsListView.vue") },
   { path: "/news/:slug", name: "news-detail", component: () => import("@/views/news/NewsDetailView.vue"), props: true },
   { path: "/events", name: "events", component: () => import("@/views/events/EventsListView.vue") },
