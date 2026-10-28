@@ -57,9 +57,17 @@ export const useResidentVerificationStore = defineStore("residentVerification", 
       return this.resident;
     },
     reset() {
-      this.$reset();
+      // Jangan memakai $reset() di sini karena state() membaca sessionStorage
+      // lagi sehingga nilai NIK lama bisa kembali ke memori.
+      this.nik = "";
+      this.isVerified = false;
+      this.resident = null;
       if (typeof window !== "undefined") {
-        window.sessionStorage.removeItem(STORAGE_KEY);
+        try {
+          window.sessionStorage.removeItem(STORAGE_KEY);
+        } catch {
+          // abaikan jika sessionStorage tidak tersedia
+        }
       }
     },
   },

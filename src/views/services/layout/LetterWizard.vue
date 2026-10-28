@@ -20,6 +20,7 @@ import { display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRow
 import { hue as getHue, HUES, SECTION_HUES } from "./pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
 import { documentTypeOf, getOnlineLetterTypeBySlug, getReusableDocuments, submitOnlineLetter } from "@/services/onlineLetters";
+import { downloadSubmissionInvoice } from "@/services/submissionInvoice";
 import publicService from "@/services/publicService";
 
 const props = defineProps({
@@ -229,6 +230,14 @@ const reviewSections = computed(() =>
 /* ---------- Kirim ---------- */
 const isSubmitting = ref(false);
 const result = reactive({ open: false, ok: false, code: "", message: "" });
+const invoice = ref(null);
+const invoiceDownloaded = ref(false);
+
+function downloadInvoice() {
+  if (!invoice.value) return;
+  downloadSubmissionInvoice(invoice.value);
+  invoiceDownloaded.value = true;
+}
 
 async function submit() {
   isSubmitting.value = true;
@@ -243,6 +252,14 @@ async function submit() {
       resident: resident.resident || (resident.nik ? { nik: resident.nik } : null),
       serviceFlow: isPermit ? "permit" : "general",
     });
+    invoice.value = {
+      entries: [{ title: props.title, code: res.request_code }],
+      senderName: form.name || form.applicantName || form.fullName || resident.resident?.fullName || "Pemohon",
+      documentTitle: props.title,
+      submittedAt: new Date(),
+    };
+    invoiceDownloaded.value = false;
+    downloadInvoice();
     Object.assign(result, { open: true, ok: true, code: res.request_code, message: "" });
   } catch (err) {
     const apiMessage = err?.response?.data?.message || Object.values(err?.response?.data?.errors ?? {}).flat()[0];
@@ -394,6 +411,7 @@ async function copyCode() {
           <p class="text-lg font-semibold tracking-wide text-[var(--color-text-h)] select-all">{{ result.code }}</p>
           <Button :label="copied ? 'Tersalin' : copyFailed ? 'Gagal, salin manual' : 'Salin kode'" :icon="copied ? 'pi pi-check' : 'pi pi-copy'" text size="small" :severity="copyFailed ? 'danger' : undefined" @click="copyCode" />
         </div>
+        <p v-if="invoiceDownloaded" class="text-xs text-emerald-700">Invoice PDF sudah otomatis diunduh.</p>
         <p class="text-sm text-[var(--color-text-h)]">Pengajuan Anda sedang <b>menunggu proses verifikasi dan otorisasi</b> oleh petugas. Setelah selesai, Anda akan mendapat notifikasi melalui <b>WhatsApp</b> ke nomor {{ form.whatsapp }}.</p>
       </div>
       <div v-else class="flex flex-col items-center text-center gap-3">
@@ -405,6 +423,7 @@ async function copyCode() {
 
       <template #footer>
         <template v-if="result.ok">
+          <Button v-if="invoice" label="Unduh Invoice PDF" icon="pi pi-file-pdf" severity="secondary" outlined @click="downloadInvoice" />
           <Button label="Ke Katalog" severity="secondary" outlined @click="router.push(catalogTo)" />
           <Button label="Lihat Dokumen Saya" :class="h.btn" @click="router.push({ name: 'my-documents' })" />
         </template>

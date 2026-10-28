@@ -27,6 +27,7 @@ import { applyAliases, buildAliasIndex, display, fillForm, makeResidentLookup, s
 import { HUES, SECTION_HUES, hue } from "@/views/services/layout/pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
 import { documentTypeOf, getReusableDocuments, submitOnlineLetter } from "@/services/onlineLetters";
+import { downloadSubmissionInvoice } from "@/services/submissionInvoice";
 import publicService from "@/services/publicService";
 
 const props = defineProps({
@@ -380,6 +381,14 @@ function confirmAndSubmit() {
 /* ---------- Kirim ---------- */
 const isSubmitting = ref(false);
 const result = reactive({ open: false, ok: false, codes: [], message: "" });
+const invoice = ref(null);
+const invoiceDownloaded = ref(false);
+
+function downloadInvoice() {
+  if (!invoice.value) return;
+  downloadSubmissionInvoice(invoice.value);
+  invoiceDownloaded.value = true;
+}
 
 const unavailableLetters = computed(() => selectedLetters.value.filter((letter) => !getOnlineLetterConfig(letter.slug)));
 const canSubmitOnline = computed(() => selectedLetters.value.length > 0 && unavailableLetters.value.length === 0);
@@ -415,6 +424,14 @@ async function submit() {
   isSubmitting.value = true;
   try {
     const res = await sendApplication();
+    invoice.value = {
+      entries: res.codes,
+      senderName: form.name || form.applicantName || form.fullName || resident.resident?.fullName || "Pemohon",
+      documentTitle: bundle.title,
+      submittedAt: new Date(),
+    };
+    invoiceDownloaded.value = false;
+    downloadInvoice();
     Object.assign(result, { open: true, ok: true, codes: res.codes, message: "" });
   } catch (err) {
     const apiMessage = err?.response?.data?.message || Object.values(err?.response?.data?.errors ?? {}).flat()[0];
@@ -721,6 +738,7 @@ async function copyOne(code) {
           </li>
           <li class="pt-1 text-center"><Button :label="copied ? 'Tersalin' : copyFailed ? 'Gagal, salin manual' : 'Salin semua kode'" :icon="copied ? 'pi pi-check' : 'pi pi-copy'" text size="small" :severity="copyFailed ? 'danger' : undefined" @click="copyCodes" /></li>
         </ul>
+        <p v-if="invoiceDownloaded" class="text-xs text-emerald-700">Invoice PDF sudah otomatis diunduh.</p>
         <p v-if="ui.doneMessage" class="text-sm text-[var(--color-text-h)]">{{ ui.doneMessage }} Notifikasi akan dikirim melalui <b>WhatsApp</b> ke nomor {{ form.whatsapp }}.</p>
         <p v-else class="text-sm text-[var(--color-text-h)]">Pengajuan Anda sedang <b>menunggu proses verifikasi dan otorisasi</b> oleh petugas. Setelah selesai, Anda akan mendapat notifikasi melalui <b>WhatsApp</b> ke nomor {{ form.whatsapp }}.</p>
       </div>
@@ -736,6 +754,7 @@ async function copyOne(code) {
           <Button :label="ui.done.label" :icon="ui.done.icon" :class="h.btn" @click="ui.done.run(router)" />
         </template>
         <template v-else-if="result.ok">
+          <Button v-if="invoice" label="Unduh Invoice PDF" icon="pi pi-file-pdf" severity="secondary" outlined @click="downloadInvoice" />
           <Button label="Ke Katalog" severity="secondary" outlined @click="router.push({ name: 'general-catalog', query: { category: 'permohonan' } })" />
           <Button label="Lihat Dokumen Saya" :class="h.btn" @click="router.push({ name: 'my-documents' })" />
         </template>
