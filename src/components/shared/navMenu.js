@@ -19,6 +19,7 @@ export const navMenuItems = [
     ],
   },
   { label: "Aduan", route: { name: "complaints" } },
+  { label: "Survei Kepuasan", route: { name: "satisfaction-survey" } },
   { label: "Potensi ", route: { name: "potential" } },
   { label: "Data", route: { name: "data" } },
 ];
@@ -31,6 +32,7 @@ export const navMenuItemsMobile = [
   { label: "Data Kalurahan", route: { name: "data" } },
   { label: "Produk Hukum", route: { name: "legal-products" } },
   { label: "Pembangunan", route: { name: "development" } },
+  { label: "Survei Kepuasan", route: { name: "satisfaction-survey" } },
 ];
 
 // Tidak dipakai bottom nav lagi, dibiarkan kalau dipakai di tempat lain
@@ -53,5 +55,6 @@ export const mobileMoreLinks = [
   { label: "Data Kalurahan", icon: "pi pi-chart-bar", route: { name: "data" } },
   { label: "Produk Hukum", icon: "pi pi-book", route: { name: "legal-products" } },
   { label: "Pembangunan", icon: "pi pi-wrench", route: { name: "development" } },
+  { label: "Survei Kepuasan", icon: "pi pi-thumbs-up", route: { name: "satisfaction-survey" } },
   { label: "Unduh Dokumen", icon: "pi pi-download", route: { name: "my-documents" } },
 ];
