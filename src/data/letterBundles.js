@@ -75,7 +75,8 @@ const asPrefix = (p) => ["Name", "Nik", "BirthPlace", "BirthDate", "Religion", "
 const applicantAs = (p) => APPLICANT.map((k, i) => [k, asPrefix(p)[i]]);
 
 const ALIAS_NIKAH_LAKI = [
-  ...applicantAs("groom"), ["applicantBin", "groomBin"],
+  ...applicantAs("groom"), ["gender", "groomGender"], ["applicantBin", "groomBin"],
+  ["maritalStatus", "groomStatus"],
   ...link("father", "groomFather"), ...link("mother", "groomMother"),
   ...link("spouse", "bride", SUF.filter((s) => s !== "Bin")), ["spouseBin", "brideBinti"],
   ["previousSpouseName", "groomPrevName"], ...link("deceased", "groomPrev", ["Name", "BirthPlace", "BirthDate", "Nationality", "Religion", "Occupation", "Address"]),
@@ -83,7 +84,8 @@ const ALIAS_NIKAH_LAKI = [
   ...link("child", "groom"), ...link("childSpouse", "bride", SUF.filter((x) => x !== "Bin")), ["childSpouseBin", "brideBinti"],
 ];
 const ALIAS_NIKAH_PEREMPUAN = [
-  ...applicantAs("bride"), ["applicantBin", "brideBinti"],
+  ...applicantAs("bride"), ["gender", "brideGender"], ["applicantBin", "brideBinti"],
+  ["maritalStatus", "brideStatus"],
   ...link("father", "brideFather"), ...link("mother", "brideMother"),
   ...link("spouse", "groom", SUF.filter((s) => s !== "Bin")), ["spouseBin", "groomBin"],
   ["previousSpouseName", "exHusbandName"], ["exHusbandName", "bridePrevName"], ["exHusbandNik", "bridePrevNik"],
