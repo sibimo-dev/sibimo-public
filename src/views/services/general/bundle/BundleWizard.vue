@@ -427,7 +427,7 @@ async function submit() {
     invoice.value = {
       entries: res.codes,
       senderName: form.name || form.applicantName || form.fullName || resident.resident?.fullName || "Pemohon",
-      documentTitle: bundle.title,
+      documentTitle: props.bundle.title,
       submittedAt: new Date(),
     };
     invoiceDownloaded.value = false;
