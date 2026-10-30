@@ -1,7 +1,9 @@
 <script setup>
 /* Kotak pencarian hero dengan rekomendasi (autocomplete).
    items: [{ title, type, to, keywords?: string[] }]
-   Emit "search" (teks) bila pengguna menekan Cari/Enter tanpa memilih saran. */
+   Saat Cari/Enter ditekan tanpa memilih saran:
+   - ada hasil  → buka hasil teratas
+   - tidak ada  → halaman 404 (NotFoundView) */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
@@ -11,7 +13,6 @@ const props = defineProps({
   max: { type: Number, default: 6 },
   minChars: { type: Number, default: 2 },
 });
-const emit = defineEmits(["search"]);
 
 const router = useRouter();
 const root = ref(null);
@@ -75,9 +76,22 @@ function choose(item) {
 }
 
 function submit() {
-  if (active.value >= 0 && results.value[active.value]) return choose(results.value[active.value]);
+  // 1. Ada saran yang sedang disorot (pakai panah) → ke sana
+  if (active.value >= 0 && results.value[active.value]) {
+    return choose(results.value[active.value]);
+  }
+
+  const q = query.value.trim();
+  if (q.length < props.minChars) return; // terlalu pendek, abaikan
+
+  // 2. Ada hasil → ke hasil teratas (mis. "age" → Agenda Kegiatan)
+  if (results.value.length) {
+    return choose(results.value[0]);
+  }
+
+  // 3. Tidak ada hasil → 404 (path tidak terdaftar jatuh ke catch-all)
   open.value = false;
-  if (query.value.trim()) emit("search", query.value.trim());
+  router.push({ path: "/tidak-ditemukan", query: { q } });
 }
 
 /* Berputar: -1 (tidak ada yang dipilih) → 0 → … → n-1 → -1 */
@@ -154,7 +168,7 @@ onBeforeUnmount(() => document.removeEventListener("click", onDocClick));
       v-else-if="open && query.trim().length >= minChars"
       class="absolute left-0 right-0 z-50 mt-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-[13px] text-slate-500 shadow-xl"
     >
-      Tidak ada saran untuk "{{ query }}". Tekan Enter untuk mencari.
+      Tidak ada hasil untuk "{{ query }}".
     </p>
   </div>
 </template>
