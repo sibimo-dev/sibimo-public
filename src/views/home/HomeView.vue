@@ -915,6 +915,30 @@ onBeforeUnmount(() => {
         <div class="pointer-events-none absolute -right-16 -top-16 w-56 h-56 rounded-full bg-sky-400/15 blur-2xl" />
         <div class="pointer-events-none absolute -left-10 bottom-[-3rem] w-48 h-48 rounded-full bg-violet-400/15 blur-2xl" />
 
+        <!-- Batik kawung corner shadow -->
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 320 320"
+          class="pointer-events-none absolute bottom-0 right-0 h-52 w-52 opacity-25 sm:h-72 sm:w-72 sm:opacity-30 lg:h-80 lg:w-80 [mask-image:radial-gradient(circle_at_100%_100%,black_15%,transparent_72%)] [-webkit-mask-image:radial-gradient(circle_at_100%_100%,black_15%,transparent_72%)]"
+        >
+          <defs>
+            <pattern id="batik-kawung-home-lurah" width="64" height="64" patternUnits="userSpaceOnUse">
+              <g class="fill-none stroke-amber-200 stroke-[1.5]">
+                <ellipse cx="32" cy="16" rx="9" ry="17" />
+                <ellipse cx="32" cy="48" rx="9" ry="17" />
+                <ellipse cx="16" cy="32" rx="17" ry="9" />
+                <ellipse cx="48" cy="32" rx="17" ry="9" />
+              </g>
+              <circle cx="32" cy="32" r="3.5" class="fill-amber-300" />
+              <circle cx="0" cy="0" r="2.5" class="fill-amber-200" />
+              <circle cx="64" cy="0" r="2.5" class="fill-amber-200" />
+              <circle cx="0" cy="64" r="2.5" class="fill-amber-200" />
+              <circle cx="64" cy="64" r="2.5" class="fill-amber-200" />
+            </pattern>
+          </defs>
+          <rect width="320" height="320" fill="url(#batik-kawung-home-lurah)" />
+        </svg>
+
         <div
           class="relative shrink-0 w-50 aspect-[5/6] sm:w-72 lg:w-80 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center overflow-hidden"
         >

@@ -60,7 +60,7 @@ function formatComplaintDate(iso) {
 function maskPhoneNumber(phone) {
   const digits = (phone || '').replace(/\D/g, '')
   if (!digits) return '-'
-  const visibleStart = digits.slice(0, 2) 
+  const visibleStart = digits.slice(0, 2)
   const stars = '*'.repeat(Math.max(digits.length - 2, 0))
   return `${visibleStart}${stars}`
 }
@@ -123,6 +123,38 @@ const statCards = computed(() => [
   { id: 'in-progress', label: 'Sedang Diproses', value: inProgressCount.value, icon: 'pi pi-cog', accent: 'from-sky-400 to-sky-500', iconBg: 'bg-sky-100 text-sky-600' },
   { id: 'resolved', label: 'Selesai', value: resolvedCount.value, icon: 'pi pi-check-circle', accent: 'from-emerald-400 to-emerald-500', iconBg: 'bg-emerald-100 text-emerald-600' },
 ])
+
+/* ---------------- Teks pencarian gabungan ----------------
+   Dibuat di frontend saja (tidak mengubah data/backend). Berisi nilai yang TAMPIL
+   di tabel (label Indonesia), bukan value mentah dari backend, supaya mengetik
+   "selesai" atau "lingkungan" langsung cocok. */
+function dateSearchText(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d)) return ''
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yyyy = d.getFullYear()
+  const longDate = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+  // contoh: "23 Okt 2026 23 Oktober 2026 23/10/2026 2026-10-23"
+  return `${formatComplaintDate(iso)} ${longDate} ${dd}/${mm}/${yyyy} ${yyyy}-${mm}-${dd}`
+}
+
+const tableRows = computed(() =>
+  complaints.value.map((c) => ({
+    ...c,
+    searchText: [
+      c.citizen?.full_name,
+      c.title,
+      locationSummary(c.location),
+      categoryLabelMap[c.category] ?? c.category,
+      statusLabelMap[c.status] ?? c.status,
+      dateSearchText(c.submitted_at),
+    ]
+      .filter(Boolean)
+      .join(' '),
+  }))
+)
 
 /* ---------------- Filter bawaan DataTable ---------------- */
 function createEmptyFilters() {
@@ -220,9 +252,8 @@ const tablePt = {
 
         <DataTable
           v-model:filters="filters"
-          :value="complaints"
-          :globalFilterFields="['title', 'citizen.full_name']"
-          filterDisplay="menu"
+          :value="tableRows"
+          :globalFilterFields="['searchText']"
           paginator
           :rows="5"
           dataKey="complaint_id"
@@ -233,10 +264,10 @@ const tablePt = {
           <template #header>
             <div class="flex flex-wrap items-center justify-between gap-3">
               <span class="text-sm font-semibold text-slate-600">Klik baris untuk lihat detail aduan.</span>
-              <div class="flex items-center gap-2">
-                <IconField>
+              <div class="flex w-full items-center gap-2 sm:w-auto">
+                <IconField class="w-full sm:w-auto">
                   <InputIcon class="pi pi-search" />
-                  <InputText v-model="filters['global'].value" placeholder="Cari judul aduan atau nama pelapor..." />
+                  <InputText v-model="filters['global'].value" placeholder="Cari nama, judul, lokasi, kategori, tanggal, status..." class="w-full sm:w-96" />
                 </IconField>
                 <Transition
                   enter-active-class="transition-all duration-200 ease-out"
@@ -423,8 +454,8 @@ const tablePt = {
           Tidak ada bukti pendukung yang dilampirkan.
         </div>
 
-                <!-- ============ Bukti Penyelesaian (hanya muncul jika aduan sudah selesai) ============ -->
-                <div v-if="isSelectedComplaintResolved" class="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+        <!-- ============ Bukti Penyelesaian (hanya muncul jika aduan sudah selesai) ============ -->
+        <div v-if="isSelectedComplaintResolved" class="flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
           <div class="flex items-center gap-3">
             <span class="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-emerald-100 text-lg text-emerald-600">
               <i class="pi pi-check-circle" />

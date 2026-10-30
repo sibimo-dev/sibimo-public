@@ -172,7 +172,8 @@ const MAX_SIZE_MB = 10
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'video/mp4']
 
 const uploadedFiles = ref([])
-const fileError = ref('')
+// Daftar semua file yang ditolak (bukan hanya yang terakhir), supaya tiap masalah terlihat.
+const fileErrors = ref([])
 const isDragging = ref(false)
 const fileInputRef = ref(null)
 
@@ -183,20 +184,20 @@ function formatFileSize(bytes) {
 }
 
 function addFiles(fileList) {
-  fileError.value = ''
+  fileErrors.value = []
   const incomingFiles = Array.from(fileList || [])
 
   for (const file of incomingFiles) {
     if (uploadedFiles.value.length >= MAX_FILES) {
-      fileError.value = `Maksimal ${MAX_FILES} file.`
-      break
+      fileErrors.value.push(`Maksimal ${MAX_FILES} file. "${file.name}" tidak ditambahkan.`)
+      continue
     }
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      fileError.value = `Format "${file.name}" tidak didukung. Gunakan JPG, PNG, atau MP4.`
+      fileErrors.value.push(`Format "${file.name}" tidak didukung. Gunakan JPG, PNG, atau MP4.`)
       continue
     }
     if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-      fileError.value = `"${file.name}" melebihi ukuran maksimal ${MAX_SIZE_MB}MB.`
+      fileErrors.value.push(`"${file.name}" berukuran ${formatFileSize(file.size)}, melebihi batas ${MAX_SIZE_MB}MB.`)
       continue
     }
     uploadedFiles.value.push({
@@ -213,7 +214,7 @@ function addFiles(fileList) {
 function clearFiles() {
   uploadedFiles.value.forEach((f) => f.previewUrl && URL.revokeObjectURL(f.previewUrl))
   uploadedFiles.value = []
-  fileError.value = ''
+  fileErrors.value = []
 }
 
 function removeFile(id) {
@@ -222,6 +223,7 @@ function removeFile(id) {
     if (uploadedFiles.value[index].previewUrl) URL.revokeObjectURL(uploadedFiles.value[index].previewUrl)
     uploadedFiles.value.splice(index, 1)
   }
+  fileErrors.value = []
 }
 
 function handleDrop(event) {
@@ -240,6 +242,7 @@ function openFilePicker() {
 
 onBeforeUnmount(() => {
   uploadedFiles.value.forEach((f) => f.previewUrl && URL.revokeObjectURL(f.previewUrl))
+  stopWatching()
 })
 
 /* ---------------- Draft (tersimpan sementara di perangkat ini) ---------------- */
@@ -279,20 +282,67 @@ function saveDraft() {
   setTimeout(() => (isDraftSaved.value = false), 2500)
 }
 
-/* ---------------- Submit ----------------
-   Masih DUMMY: disimpan ke Pinia store lokal saja, BELUM panggil API/backend.
-   Struktur payload citizen kini hanya full_name & phone_number. */
-const canSubmit = computed(
-  () =>
-    !!selectedCategory.value &&
-    title.value.trim().length > 0 &&
-    description.value.trim().length > 0
+/* ---------------- Validasi ----------------
+   Tombol Kirim tidak lagi di-disable. Saat diklik dengan data belum lengkap,
+   `showErrors` menyala: setiap bagian yang bermasalah diberi tanda merah +
+   pesan, ringkasan ditampilkan di dekat tombol, dan halaman digulir ke
+   bagian pertama yang bermasalah. Setelah itu error ikut hilang otomatis
+   begitu pengguna memperbaikinya. */
+const showErrors = ref(false)
+
+const FIELD_IDS = {
+  category: 'field-category',
+  phone: 'field-phone',
+  title: 'field-title',
+  description: 'field-description',
+}
+
+function isPhoneValid(value) {
+  const v = value.trim()
+  if (!v) return true // opsional
+  if (!/^[+\d\s\-()]+$/.test(v)) return false
+  const digits = v.replace(/\D/g, '')
+  return digits.length >= 8 && digits.length <= 15
+}
+
+// Urutan key = urutan tampil di halaman (dipakai untuk menggulir ke error pertama).
+const errors = computed(() => {
+  const e = {}
+  if (!selectedCategory.value) e.category = 'Pilih salah satu kategori aduan.'
+  if (!isPhoneValid(phoneNumber.value)) e.phone = 'Nomor telepon tidak valid. Gunakan 8–15 digit angka (boleh diawali +).'
+  if (!title.value.trim()) e.title = 'Judul aduan wajib diisi.'
+  if (!description.value.trim()) e.description = 'Deskripsi laporan wajib diisi.'
+  return e
+})
+
+const errorList = computed(() =>
+  Object.entries(errors.value).map(([key, message]) => ({ key, id: FIELD_IDS[key], message }))
 )
+const isFormValid = computed(() => errorList.value.length === 0)
+
+function scrollToField(id) {
+  const el = document.getElementById(id)
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  const focusable = el.matches('input,textarea,button') ? el : el.querySelector('input,textarea,button')
+  focusable?.focus({ preventScroll: true })
+}
+
+/* ---------------- Submit ---------------- */
 const isSubmitting = ref(false)
 const isSubmitSuccess = ref(false)
+const submitError = ref('')
 
 async function submitReport() {
-  if (!canSubmit.value || isSubmitting.value) return
+  if (isSubmitting.value) return
+
+  showErrors.value = true
+  submitError.value = ''
+  if (!isFormValid.value) {
+    scrollToField(errorList.value[0].id)
+    return
+  }
+
   isSubmitting.value = true
 
   try {
@@ -315,11 +365,12 @@ async function submitReport() {
     }
 
     isSubmitSuccess.value = true
+    showErrors.value = false
     localStorage.removeItem(DRAFT_STORAGE_KEY)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } catch (err) {
     console.error('Gagal mengirim aduan:', err)
-    fileError.value = err.response?.data?.message || 'Gagal mengirim laporan, coba lagi.'
+    submitError.value = err.response?.data?.message || 'Gagal mengirim laporan, coba lagi.'
   } finally {
     isSubmitting.value = false
   }
@@ -340,6 +391,8 @@ function resetForm() {
   locatingStatus.value = 'idle'
   locationErrorMessage.value = ''
   locationAccuracy.value = null
+  showErrors.value = false
+  submitError.value = ''
   clearFiles()
 }
 
@@ -402,17 +455,21 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
 
     <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
       <Transition appear :enter-active-class="`${fadeUpEnter} delay-[60ms]`" enter-from-class="opacity-0 translate-y-3" enter-to-class="opacity-100 translate-y-0">
-      <form class="space-y-8 lg:col-span-2" @submit.prevent="submitReport">
+      <form class="space-y-8 lg:col-span-2" novalidate @submit.prevent="submitReport">
         <!-- Section 1: Kategori -->
         <section>
           <div class="flex items-center gap-2.5">
             <Transition appear :enter-active-class="popEnterActive" enter-from-class="scale-50 opacity-0" enter-to-class="scale-100 opacity-100">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-bold text-white shadow-sm shadow-indigo-500/30">1</span>
             </Transition>
-            <h2 class="text-base font-semibold text-slate-900">Kategori Aduan</h2>
+            <h2 class="text-base font-semibold text-slate-900">Kategori Aduan <span class="text-rose-500">*</span></h2>
           </div>
           <div class="mt-3 border-b border-slate-100 pb-6">
-            <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <div
+              id="field-category"
+              class="grid grid-cols-2 gap-3 rounded-2xl sm:grid-cols-5"
+              :class="showErrors && errors.category && 'p-2 ring-2 ring-rose-300 ring-offset-2'"
+            >
               <button
                 v-for="category in categories"
                 :key="category.value"
@@ -432,6 +489,7 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
                 <span class="text-xs font-semibold leading-tight">{{ category.label }}</span>
               </button>
             </div>
+            <p v-if="showErrors && errors.category" class="mt-2 text-xs font-medium text-rose-600" role="alert">{{ errors.category }}</p>
           </div>
         </section>
 
@@ -447,38 +505,49 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
           <div class="mt-4 space-y-5 border-b border-slate-100 pb-6">
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
-                <label class="mb-1.5 block text-xs font-semibold text-slate-500">Nama Lengkap <span class="font-normal text-slate-400">(opsional)</span></label>
-                <InputText v-model="fullName" placeholder="Boleh dikosongkan untuk anonim" class="w-full" />
+                <label for="field-name" class="mb-1.5 block text-xs font-semibold text-slate-500">Nama Lengkap <span class="font-normal text-slate-400">(opsional)</span></label>
+                <InputText id="field-name" v-model="fullName" placeholder="Boleh dikosongkan untuk anonim" class="w-full" />
               </div>
               <div>
-                <label class="mb-1.5 block text-xs font-semibold text-slate-500">Nomor Telepon <span class="font-normal text-slate-400">(opsional)</span></label>
-                <InputText v-model="phoneNumber" placeholder="Boleh dikosongkan untuk anonim" class="w-full" />
+                <label for="field-phone" class="mb-1.5 block text-xs font-semibold text-slate-500">Nomor Telepon <span class="font-normal text-slate-400">(opsional)</span></label>
+                <InputText
+                  id="field-phone"
+                  v-model="phoneNumber"
+                  inputmode="tel"
+                  placeholder="Boleh dikosongkan untuk anonim"
+                  class="w-full"
+                  :invalid="showErrors && !!errors.phone"
+                />
+                <p v-if="showErrors && errors.phone" class="mt-1.5 text-xs font-medium text-rose-600" role="alert">{{ errors.phone }}</p>
               </div>
             </div>
 
             <div>
-              <label class="mb-1.5 block text-xs font-semibold text-slate-500">Judul Aduan/Topik</label>
-              <InputText v-model="title" placeholder="Contoh: Jalan berlubang di Jl. Merdeka" class="w-full" />
+              <label for="field-title" class="mb-1.5 block text-xs font-semibold text-slate-500">Judul Aduan/Topik <span class="text-rose-500">*</span></label>
+              <InputText
+                id="field-title"
+                v-model="title"
+                placeholder="Contoh: Jalan berlubang di Jl. Merdeka"
+                class="w-full"
+                :invalid="showErrors && !!errors.title"
+              />
+              <p v-if="showErrors && errors.title" class="mt-1.5 text-xs font-medium text-rose-600" role="alert">{{ errors.title }}</p>
             </div>
 
             <div>
               <div>
-                <label class="mb-1.5 block text-xs font-semibold text-slate-500">Deskripsi Laporan</label>
+                <label for="field-description" class="mb-1.5 block text-xs font-semibold text-slate-500">Deskripsi Laporan <span class="text-rose-500">*</span></label>
                 <Textarea
+                  id="field-description"
                   v-model="description"
                   rows="4"
                   placeholder="Ceritakan secara detail mengenai masalah yang Anda temui. Kapan terjadi? Apa dampaknya?"
                   class="w-full"
+                  :invalid="showErrors && !!errors.description"
                 />
               </div>
 
-              <div class="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-slate-100">
-                <div
-                  class="h-full rounded-full transition-all duration-300"
-                  :class="isDescriptionValid ? 'bg-emerald-500' : 'bg-gradient-to-r from-amber-400 to-amber-500'"
-                  :style="{ width: `${Math.min((descriptionCount / MIN_DESCRIPTION_LENGTH) * 100, 100)}%` }"
-                />
-              </div>
+              <p v-if="showErrors && errors.description" class="mt-1.5 text-xs font-medium text-rose-600" role="alert">{{ errors.description }}</p>
             </div>
 
             <div>
@@ -526,7 +595,7 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
         </section>
 
         <!-- Section 3: Bukti Pendukung -->
-        <section>
+        <section id="field-files">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               <Transition appear :enter-active-class="popEnterActive" enter-from-class="scale-50 opacity-0" enter-to-class="scale-100 opacity-100">
@@ -540,7 +609,13 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
           <div class="mt-4">
             <div
               class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-all duration-200"
-              :class="isDragging ? 'scale-[1.01] border-indigo-400 bg-indigo-50' : 'border-slate-200 bg-gradient-to-br from-slate-50 to-indigo-50/40 hover:border-indigo-300 hover:bg-indigo-50/60'"
+              :class="
+                isDragging
+                  ? 'scale-[1.01] border-indigo-400 bg-indigo-50'
+                  : fileErrors.length
+                    ? 'border-rose-300 bg-rose-50/40 hover:border-rose-400'
+                    : 'border-slate-200 bg-gradient-to-br from-slate-50 to-indigo-50/40 hover:border-indigo-300 hover:bg-indigo-50/60'
+              "
               @click="openFilePicker"
               @dragover.prevent="isDragging = true"
               @dragleave.prevent="isDragging = false"
@@ -555,7 +630,12 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
               <input ref="fileInputRef" type="file" class="hidden" multiple accept="image/jpeg,image/png,video/mp4" @change="handleFileInputChange" />
             </div>
 
-            <p v-if="fileError" class="mt-2 text-xs text-red-500">{{ fileError }}</p>
+            <div v-if="fileErrors.length" class="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5" role="alert">
+              <p class="text-xs font-semibold text-rose-700">{{ fileErrors.length }} file tidak dapat ditambahkan:</p>
+              <ul class="mt-1 list-disc space-y-0.5 pl-4 text-xs text-rose-600">
+                <li v-for="(msg, i) in fileErrors" :key="i">{{ msg }}</li>
+              </ul>
+            </div>
 
             <TransitionGroup
               v-if="uploadedFiles.length"
@@ -580,6 +660,32 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
           </div>
         </section>
 
+        <!-- Ringkasan kesalahan (muncul dekat tombol Kirim, setelah pengguna mencoba mengirim) -->
+        <Transition
+          enter-active-class="transition-all duration-300 ease-out"
+          enter-from-class="opacity-0 -translate-y-1"
+          enter-to-class="opacity-100 translate-y-0"
+          leave-active-class="transition-all duration-200 ease-in"
+          leave-to-class="opacity-0"
+        >
+          <div v-if="showErrors && errorList.length" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3.5 text-sm text-rose-700 shadow-sm" role="alert">
+            <p class="font-semibold">Laporan belum bisa dikirim. Lengkapi {{ errorList.length }} bagian berikut:</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+              <li v-for="err in errorList" :key="err.key">
+                <button type="button" class="text-left underline underline-offset-2 hover:text-rose-900" @click="scrollToField(err.id)">
+                  {{ err.message }}
+                </button>
+              </li>
+            </ul>
+          </div>
+        </Transition>
+
+        <!-- Error dari server/jaringan -->
+        <div v-if="submitError" class="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">
+          <span class="mt-0.5">⚠️</span>
+          <p>{{ submitError }}</p>
+        </div>
+
         <div class="flex flex-wrap items-center justify-end gap-3 pt-2">
           <Transition
             enter-active-class="transition-opacity duration-300"
@@ -596,7 +702,7 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
             :label="isSubmitting ? 'Mengirim...' : 'Kirim Laporan'"
             icon="pi pi-send"
             :loading="isSubmitting"
-            :disabled="!canSubmit || isSubmitting"
+            :disabled="isSubmitting"
             class="transition-transform duration-200 hover:-translate-y-0.5"
           />
         </div>

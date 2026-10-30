@@ -91,3 +91,8 @@ export async function getRegions() {
   const data = await unwrap(freshGet('/regions'))
   return Array.isArray(data) ? data : []
 }
+
+export async function getRegionAreas() {
+  const data = await unwrap(freshGet('/region-areas'))
+  return Array.isArray(data) ? data : []
+}
