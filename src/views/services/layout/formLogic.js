@@ -4,7 +4,13 @@
 export const MAX_FILE_MB = 5;
 export const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp", "image/heic"];
 
-export const toDate = (v) => (v instanceof Date ? v : v ? new Date(v) : null);
+/* String yang bukan tanggal (mis. "SEUMUR HIDUP" pada Masa Berlaku KTP) menghasilkan null, bukan Invalid Date. */
+export const toDate = (v) => {
+  if (v instanceof Date) return v;
+  if (!v) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
 export const isFilled = (v) =>
   v instanceof Date ? !Number.isNaN(v.getTime()) : Array.isArray(v) ? v.length > 0 : String(v ?? "").trim() !== "";
 export const emptyRow = (columns) => Object.fromEntries(columns.map((c) => [c.key, c.default ?? ""]));
@@ -15,13 +21,169 @@ export const fmtDate = (d) =>
     ? d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
     : "";
 
+/* Label pilihan untuk nilai bernomor ({ value: "2", label: "2. Perempuan" }): tampilan cek ulang memakai label, bukan kode. */
+const optionLabelOf = (options, value) => {
+  if (!Array.isArray(options)) return null;
+  const hit = options.find((o) => o && typeof o === "object" && String(o.value) === String(value ?? ""));
+  return hit ? hit.label : null;
+};
+export const cellText = (column, value) => {
+  if (column.type === "date") return typeof value === "string" ? value : fmtDate(value);
+  if (column.type === "select") return optionLabelOf(column.options, value) ?? value;
+  return value;
+};
+
 export function display(field, v) {
-  if (field.type === "date") return fmtDate(v) || "-";
+  if (field.type === "select") {
+    const label = optionLabelOf(field.options, v);
+    if (label && isFilled(v)) return label;
+  }
+  if (field.type === "date") return (typeof v === "string" && v.trim() ? v : fmtDate(v)) || "-";
   if (Array.isArray(v)) return v.length ? v.join(", ") : "-";
   return isFilled(v) ? String(v) : "-";
 }
 
 export const filledRows = (field, form) => form[field.key].filter((r) => Object.values(r).some(isFilled));
+
+/* ---------- Keluarga yang pindah mengikuti "Jenis Kepindahan" (sama dengan admin) ----------
+   Field rows dengan `autoByType: "<key jenis kepindahan>"` (surat pindah / datang) TIDAK diisi lewat "Tambah baris",
+   tetapi otomatis dari anggota KK pemohon (data warga yang sudah diverifikasi lewat NIK di awal), menurut pilihan Jenis Kepindahan:
+     1. Kep. Keluarga                          → hanya kepala keluarga           (otomatis, terkunci)
+     2. Kep. Keluarga dan seluruh Angg.        → semua anggota KK                (otomatis, terkunci)
+     3. Kep. Keluarga dan sbg Angg. Keluarga   → kepala keluarga otomatis + anggota lain DITAMBAH MANUAL
+     4. Anggota Keluarga                       → semua anggota KK kecuali kepala keluarga (otomatis, terkunci)
+   Bila pilihan otomatis tidak menghasilkan satu pun anggota (atau data KK belum tersedia), baris dibuka sebagai isian MANUAL.
+   Daftar anggota KK dibaca dari `resident.household` (hasil verifikasi NIK) dan disimpan di autoFilled.__household
+   (bukan di form, jadi tidak ikut terkirim). Tidak ada pencarian NIK baru di dalam form. */
+const isHead = (p) => /kepala\s+keluarga/i.test(String(p?.familyRelationship ?? ""));
+export const relocationMode = (value) => ({ 1: "head", 2: "all", 3: "partial", 4: "others" })[parseInt(String(value ?? "").trim(), 10)] ?? null;
+export const householdOf = (autoFilled) => (Array.isArray(autoFilled?.__household) ? autoFilled.__household : []);
+export const pickFamily = (mode, household = []) => {
+  const heads = household.filter(isHead);
+  const others = household.filter((p) => !isHead(p));
+  if (mode === "head" || mode === "partial") return heads;
+  if (mode === "all") return [...heads, ...others];
+  if (mode === "others") return others;
+  return [];
+};
+/* Mode efektif untuk tampilan: null bila tidak ada anggota KK yang cocok dengan pilihan Jenis Kepindahan,
+   sehingga baris tidak dikunci dan pemohon bisa mengisi manual. */
+export const familyModeFor = (value, household = []) => {
+  const mode = relocationMode(value);
+  if (!mode) return null;
+  return pickFamily(mode, household).length ? mode : null;
+};
+
+/* ---------- Daftar anggota dari KK (field rows dengan `fromHousehold`) ----------
+   `fromHousehold` = { kunciKolom: "properti warga" }. Satu baris dibuat per anggota KK (kepala keluarga lebih dulu),
+   semua kolom boleh dikoreksi manual. Kolom select bernomor dicocokkan lewat `source` (nilai di Data Warga) atau label. */
+const lc = (v) => String(v ?? "").trim().toLowerCase();
+const bareNumber = (v) => String(v ?? "").replace(/^\s*\d+\s*[.)\-:]\s*/, "").trim();
+const canon = (v) => String(v ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+export function matchCode(column, raw) {
+  if (canon(raw) === "belumada") raw = "Tidak Ada"; // Data Warga menyimpan "Belum Ada" untuk pilihan "1. Tidak Ada"
+  const options = Array.isArray(column.options) ? column.options : [];
+  const src = (o) => (o && typeof o === "object" ? (o.source ?? o.value) : o);
+  const lab = (o) => (o && typeof o === "object" ? o.label : o);
+  const hit = options.find((o) => lc(src(o)) === lc(raw) || lc(bareNumber(lab(o))) === lc(bareNumber(raw)))
+    ?? options.find((o) => canon(src(o)) === canon(raw) || canon(lab(o)) === canon(raw));
+  return hit === undefined ? "" : (hit && typeof hit === "object" ? hit.value : hit);
+}
+export function rowFromPerson(field, person) {
+  const row = emptyRow(field.columns);
+  for (const c of field.columns) {
+    const prop = field.fromHousehold[c.key];
+    const raw = prop ? person?.[prop] : undefined;
+    if (!isFilled(raw)) continue;
+    row[c.key] = c.type === "date" ? toDate(raw) : c.type === "select" ? matchCode(c, raw) : String(raw).trim();
+  }
+  // kolom yang tidak berlaku (mis. akta kawin saat belum kawin) dikosongkan, sama seperti saat dipilih manual
+  for (const c of field.columns) if (c.disabledWhen && c.disabledWhen(row)) row[c.key] = c.default ?? "";
+  return row;
+}
+const familyRow = (p) => ({ nik: p.nik ?? "", name: p.fullName ?? "", validUntil: "", shdk: p.familyRelationship ?? "" });
+
+/* Susun ulang baris keluarga sesuai Jenis Kepindahan. Dipanggil saat data KK tersedia dan saat Jenis Kepindahan diganti.
+   Mengembalikan daftar key field yang berubah. `prevHousehold` = KK sebelumnya (supaya barisnya ikut dibersihkan). */
+export function syncFamilyRows(form, sections, autoFilled = {}, prevHousehold = []) {
+  const household = householdOf(autoFilled);
+  const nikSet = (list) => new Set(list.map((p) => String(p.nik ?? "")));
+  const headNiks = nikSet([...pickFamily("head", household), ...pickFamily("head", prevHousehold)]);
+  const currNiks = nikSet(household);
+  const prevOnly = new Set([...nikSet(prevHousehold)].filter((n) => !currNiks.has(n)));
+  const changed = [];
+  for (const section of sections) {
+    for (const field of section.fields) {
+      if (field.type !== "rows" || !field.autoByType) continue;
+      const old = Array.isArray(form[field.key]) ? form[field.key] : [];
+      const minRows = field.min ?? (field.optional ? 0 : 1);
+      const pad = (rows) => [...rows, ...Array.from({ length: Math.max(0, minRows - rows.length) }, () => emptyRow(field.columns))];
+      const mode = relocationMode(form[field.autoByType]);
+      const prevMode = autoFilled[`__mode_${field.key}`]; // baris dari mode otomatis (1/2/4) tidak dianggap input manual
+      if (!household.length) {
+        // KK tidak tersedia: buang baris otomatis milik KK lama, sisanya (manual) dibiarkan.
+        if (prevHousehold.length) {
+          form[field.key] = pad(old.filter((r) => !prevHousehold.some((p) => String(p.nik ?? "") === String(r.nik ?? ""))));
+          delete autoFilled[field.key];
+          delete autoFilled[`__mode_${field.key}`];
+          changed.push(field.key);
+        }
+        continue;
+      }
+      if (!mode) continue; // Jenis Kepindahan belum dipilih
+      const picked = pickFamily(mode, household);
+      if (!picked.length) {
+        // Tidak ada anggota KK yang cocok dengan pilihan ini: jangan sisakan baris kosong yang terkunci.
+        const wasAuto = !!prevMode && prevMode !== "partial" && prevMode !== "manual";
+        const autoNiks = new Set([...nikSet(household), ...nikSet(prevHousehold)]);
+        const keep = old.filter((r) => Object.values(r).some(isFilled) && !(wasAuto && autoNiks.has(String(r.nik ?? ""))));
+        form[field.key] = pad(keep);
+        delete autoFilled[field.key];
+        autoFilled[`__mode_${field.key}`] = "manual";
+        changed.push(field.key);
+        continue;
+      }
+      const validByNik = new Map(old.filter((r) => r.nik && r.validUntil).map((r) => [String(r.nik), r.validUntil]));
+      const auto = picked.map((p) => ({ ...familyRow(p), validUntil: validByNik.get(String(p.nik)) ?? "" }));
+      const manual = mode === "partial" && (!prevMode || prevMode === "partial" || prevMode === "manual") ? old.filter((r) => Object.values(r).some(isFilled) && !headNiks.has(String(r.nik ?? "")) && !prevOnly.has(String(r.nik ?? ""))) : [];
+      form[field.key] = pad([...auto, ...manual].slice(0, field.max ?? 20));
+      autoFilled[field.key] = true;
+      autoFilled[`__mode_${field.key}`] = mode;
+      changed.push(field.key);
+    }
+  }
+  return changed;
+}
+
+/* Pasang data KK dari warga terverifikasi ke form: isi baris `fromHousehold` (Biodata Keluarga) dan susun baris `autoByType`
+   (surat pindah/datang). Aman dipanggil berulang; isian manual tidak ditimpa. Mengembalikan daftar key yang terisi. */
+export function applyHousehold(form, sections, resident, autoFilled = {}) {
+  const hasFamilyRows = sections.some((s) => s.fields.some((x) => x.type === "rows" && (x.autoByType || x.fromHousehold)));
+  if (!hasFamilyRows) return [];
+  const prevHousehold = householdOf(autoFilled);
+  autoFilled.__household = Array.isArray(resident?.household) ? resident.household : [];
+  const filled = [];
+  for (const section of sections) {
+    for (const field of section.fields) {
+      if (field.type !== "rows" || field.autoByType || !field.fromHousehold) continue;
+      const household = householdOf(autoFilled);
+      const current = form[field.key];
+      const manual = Array.isArray(current) && current.some((row) => Object.values(row).some(isFilled)) && !autoFilled[field.key];
+      if (household.length && !manual) {
+        const heads = pickFamily("head", household);
+        const ordered = [...heads, ...household.filter((p) => !heads.includes(p))].slice(0, field.max ?? 20);
+        form[field.key] = ordered.map((p) => rowFromPerson(field, p));
+        autoFilled[field.key] = true;
+        filled.push(field.key);
+      } else if (!household.length && autoFilled[field.key]) {
+        form[field.key] = Array.from({ length: field.min ?? (field.optional ? 0 : 1) }, () => emptyRow(field.columns));
+        delete autoFilled[field.key];
+      }
+    }
+  }
+  for (const key of syncFamilyRows(form, sections, autoFilled, prevHousehold)) if (!filled.includes(key)) filled.push(key);
+  return filled;
+}
 
 const optionValue = (option) => option && typeof option === "object"
   ? option.value ?? option.label
@@ -60,7 +222,9 @@ const selectValue = (field, raw) => {
   const catinStatus = catinStatusValue(field, raw);
   if (catinStatus !== undefined) return catinStatus;
   if (field.type !== "select" || !Array.isArray(field.options)) return isGenderField(field) ? numberedGender(raw) : raw;
-  const hit = field.options.find((option) => bareOption(optionValue(option)) === bareOption(raw));
+  // Opsi bernomor { value, label, source }: cocokkan juga dengan label & nilai asli di Data Warga (source).
+  const hit = field.options.find((option) => bareOption(optionValue(option)) === bareOption(raw)
+    || (option && typeof option === "object" && (bareOption(option.label) === bareOption(raw) || bareOption(option.source) === bareOption(raw))));
   return hit === undefined ? (isGenderField(field) ? numberedGender(raw) : raw) : optionValue(hit);
 };
 
@@ -107,8 +271,32 @@ export function makeResidentLookup(store) {
     if (!relation || /anak|menantu|cucu|orang ?tua|saudara|famili/i.test(relation)) return false;
     return /suami|istri|kepala|\bkk\b/i.test(relation);
   };
-  return (k) => {
+  const MALE = ["laki-laki", "laki laki", "l", "male", "pria", "1. laki-laki"];
+  const FEMALE = ["perempuan", "p", "female", "wanita", "2. perempuan"];
+  const coupleRole = () => {
+    const g = String(store.resident?.gender ?? "").trim().toLowerCase();
+    return MALE.includes(g) ? "asGroom" : FEMALE.includes(g) ? "asBride" : null;
+  };
+  // Properti orang lain (ayah/ibu/pasangan) dari objek resident; bila objek tidak ada, pakai kolom datar (fatherName, dst.).
+  const personProp = (person, property, flat = {}) => {
+    const direct = person?.[property];
+    if (isFilled(direct)) return direct;
+    if (property === "birthPlaceDate" && person) return formatResidentBirth({ resident: person }) || undefined;
+    return flat[property];
+  };
+  const lookup = (k) => {
     if (k === "parentRole") return role() === "Father" ? "Ayah" : role() === "Mother" ? "Ibu" : undefined;
+    // Blok calon pengantin & orang tuanya (sama dengan admin): hanya terisi bila jenis kelamin warga cocok.
+    const rel = /^(asGroom|asBride|parentFather|parentMother|spouse):(.+)$/.exec(k);
+    if (rel) {
+      const [, relation, property] = rel;
+      const current = store.resident;
+      if (!current) return undefined;
+      if (relation === "spouse") return personProp(current.spouse, property);
+      if (relation === "parentFather") return personProp(current.father, property, { fullName: current.fatherName, nik: current.fatherNationalId });
+      if (relation === "parentMother") return personProp(current.mother, property, { fullName: current.motherName, nik: current.motherNationalId });
+      return relation === coupleRole() ? lookup(property) : undefined;
+    }
     const m = /^as(Father|Mother):(.+)$/.exec(k);
     if (m) {
       if (role() !== m[1]) return undefined;
@@ -147,6 +335,7 @@ export function makeResidentLookup(store) {
     if (k === "rtRw") return [store.resident?.rt, store.resident?.rw].filter(Boolean).join(" / ");
     return store.resident?.[k];
   };
+  return lookup;
 }
 
 // Field generik yang sering dipakai surat tetapi belum selalu menuliskan
@@ -233,7 +422,8 @@ const RESIDENT_FIELD_SOURCES = Object.freeze({
   motherName: "motherName",
 });
 
-const residentSourceFor = (field) => field.from ?? RESIDENT_FIELD_SOURCES[field.key];
+// `noAutofill`: isian milik orang lain (mis. data anak pada KIA) tidak boleh terisi dari data pemohon lewat kunci generik.
+const residentSourceFor = (field) => field.from ?? (field.noAutofill ? undefined : RESIDENT_FIELD_SOURCES[field.key]);
 
 /*
  * Beberapa surat paket tidak memiliki field generik `nik`/`name`; misalnya
@@ -241,7 +431,9 @@ const residentSourceFor = (field) => field.from ?? RESIDENT_FIELD_SOURCES[field.
  * verifikasi pada field generik terlebih dahulu supaya alias paket dapat
  * mengisinya ke field yang sesuai tanpa menimpa isian manual.
  */
-export function seedVerifiedApplicant(form, store) {
+export function seedVerifiedApplicant(form, store, sections = []) {
+  // Kunci milik orang lain (field `noAutofill` tanpa `from`) tidak ikut diisi dengan data pemohon.
+  const blocked = new Set(sections.flatMap((section) => section.fields).filter((x) => x.noAutofill && !x.from).map((x) => x.key));
   const birthPlaceDate = formatResidentBirth(store);
   const values = {
     name: store.resident?.fullName,
@@ -301,6 +493,7 @@ export function seedVerifiedApplicant(form, store) {
   };
 
   for (const [key, value] of Object.entries(values)) {
+    if (blocked.has(key)) continue;
     if (!isFilled(form[key]) && isFilled(value)) form[key] = value;
   }
   return form;
@@ -429,3 +622,34 @@ export function applyAliases(form, sections, index) {
   }
   return filled;
 }
+
+/* Setelah "Lanjut" gagal validasi: scroll ke isian wajib pertama (urutan tampil di layar) yang belum terisi lalu fokuskan.
+   keys = key isian yang error. Elemen dicari lewat atribut data-field-key di LetterFormFields. */
+export function focusFirstInvalid(keys = []) {
+  if (typeof document === "undefined") return;
+  const wanted = new Set(keys.filter((k) => k && !k.startsWith("_")));
+  const go = (tries = 0) => {
+    const el = [...document.querySelectorAll("[data-field-key]")].find((n) => wanted.has(n.dataset.fieldKey));
+    if (!el) return tries < 5 ? requestAnimationFrame(() => go(tries + 1)) : undefined;
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    el.querySelector("input:not([type=hidden]):not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])")?.focus({ preventScroll: true });
+  };
+  requestAnimationFrame(() => go());
+}
+
+
+/* Pasangan kunci yang SELALU dianggap sama di semua paket surat (digabung dengan `bundle.aliases`).
+   Dipakai BundleWizard: isian yang masih kosong terisi otomatis dari surat lain yang sudah diisi, walau nama kuncinya beda.
+   Kunci yang namanya persis sama sudah otomatis dibagi antar surat (satu form untuk semua surat dalam paket).
+   Sengaja TIDAK memasukkan alamat (address ↔ originAddress): di surat pindah datang/SKTS alamat asal berbeda dengan alamat pemohon. */
+export const COMMON_ALIASES = [
+  // Nomor KK (KTP/Pindah WNI = kkNumber, F-1.02/Akta/SKTS = familyCardNumber, Pindah Datang = originKkNumber)
+  ["kkNumber", "familyCardNumber"],
+  ["kkNumber", "originKkNumber"],
+  // Nama Kepala Keluarga
+  ["headOfFamily", "headOfFamilyName"],
+  ["headOfFamily", "originHeadOfFamily"],
+  // Nomor telepon / WhatsApp pemohon
+  ["whatsapp", "phone"],
+  ["phone", "applicantPhone"],
+];

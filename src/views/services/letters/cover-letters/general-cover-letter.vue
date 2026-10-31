@@ -4,12 +4,12 @@
 // Template PDF: letters/general-cover-letter.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { f, OPT, DOC } from "@/data/letterFields";
+import { f, OPT, DOC, forPublic } from "@/data/letterFields";
 
 // Langkah 1: isian sesuai surat yang diajukan
 // Judul tiap bagian = kalimat pada surat, supaya warga paham isian ini nanti tertulis di mana.
 // (Nama dan jabatan pejabat penandatangan diisi oleh kelurahan, bukan warga.)
-export const sections = [
+export const sections = forPublic([
   {
     // Surat: Nama, Tempat/Tgl. Lahir, NIK, Jenis Kelamin, Status Perkawinan, Agama, Pekerjaan, Alamat
     title: "Dengan ini menerangkan bahwa",
@@ -22,7 +22,7 @@ export const sections = [
       f.select("gender", "Jenis Kelamin", OPT.gender, { from: "gender" }),
       f.select("maritalStatus", "Status Perkawinan", OPT.marital, { from: "maritalStatus" }),
       f.select("religion", "Agama", OPT.religion, { from: "religion" }),
-      f.select("occupation", "Pekerjaan", OPT.occupation, { from: "occupation", editable: true }),
+      f.occupation("occupation", "Pekerjaan", { from: "occupation" }),
       f.area("address", "Alamat", { from: "address", span: 2 }),
     ],
   },
@@ -35,7 +35,7 @@ export const sections = [
       f.area("purpose", "Keperluan", { span: 2, placeholder: "Jelaskan untuk apa surat pengantar ini diperlukan" }),
     ],
   },
-];
+]);
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [

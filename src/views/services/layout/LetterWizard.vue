@@ -16,7 +16,7 @@ import FileThumb from "./FileThumb.vue";
 import FilePreviewDialog from "./FilePreviewDialog.vue";
 import { copyText } from "./copyText";
 import WizardStepper from "./WizardStepper.vue";
-import { display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "./formLogic";
+import { applyHousehold, cellText, display, fillForm, focusFirstInvalid, makeResidentLookup, seedVerifiedApplicant, filledRows, normalizeDocs, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "./formLogic";
 import { hue as getHue, HUES, SECTION_HUES } from "./pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
 import { documentTypeOf, getOnlineLetterTypeBySlug, getReusableDocuments, submitOnlineLetter } from "@/services/onlineLetters";
@@ -63,6 +63,9 @@ const allSections = computed(() => [
 ]);
 
 const form = reactive({});
+// Penanda "terisi otomatis" + daftar anggota KK (autoFilled.__household) untuk baris keluarga otomatis.
+const autoFilled = reactive({});
+const onEdit = (key) => delete autoFilled[key];
 const clearUnavailableSpouseFields = () => {
   const current = resident.resident;
   const status = String(current?.maritalStatus ?? "").trim().toLowerCase();
@@ -87,7 +90,9 @@ const syncResidentData = () => {
   // atau state yang dipulihkan dari sessionStorage.
   clearUnavailableSpouseFields();
   fillForm(form, allSections.value, makeResidentLookup(resident));
-  seedVerifiedApplicant(form, resident);
+  seedVerifiedApplicant(form, resident, allSections.value);
+  // Baris keluarga (surat pindah/datang, biodata keluarga) dari KK warga terverifikasi — bukan pencarian NIK baru.
+  applyHousehold(form, allSections.value, resident.resident, autoFilled);
 };
 syncResidentData();
 watch(
@@ -197,7 +202,7 @@ function back() {
 function next() {
   if (current.value === 0) {
     errors.value = validateFields(allSections.value, form);
-    if (Object.keys(errors.value).length) return;
+    if (Object.keys(errors.value).length) return focusFirstInvalid(Object.keys(errors.value));
   }
   if (current.value === 1) {
     fileErrors.value = validateDocs(docList.value, files, reusedDocuments);
@@ -298,7 +303,7 @@ async function copyCode() {
     <div class="mt-4 rounded-3xl border border-surface-200 bg-white p-5 sm:p-7 shadow-sm">
       <!-- ============ STEP 1: ISIAN SURAT ============ -->
       <div v-if="current === 0">
-        <LetterFormFields :sections="allSections" :form="form" :errors="errors" />
+        <LetterFormFields :sections="allSections" :form="form" :errors="errors" :autoFilled="autoFilled" @edit="onEdit" />
       </div>
 
       <!-- ============ STEP 2: DOKUMEN PENDUKUNG ============ -->
@@ -326,7 +331,7 @@ async function copyCode() {
                   <dd v-if="!filledRows(field, form).length" class="text-[var(--color-text-h)]">-</dd>
                   <ol v-else class="mt-1 list-decimal pl-5 text-[var(--color-text-h)]">
                     <li v-for="(row, i) in filledRows(field, form)" :key="i">
-                      {{ field.columns.map((c) => (c.type === 'date' ? fmtDate(row[c.key]) : row[c.key])).filter(Boolean).join(" · ") }}
+                      {{ field.columns.map((c) => cellText(c, row[c.key])).filter(Boolean).join(" · ") }}
                     </li>
                   </ol>
                 </div>

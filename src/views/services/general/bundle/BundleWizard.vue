@@ -23,7 +23,7 @@ import FileThumb from "@/views/services/layout/FileThumb.vue";
 import FilePreviewDialog from "@/views/services/layout/FilePreviewDialog.vue";
 import { copyText } from "@/views/services/layout/copyText";
 import WizardStepper from "@/views/services/layout/WizardStepper.vue";
-import { applyAliases, buildAliasIndex, display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "@/views/services/layout/formLogic";
+import { applyAliases, applyHousehold, buildAliasIndex, cellText, display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, normalizeDocs, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "@/views/services/layout/formLogic";
 import { HUES, SECTION_HUES, hue } from "@/views/services/layout/pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
 import { documentTypeOf, getReusableDocuments, submitOnlineLetter } from "@/services/onlineLetters";
@@ -51,12 +51,15 @@ const lookup = makeResidentLookup(resident);
 const aliasIndex = buildAliasIndex(props.bundle.aliases);
 
 const form = reactive({});
+const autoFilled = reactive({}); // { [fieldKey]: true } — penanda "terisi otomatis"; autoFilled.__household = anggota KK pemohon
 const allFormSections = () => [...props.bundle.letters.flatMap((l) => l.sections), NOTIF_SECTION];
 const syncResidentData = () => {
   // Isi seluruh field yang memiliki sumber data warga, termasuk field yang
   // baru terlihat setelah state verifikasi NIK selesai dipulihkan.
   fillForm(form, allFormSections(), lookup);
-  seedVerifiedApplicant(form, resident);
+  seedVerifiedApplicant(form, resident, allFormSections());
+  // Baris keluarga (surat pindah/datang, biodata keluarga) dari KK warga terverifikasi — bukan pencarian NIK baru.
+  applyHousehold(form, allFormSections(), resident.resident, autoFilled);
 };
 syncResidentData();
 watch(
@@ -64,6 +67,26 @@ watch(
   syncResidentData,
   { deep: true },
 );
+
+/* Nama penandatangan Pemohon (field bertanda `applicantSigner`, lihat signerFields.js) = nama pemohon dari NIK yang
+   PERTAMA dicari/diinput: warga terverifikasi → fullName dari data warga; NIK belum terdaftar → nama yang diketik
+   di isian "Nama Lengkap" (kecuali di surat yang `name`-nya milik orang lain, mis. data anak pada KIA).
+   Hanya mengisi yang masih kosong / yang masih otomatis; isian yang sudah dikoreksi pemohon tidak ditimpa. */
+const applicantSignerKeys = () => [...new Set(allFormSections().flatMap((s) => s.fields).filter((x) => x.applicantSigner).map((x) => x.key))];
+const typedApplicantName = () => {
+  const blocked = new Set(allFormSections().flatMap((s) => s.fields).filter((x) => x.noAutofill && !x.from).map((x) => x.key));
+  return ["name", "fullName"].filter((k) => !blocked.has(k)).map((k) => form[k]).find((v) => isFilled(v)) ?? "";
+};
+const syncApplicantSigner = () => {
+  const name = resident.resident?.fullName || typedApplicantName();
+  if (!isFilled(name)) return;
+  for (const key of applicantSignerKeys()) {
+    if (isFilled(form[key]) && !autoFilled[key]) continue;
+    if (form[key] !== name) form[key] = name;
+    autoFilled[key] = true;
+  }
+};
+watch([() => resident.resident?.fullName, () => form.name, () => form.fullName], syncApplicantSigner, { immediate: true });
 
 // Segarkan cache verifikasi lama agar field tambahan dari endpoint public
 // (termasuk nomor KK dan nama ayah/ibu) ikut tersedia di paket surat.
@@ -108,7 +131,6 @@ async function loadSavedDocuments() {
 }
 const preview = reactive({ open: false, file: null, title: "" });
 const openPreview = (d) => Object.assign(preview, { open: true, file: files[d.id], title: d.label });
-const autoFilled = reactive({}); // { [fieldKey]: true } — penanda "terisi otomatis"
 const errors = ref({});
 const fileErrors = ref({});
 const stepAlert = ref("");
@@ -443,13 +465,17 @@ function downloadInvoice() {
 const unavailableLetters = computed(() => selectedLetters.value.filter((letter) => !getOnlineLetterConfig(letter.slug)));
 const canSubmitOnline = computed(() => selectedLetters.value.length > 0 && unavailableLetters.value.length === 0);
 
+/* Surat yang sudah berhasil terkirim. Bila pengiriman terhenti di tengah paket lalu dicoba lagi,
+   surat yang sudah terkirim dilewati supaya tidak terkirim dobel. */
+const submittedLetters = reactive({}); // { [letter.id]: { title, code } }
+
 async function sendApplication() {
   if (!canSubmitOnline.value) {
     throw new Error(`Surat berikut belum tersedia untuk pengajuan online: ${unavailableLetters.value.map((letter) => letter.title).join(", ")}.`);
   }
 
-  const codes = [];
   for (const letter of selectedLetters.value) {
+    if (submittedLetters[letter.id]) continue;
     const letterForm = Object.fromEntries(
       sectionsOf(letter)
         .flatMap((section) => section.fields)
@@ -466,9 +492,9 @@ async function sendApplication() {
       serviceFlow: "general",
       isNewResident,
     });
-    codes.push({ title: letter.title, code: response.request_code });
+    submittedLetters[letter.id] = { title: letter.title, code: response.request_code };
   }
-  return { codes };
+  return { codes: selectedLetters.value.map((letter) => submittedLetters[letter.id]).filter(Boolean) };
 }
 async function submit() {
   isSubmitting.value = true;
@@ -477,7 +503,7 @@ async function submit() {
     invoice.value = {
       entries: res.codes,
       senderName: form.name || form.applicantName || form.fullName || resident.resident?.fullName || "Pemohon",
-      documentTitle: bundle.title,
+      documentTitle: props.bundle.title,
       submittedAt: new Date(),
     };
     invoiceDownloaded.value = false;
@@ -672,7 +698,7 @@ async function copyOne(code) {
                       <dt class="text-xs text-[var(--color-text-muted)]">{{ field.label }}</dt>
                       <dd v-if="!filledRows(field, form).length" class="text-[var(--color-text-h)]">-</dd>
                       <ol v-else class="mt-1 list-decimal pl-5 text-[var(--color-text-h)]">
-                        <li v-for="(row, i) in filledRows(field, form)" :key="i">{{ field.columns.map((c) => (c.type === 'date' ? fmtDate(row[c.key]) : row[c.key])).filter(Boolean).join(" · ") }}</li>
+                        <li v-for="(row, i) in filledRows(field, form)" :key="i">{{ field.columns.map((c) => cellText(c, row[c.key])).filter(Boolean).join(" · ") }}</li>
                       </ol>
                     </div>
                     <div v-else :class="field.span === 2 || field.type === 'checks' ? 'sm:col-span-2' : ''">
@@ -802,18 +828,22 @@ async function copyOne(code) {
       </div>
 
       <template #footer>
-        <template v-if="result.ok && ui.done">
-          <Button :label="ui.done.label" :icon="ui.done.icon" :class="h.btn" @click="ui.done.run(router)" />
-        </template>
-        <template v-else-if="result.ok">
-          <Button v-if="invoice" label="Unduh Invoice PDF" icon="pi pi-file-pdf" severity="secondary" outlined @click="downloadInvoice" />
-          <Button label="Ke Katalog" severity="secondary" outlined @click="router.push({ name: 'general-catalog', query: { category: 'permohonan' } })" />
-          <Button label="Lihat Dokumen Saya" :class="h.btn" @click="router.push({ name: 'my-documents' })" />
-        </template>
-        <template v-else>
-          <Button label="Tutup" severity="secondary" outlined @click="result.open = false" />
-          <Button label="Coba Lagi" icon="pi pi-refresh" :class="h.btn" :loading="isSubmitting" @click="result.open = false; submit()" />
-        </template>
+        <!-- Tombol sejajar selebar pop-up (sama dengan pop-up surat tunggal): rata, tidak menumpuk/menempel ke teks -->
+        <div class="flex w-full flex-wrap gap-2">
+          <template v-if="result.ok && ui.done">
+            <Button v-if="invoice" label="Unduh Invoice PDF" icon="pi pi-file-pdf" severity="secondary" outlined class="flex-1 basis-40" @click="downloadInvoice" />
+            <Button :label="ui.done.label" :icon="ui.done.icon" :class="[h.btn, 'flex-1 basis-40']" @click="ui.done.run(router)" />
+          </template>
+          <template v-else-if="result.ok">
+            <Button v-if="invoice" label="Unduh Invoice PDF" icon="pi pi-file-pdf" severity="secondary" outlined class="flex-1 basis-32" @click="downloadInvoice" />
+            <Button label="Ke Katalog" severity="secondary" outlined class="flex-1 basis-32" @click="router.push({ name: 'general-catalog', query: { category: 'permohonan' } })" />
+            <Button label="Lihat Dokumen Saya" :class="[h.btn, 'flex-1 basis-32']" @click="router.push({ name: 'my-documents' })" />
+          </template>
+          <template v-else>
+            <Button label="Tutup" severity="secondary" outlined class="flex-1" @click="result.open = false" />
+            <Button label="Coba Lagi" icon="pi pi-refresh" :class="[h.btn, 'flex-1']" :loading="isSubmitting" @click="result.open = false; submit()" />
+          </template>
+        </div>
       </template>
     </Dialog>
   </div>

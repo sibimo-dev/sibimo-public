@@ -1,6 +1,11 @@
 <script>
+// sections & documents di-export supaya juga dibaca paket surat (data/letterBundles.js) dan halaman register.
+// Ubah isian surat ini di sini saja; paket & register ikut berubah.
 // Data Isian Pendaftaran Nikah
-import { DOC, N7, akad, calonIstri, calonSuami, f, opt, ortuNikah, person } from "@/data/letterFields";
+// Template PDF: letters/marriage-women/letters/registration-form.blade.php
+// 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
+// Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
+import { DOC, OPT, N7, akad, calonIstri, calonSuami, f, opt, optional, ortuNikah, person, forPublic } from "@/data/letterFields";
 
 const onlyWhen = (section, predicate) => ({
   ...section,
@@ -12,27 +17,23 @@ const onlyWhen = (section, predicate) => ({
 const isDuda = (form) => /^(duda|cerai\s*(hidup|mati))$/i.test(String(form.groomStatus ?? "").trim());
 const isJanda = (form) => /^(janda|cerai\s*(hidup|mati))$/i.test(String(form.brideStatus ?? "").trim());
 
-export const sections = [
+// Langkah 1: isian sesuai surat yang diajukan
+export const sections = forPublic([
   akad(),
-  calonSuami(N7),
-  calonIstri(N7),
-  { title: "Status Calon Istri", fields: [f.select("brideStatus", "Status", ["Perawan", "Janda"], { from: "maritalStatus" })] },
-  onlyWhen(person("exHusband", "Data Suami Terdahulu (isi jika janda)", N7, [
-    f.text("exHusbandBin", "Bin (nama ayah)"),
-    f.date("exHusbandDiedAt", "Tanggal meninggal"),
-    f.text("exHusbandDiedPlace", "Tempat meninggal"),
-  ]), isJanda),
-  ortuNikah("brideFather", "Data Ayah Calon Istri", "Bin (nama ayah dari ayah)"),
-  ortuNikah("brideMother", "Data Ibu Calon Istri", "Binti (nama ayah dari ibu)"),
-  person("guardian", "Data Wali Nikah (isi jika wali nasab bukan ayah kandung)", N7, [
-    f.text("guardianBin", "Bin (nama ayah dari wali)"),
-    f.text("guardianRelation", "Hubungan wali dengan calon istri"),
-    f.area("guardianReason", "Sebab wali bukan ayah kandung", { span: 2, optional: true }),
-  ]),
-  { title: "Wali Hakim", fields: [f.area("judgeGuardianReason", "Sebab wali hakim (isi jika wali hakim)", { span: 2, optional: true })] },
-];
+  { ...calonSuami(), title: "Data Catin Pria" },
+  { title: "Pendidikan & Status Catin Pria", fields: [f.select("groomEducation", "Pendidikan Terakhir", OPT.education), f.select("groomStatus", "Status", ["Jejaka", "Duda", "Beristri"], { from: "maritalStatus" })] },
+  ortuNikah("groomFather", "Data Ayah Catin Pria", "Bin (nama ayah dari ayah)"),
+  ortuNikah("groomMother", "Data Ibu Catin Pria", "Binti (nama ayah dari ibu)"),
+  { ...calonIstri(), title: "Data Catin Wanita" },
+  { title: "Pendidikan & Status Catin Wanita", fields: [f.select("brideEducation", "Pendidikan Terakhir", OPT.education), f.select("brideStatus", "Status", ["Perawan", "Janda"], { from: "maritalStatus" })] },
+  ortuNikah("brideFather", "Data Ayah Catin Wanita", "Bin (nama ayah dari ayah)"),
+  ortuNikah("brideMother", "Data Ibu Catin Wanita", "Binti (nama ayah dari ibu)"),
+  onlyWhen(optional(person("groomPrev", "Data Istri Terdahulu Catin Pria (bila duda)", N7, [f.text("groomPrevBin", "Bin/Binti (nama ayah)"), f.text("groomPrevParentName", "Nama orang tua istri terdahulu"), f.date("groomPrevDeathDate", "Tanggal Meninggal"), f.text("groomPrevDeathPlace", "Tempat Meninggal")])), isDuda),
+  onlyWhen(optional(person("bridePrev", "Data Suami Terdahulu Catin Wanita (bila janda)", ["name", "nik"], [f.text("bridePrevBin", "Bin (nama ayah)"), f.date("bridePrevDeathDate", "Tanggal Meninggal"), f.text("bridePrevDeathPlace", "Tempat Meninggal")])), isJanda),
+]);
 
-export const documents = [DOC.ktp, DOC.kk, DOC.aktaLahir, DOC.pasFoto, opt(DOC.suratKematian)];
+// Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
+export const documents = [DOC.ktp, DOC.kk, DOC.aktaLahir, DOC.pasFoto, opt("Fotokopi KTP orang tua kedua calon"), opt("Akta cerai/surat kematian pasangan terdahulu")];
 </script>
 
 <script setup>

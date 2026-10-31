@@ -5,15 +5,18 @@
 // Template PDF: letters/death/death-certificate-application.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { DOC, deathDeceased, deathParent, keluarga } from "@/data/letterFields";
+import { DOC, PELAPOR_APPLICATION, deathDeceased, deathParent, keluarga, pelaporKematian, signerNames, forPublic } from "@/data/letterFields";
 
-// Langkah 1: A. Keluarga, B. Jenazah, C. Ibu Kandung, D. Ayah Kandung (E. Pelapor diisi petugas)
-export const sections = [
+// Langkah 1: A. Keluarga, B. Jenazah, C. Ibu Kandung, D. Ayah Kandung, E. Pelapor (E. diisi petugas/admin kalurahan, khusus admin)
+export const sections = forPublic([
   keluarga(),
   deathDeceased(["nik", "name", "birthPlace", "birthDate", "deathPlace", "deathDate", "gender"], "Data Jenazah", { deathDate: "Tanggal Kematian" }),
   deathParent("mother", "Data Ibu Kandung", ["nik", "name", "address"]),
   deathParent("father", "Data Ayah Kandung", ["nik", "name", "address"]),
-];
+  pelaporKematian(PELAPOR_APPLICATION),
+  // TTD di xlsx (1): Petugas penerima berkas. Pelapor tidak menandatangani di surat ini.
+  signerNames(["receivingOfficer"], "Opsional. Isi nama Petugas Penerima Berkas bila ingin dicetak; kosongkan bila ditulis tangan."),
+]);
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [DOC.suratKematian, DOC.kk, "Fotokopi KTP almarhum/almarhumah", "Fotokopi KTP pelapor"];

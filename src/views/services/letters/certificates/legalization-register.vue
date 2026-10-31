@@ -3,10 +3,10 @@
 // Template PDF: letters/legalization-register.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { f, OPT, pemohonRingkas, DOC, opt } from "@/data/letterFields";
+import { f, OPT, pemohonRingkas, DOC, opt, forPublic } from "@/data/letterFields";
 
 // Langkah 1: kolom `people` disesuaikan urut dengan kolom tabel register
-export const sections = [
+export const sections = forPublic([
   pemohonRingkas(),
   { title: "Register", fields: [f.text("registerYear", "Tahun Register", { placeholder: "Contoh: 2026" })] },
   {
@@ -27,11 +27,11 @@ export const sections = [
         { key: "maritalStatus", label: "Status Kawin", type: "select", options: OPT.marital },
         { key: "familyStatus", label: "Status Hub dlm Keluarga", type: "select", options: OPT.shdk },
         { key: "education", label: "Pendidikan Terakhir", type: "select", options: OPT.education },
-        { key: "occupation", label: "Jenis Pekerjaan" },
+        { key: "occupation", label: "Jenis Pekerjaan", type: "occupation", options: OPT.occupation },
       ]),
     ],
   },
-];
+]);
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [

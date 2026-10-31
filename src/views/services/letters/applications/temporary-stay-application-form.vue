@@ -1,9 +1,9 @@
 <script>
-import { f, pemohon, DOC, opt } from "@/data/letterFields";
+import { f, pemohon, DOC, opt, signerNames, forPublic } from "@/data/letterFields";
 import { signerSection } from "@/views/services/layout/signerFields.js";
 // permohonan tinggal sementara
 
-export const sections = [
+export const sections = forPublic([
   pemohon([f.kk("familyCardNumber", "Nomor KK")]),
   {
     title: "Wilayah Alamat Asal",
@@ -55,9 +55,9 @@ export const sections = [
       f.text("familyMember5Name", "Nama anggota 5", { optional: true }), f.text("familyMember5Nik", "NIK anggota 5", { optional: true }),
     ],
   },
-  // TTD: Dukuh, Panewu/Camat, dan Pemohon (= data pemohon di atas)
+  // TTD: Dukuh, Panewu/Camat, dan Pemohon (= Nama Lengkap pemohon di atas)
   signerSection(["hamletHead", "districtHead", ["applicant", "Nama Pemohon", "applicantSignerName"]]),
-];
+]);
 
 export const documents = [
   DOC.ktp,
