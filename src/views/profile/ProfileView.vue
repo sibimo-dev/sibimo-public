@@ -26,70 +26,72 @@ import {
   getVisionMissions,
   getOrganizationalStructures,
   getRegions,
+  getRegionAreas,
   profileMediaUrl,
   readProfileCache,
   writeProfileCache,
 } from '@/services/profile'
 
 /* -------------------------------------------------------------------------- */
-/*  RW / RT leaders                                                           */
-/*  profile.js tidak meng-export getNeighborhoodLeaders, jadi dibuat di sini. */
-/*  Ganti endpoint di bawah kalau route backend-nya berbeda.                  */
+/*  Pengurus RW / RT dari /region-areas                                       */
+/*  Bentuk: [{ dusun, rws: [{ rw, head_name, head, rts: [...] }] }]          */
+/*  Objek `head` (biodata, riwayat) ikut diteruskan ke popup detail.          */
 /* -------------------------------------------------------------------------- */
-const NEIGHBORHOOD_LEADERS_ENDPOINT = '/neighborhood-leaders'
+const EMPTY_LEADERS = { rw: [], rt: [] }
 
-async function getNeighborhoodLeaders() {
-  const response = await api.get(NEIGHBORHOOD_LEADERS_ENDPOINT, {
-    params: { _profile: Date.now() },
+// Field detail ketua yang diisi dari admin (Data Wilayah > Kelola RW dan RT).
+// Nomor HP sengaja tidak ikut diteruskan supaya tidak tampil di halaman publik.
+const LEADER_DETAIL_KEYS = [
+  'gender', 'birth_date', 'education', 'major', 'school_name', 'graduation_year',
+  'sk_number', 'start_date', 'end_date', 'position_history',
+]
+
+function pickLeaderDetail(item) {
+  const result = {}
+  LEADER_DETAIL_KEYS.forEach((key) => {
+    if (item?.[key] !== undefined && item[key] !== null) result[key] = item[key]
   })
-  const payload = response.data?.data ?? response.data
+  return result
+}
 
-  // Bentuk 1: { rw: [...], rt: [...] }
-  if (payload && !Array.isArray(payload) && typeof payload === 'object') {
-    return {
-      rw: Array.isArray(payload.rw) ? payload.rw : [],
-      rt: Array.isArray(payload.rt) ? payload.rt : [],
-    }
-  }
-
-  // Bentuk 2: array campuran, RT dikenali dari field rt_number
-  const list = Array.isArray(payload) ? payload : []
-  const hasRtNumber = (item) => item?.rt_number !== null && item?.rt_number !== undefined && item?.rt_number !== ''
+// Biodata ada di `head`; masa jabatan & SK ada di assignments[0].
+function leaderFromHead(head) {
+  const a = Array.isArray(head?.assignments) ? head.assignments[0] : null
   return {
-    rt: list.filter(hasRtNumber),
-    rw: list.filter((item) => !hasRtNumber(item)),
+    ...(head ?? {}),
+    start_date: head?.start_date ?? a?.start_date ?? null,
+    end_date: head?.end_date ?? a?.end_date ?? null,
+    sk_number: head?.sk_number ?? a?.sk_number ?? null,
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/*  DATA DUMMY RW / RT                                                        */
-/*  Dipakai selama endpoint belum tersedia atau mengembalikan data kosong,    */
-/*  DAN admin belum punya data Ketua RW/RT sama sekali.                       */
-/*  Hapus blok ini (dan pemanggilan withDummyLeaders) kalau sudah tidak perlu.*/
-/* -------------------------------------------------------------------------- */
-const DUMMY_NEIGHBORHOOD_LEADERS = {
-  rw: [
-    { name: 'Sutrisno', rw_number: 1, padukuhan: 'Krajan', is_active: true },
-    { name: 'Margono', rw_number: 2, padukuhan: 'Krajan', is_active: true },
-    { name: 'Heri Susanto', rw_number: 3, padukuhan: 'Bangkong', is_active: true },
-    { name: 'Wahyudi', rw_number: 4, padukuhan: 'Bangkong', is_active: true },
-    { name: 'Slamet Riyadi', rw_number: 5, padukuhan: 'Koroulon', is_active: true },
-  ],
-  rt: [
-    { name: 'Agus Prasetyo', rt_number: 1, rw_number: 1, padukuhan: 'Krajan', is_active: true },
-    { name: 'Budi Santoso', rt_number: 2, rw_number: 1, padukuhan: 'Krajan', is_active: true },
-    { name: 'Joko Widodo', rt_number: 3, rw_number: 2, padukuhan: 'Krajan', is_active: true },
-    { name: 'Eko Purnomo', rt_number: 4, rw_number: 2, padukuhan: 'Krajan', is_active: true },
-    { name: 'Dwi Handoko', rt_number: 1, rw_number: 3, padukuhan: 'Bangkong', is_active: true },
-    { name: 'Siti Aminah', rt_number: 2, rw_number: 3, padukuhan: 'Bangkong', is_active: true },
-    { name: 'Rudi Hartono', rt_number: 1, rw_number: 5, padukuhan: 'Koroulon', is_active: true },
-    { name: 'Tri Wahyuni', rt_number: 2, rw_number: 5, padukuhan: 'Koroulon', is_active: true },
-  ],
-}
-
-function withDummyLeaders(data) {
-  const hasData = data && (data.rw?.length || data.rt?.length)
-  return hasData ? data : DUMMY_NEIGHBORHOOD_LEADERS
+function leadersFromRegionAreas(areas) {
+  const result = { rw: [], rt: [] }
+  ;(Array.isArray(areas) ? areas : []).forEach((dusun) => {
+    ;(Array.isArray(dusun?.rws) ? dusun.rws : []).forEach((rw) => {
+      if (rw?.head_name) {
+        result.rw.push({
+          ...leaderFromHead(rw.head),
+          name: rw.head_name,
+          rw_number: rw.rw,
+          padukuhan: dusun.dusun,
+          is_active: true,
+        })
+      }
+      ;(Array.isArray(rw?.rts) ? rw.rts : []).forEach((rt) => {
+        if (!rt?.head_name) return
+        result.rt.push({
+          ...leaderFromHead(rt.head),
+          name: rt.head_name,
+          rt_number: rt.rt,
+          rw_number: rw.rw,
+          padukuhan: dusun.dusun,
+          is_active: true,
+        })
+      })
+    })
+  })
+  return result
 }
 
 /* -------------------------------------------------------------------------- */
@@ -135,7 +137,7 @@ const historyData = ref(null)
 const visionMission = ref(null)
 const orgStructureData = ref(null)
 const regions = ref([])
-const neighborhoodLeaders = ref(DUMMY_NEIGHBORHOOD_LEADERS)
+const neighborhoodLeaders = ref(EMPTY_LEADERS)
 const profileLoading = ref(true)
 const profileError = ref('')
 
@@ -270,6 +272,7 @@ function openLeaderDetail(group, item) {
       ...item,
       title: `${group.role} ${padNumber(group.key === 'rw' ? item.rw_number : item.rt_number)}`.trim(),
       wilayah: leaderLocation(group, item),
+      hidePhoto: true,
     },
     { level: group.title },
   )
@@ -459,6 +462,19 @@ function initials(name) {
     .join('') || '?'
 }
 
+// Usia dihitung dari birth_date (tidak disimpan di database). Fallback ke `age` bila ada.
+function calcAge(birthDate) {
+  if (!birthDate) return null
+  const raw = String(birthDate)
+  const b = new Date(raw.length === 10 ? `${raw}T00:00:00` : raw)
+  if (Number.isNaN(b.getTime())) return null
+  const now = new Date()
+  let age = now.getFullYear() - b.getFullYear()
+  const m = now.getMonth() - b.getMonth()
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age -= 1
+  return age >= 0 ? age : null
+}
+
 function formatDate(value) {
   if (!value) return ''
   const raw = String(value)
@@ -469,6 +485,9 @@ function formatDate(value) {
 
 function formatDetailMasaJabatan(item) {
   if (item?.level === 'Pejabat Terdahulu') return formatMasaJabatan(item)
+  if (item?.start_date) {
+    return `${formatDate(item.start_date)} – ${item.end_date ? formatDate(item.end_date) : 'Sekarang'}`
+  }
   if (!item?.start_year && !item?.end_year) return '—'
   if (item.start_year && !item.end_year) return `${item.start_year} – Sekarang`
   return `${item.start_year ?? '?'} – ${item.end_year}`
@@ -478,28 +497,49 @@ const detailItems = computed(() => {
   const p = detail.value ?? {}
   return [
     { icon: 'pi pi-user', label: 'Jenis Kelamin', value: dash(p.gender) },
-    { icon: 'pi pi-id-card', label: 'Usia', value: p.age ? `${p.age} tahun` : '—' },
+    { icon: 'pi pi-id-card', label: 'Usia', value: (calcAge(p.birth_date) ?? p.age) ? `${calcAge(p.birth_date) ?? p.age} tahun` : '—' },    
     { icon: 'pi pi-book', label: 'Pendidikan', value: dash(p.education) },
     { icon: 'pi pi-bookmark', label: 'Jurusan', value: dash(p.major) },
     { icon: 'pi pi-building', label: 'Nama Sekolah', value: dash(p.school_name) },
     { icon: 'pi pi-graduation-cap', label: 'Tahun Lulus', value: dash(p.graduation_year) },
+    ...(p.sk_number ? [{ icon: 'pi pi-file', label: 'Nomor SK', value: p.sk_number }] : []),
     ...(p.wilayah ? [{ icon: 'pi pi-map-marker', label: 'Wilayah', value: p.wilayah }] : []),
   ]
 })
 
-const detailTermEnd = computed(() => formatDate(detail.value?.term_end_date) || '—')
+const detailTermEnd = computed(() => (
+  formatDate(detail.value?.term_end_date || detail.value?.end_date) || '—'
+))
 
 // Riwayat jabatan: SK hanya berupa teks (nomor SK, atau nama file yang diunggah admin), tanpa tautan dokumen.
-const detailHistory = computed(() => (
-  Array.isArray(detail.value?.position_history)
-    ? detail.value.position_history
-        .filter((h) => h && (h.sk || h.date || h.official || h.document))
-        .map((h) => ({
-          ...h,
-          title: h.sk || h.document_name || (h.document ? String(h.document).split('/').pop() : ''),
-        }))
-    : []
-))
+const detailHistory = computed(() => {
+  const d = detail.value
+  // assignments = penugasan (dari ERD baru), position_history = daftar SK tambahan di form admin.
+  const raw = [
+    ...(Array.isArray(d?.assignments) ? d.assignments : []),
+    ...(Array.isArray(d?.position_history) ? d.position_history : []),
+  ]
+  const seen = new Set()
+  return raw
+    .map((h) => ({
+      ...h,
+      sk: h.sk || h.sk_number,
+      date: h.date || h.sk_date,
+      official: h.official || h.sk_issuer,
+      document: h.document || h.sk_document,
+    }))
+    .filter((h) => h.sk || h.date || h.official || h.document)
+    .filter((h) => {
+      const key = `${h.sk ?? ''}|${h.document ?? ''}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .map((h) => ({
+      ...h,
+      title: h.sk || h.document_name || (h.document ? String(h.document).split('/').pop() : ''),
+    }))
+})
 
 /* -------------------------------------------------------------------------- */
 /*  Stats                                                                     */
@@ -672,7 +712,7 @@ async function loadProfile() {
       ? (cached.orgStructure[0] ?? null)
       : (cached.orgStructure ?? null)
     regions.value = cached.regions ?? []
-    neighborhoodLeaders.value = withDummyLeaders(cached.neighborhoodLeaders)
+    neighborhoodLeaders.value = leadersFromRegionAreas(cached.regionAreas)
     applyRegionStats(regions.value)
     nextTick(observeRevealElements)
   }
@@ -694,15 +734,9 @@ async function loadProfile() {
     request(getOrganizationalStructures(), 'struktur organisasi', (data) => {
       orgStructureData.value = data?.[0] ?? null
     }, 'orgStructure'),
-    request(
-      getNeighborhoodLeaders().catch((error) => {
-        console.warn('[profile] Endpoint RW/RT belum tersedia, memakai data dummy:', error)
-        return null
-      }),
-      'rw & rt',
-      (data) => { neighborhoodLeaders.value = withDummyLeaders(data) },
-      'neighborhoodLeaders',
-    ),
+    request(getRegionAreas(), 'pengurus RT/RW', (data) => {
+      neighborhoodLeaders.value = leadersFromRegionAreas(data)
+    }, 'regionAreas'),
     request(getRegions(), 'wilayah', (data) => {
       regions.value = data ?? []
       applyRegionStats(regions.value)
@@ -1355,9 +1389,11 @@ onBeforeUnmount(() => {
     >
       <div v-if="detail">
         <!-- Banner -->
-        <div class="relative overflow-hidden !bg-gradient-to-br !from-[#0d2c4d] !via-[#12395f] !to-[#1d4f85] px-6 pb-24 pt-10 text-center">
-          <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.6)_1px,transparent_1px)] bg-[length:18px_18px] opacity-10" />
-
+        <div
+          class="relative overflow-hidden !bg-gradient-to-br !from-[#0d2c4d] !via-[#12395f] !to-[#1d4f85] px-6 pt-10 text-center"
+          :class="detail.hidePhoto ? 'pb-8' : 'pb-24'"
+        >          
+        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.6)_1px,transparent_1px)] bg-[length:18px_18px] opacity-10" />
           <button
             type="button"
             class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full !bg-white/20 text-white transition hover:brightness-125 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
@@ -1373,7 +1409,7 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- Foto -->
-        <div class="relative z-10 -mt-16 flex justify-center">
+        <div v-if="!detail.hidePhoto" class="relative z-10 -mt-16 flex justify-center">
           <div class="h-32 w-32 overflow-hidden rounded-2xl bg-white shadow-xl ring-4 ring-white">
             <img v-if="detailPhoto" :src="detailPhoto" :alt="`Foto ${detail.name}`" class="h-full w-full object-cover" />
             <div
@@ -1407,7 +1443,7 @@ onBeforeUnmount(() => {
           <div class="mt-7">
             <div class="mb-3 flex items-center gap-2">
               <span class="h-px w-5 bg-blue-500" />
-              <span class="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">Informasi Pamong</span>
+              <span class="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-700">{{ detail.hidePhoto ? 'Informasi Ketua' : 'Informasi Pamong' }}</span>            
             </div>
             <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               <div
