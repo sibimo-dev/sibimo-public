@@ -4,22 +4,28 @@
 // Template PDF: letters/unregistered-marriage-responsibility-letter.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { f, OPT, person, DOC, opt } from "@/data/letterFields";
+import { f, OPT, person, DOC, opt, forPublic } from "@/data/letterFields";
 
-const ROLE_FROM = { Name: "fullName", Nik: "nik", BirthPlace: "birthPlace", BirthDate: "birthDate", Occupation: "occupation", Address: "address" };
-const spouseRole = (block, prefix, role) => ({
+// Suami/istri hanya diisi jika pemohon berstatus menikah dan pasangan sahnya
+// ditemukan dari KK. Jika pemohon belum menikah/merupakan anak dalam KK,
+// kedua blok dibiarkan kosong.
+const SPOUSE_FROM = { Name: "fullName", Nik: "nik", BirthPlace: "birthPlace", BirthDate: "birthDate", Occupation: "occupation", Address: "address" };
+const byRole = (block, prefix, role) => ({
   ...block,
-  fields: block.fields.map((field) => {
-    const source = ROLE_FROM[field.key.slice(prefix.length)];
-    return source ? { ...field, from: `${role}:${source}` } : field;
+  hint: "Terisi otomatis dari pemohon dan pasangan sah berdasarkan status serta hubungan keluarga.",
+  fields: block.fields.map((fl) => {
+    const src = SPOUSE_FROM[fl.key.slice(prefix.length)];
+    return src ? { ...fl, from: `${role}:${src}` } : fl;
   }),
 });
 
 // Langkah 1: isian sesuai surat yang diajukan
-export const sections = [
+// TTD (4): Pihak pertama (husbandName), Pihak kedua (wifeName), Saksi I (witness1Name), Saksi II (witness2Name)
+// → semua penandatangan sudah punya isian nama di bawah, jadi tidak perlu field nama penandatangan tambahan.
+export const sections = forPublic([
   // Surat: Nama, NIK, Tempat & Tanggal Lahir, Pekerjaan, Alamat (suami = Pihak Pertama, istri = Pihak Kedua)
-  spouseRole(person("husband", "Data Suami (Pihak Pertama)", ["name", "nik", "birth", "occupation", "address"]), "husband", "asHusband"),
-  spouseRole(person("wife", "Data Istri (Pihak Kedua)", ["name", "nik", "birth", "occupation", "address"]), "wife", "asWife"),
+  byRole(person("husband", "Data Suami (Pihak Pertama)", ["name", "nik", "birth", "occupation", "address"]), "husband", "asHusband"),
+  byRole(person("wife", "Data Istri (Pihak Kedua)", ["name", "nik", "birth", "occupation", "address"]), "wife", "asWife"),
   {
     title: "Data Perkawinan",
     fields: [f.date("marriageDate", "Tanggal Perkawinan Dilaksanakan")],
@@ -46,7 +52,7 @@ export const sections = [
       ], { optional: true, max: 7 }),
     ],
   },
-];
+]);
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [

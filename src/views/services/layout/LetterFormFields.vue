@@ -8,7 +8,8 @@ import AutoComplete from "primevue/autocomplete";
 import Checkbox from "primevue/checkbox";
 import Button from "primevue/button";
 import { onMounted, ref, watch } from "vue";
-import { visible, isFilled, emptyRow, toDate } from "./formLogic";
+import { visible, isFilled, emptyRow, toDate, syncFamilyRows, relocationMode, familyModeFor, householdOf, pickFamily } from "./formLogic";
+import { scopeWilayah } from "@/data/letterFields";
 import { HUES, SECTION_HUES } from "./pastel";
 import SignaturePad from "./SignaturePad.vue";
 import { getRegions } from "@/services/profile";
@@ -32,8 +33,8 @@ const hamletSuggestions = ref([]);
 const searchHamlets = (event) => {
   const query = String(event?.query ?? "").trim().toLocaleLowerCase("id-ID");
   hamletSuggestions.value = !query
-    ? hamletOptions.value.slice(0, 10)
-    : hamletOptions.value.filter((name) => name.toLocaleLowerCase("id-ID").includes(query)).slice(0, 20);
+    ? hamletOptions.value
+    : hamletOptions.value.filter((name) => name.toLocaleLowerCase("id-ID").includes(query));
 };
 
 onMounted(async () => {
@@ -61,9 +62,159 @@ watch(
   },
   { immediate: true },
 );
+/* ---------- Validasi NIK (16 digit) ---------- */
+const isNikField = (field) => field.digits === 16 || /(^|[^a-z])nik([^a-z]|$)/i.test(`${field.key} ${field.label}`);
+const nikInvalid = (field, value) => isNikField(field) && isFilled(value) && !/^\d{16}$/.test(String(value).trim());
+const fieldInvalid = (field, value) => !!props.errors[field.key] || nikInvalid(field, value);
+
+/* Isian bertipe `combo` (mis. Desa/Kecamatan/Kabupaten): pilih dari daftar ATAU ketik manual.
+   field.options boleh array atau fungsi (form) => array, sehingga daftar bisa bergantung pada isian lain. */
+const comboSuggestions = ref([]);
+const searchCombo = (event, field) => {
+  const list = typeof field.options === "function" ? field.options(props.form) : field.options ?? [];
+  const query = String(event?.query ?? "").trim().toLocaleLowerCase("id-ID");
+  comboSuggestions.value = !query ? list : list.filter((name) => name.toLocaleLowerCase("id-ID").includes(query));
+};
+
+/* Wilayah otomatis menurut "Cakupan Kepindahan" (field dengan `scopeAuto: { key, level }`).
+   Hanya menimpa isian yang masih kosong atau yang masih berisi nilai otomatis dari cakupan sebelumnya,
+   jadi ketikan/pilihan manual tidak hilang. */
+const scopeSeen = {};
+const scopeFields = () => allFields().filter((x) => x.scopeAuto);
+watch(
+  () => [...new Set(scopeFields().map((x) => x.scopeAuto.key))].map((k) => props.form[k] ?? "").join("|"),
+  () => {
+    for (const k of new Set(scopeFields().map((x) => x.scopeAuto.key))) {
+      const now = scopeWilayah(props.form[k]);
+      const before = scopeSeen[k] ?? {};
+      for (const x of scopeFields().filter((y) => y.scopeAuto.key === k)) {
+        const level = x.scopeAuto.level;
+        const value = props.form[x.key];
+        if (!isFilled(value) || value === before[level]) props.form[x.key] = now[level] ?? "";
+      }
+      scopeSeen[k] = now;
+    }
+  },
+  { immediate: true },
+);
+
+/* Umur otomatis: field dengan `ageOf` (kunci tanggal lahir) mengikuti tanggal lahir selama tanggal lahirnya ada di form ini.
+   Bila isian umur opsional dan tanggal lahir kosong (tanggal tidak diketahui), umur boleh diisi manual. */
+const ageYears = (date) => {
+  if (!date || Number.isNaN(date.getTime())) return "";
+  const today = new Date();
+  if (date > today) return "";
+  let years = today.getFullYear() - date.getFullYear();
+  if (today.getMonth() < date.getMonth() || (today.getMonth() === date.getMonth() && today.getDate() < date.getDate())) years -= 1;
+  return String(Math.max(years, 0));
+};
+const hasField = (key) => allFields().some((x) => x.key === key);
+const ageFields = () => allFields().filter((x) => x.ageOf && hasField(x.ageOf));
+const ageLocked = (field) => !!field.ageOf && hasField(field.ageOf) && (!field.optional || isFilled(props.form[field.ageOf]));
+watch(
+  () => ageFields().map((x) => +toDate(props.form[x.ageOf]) || 0),
+  () => {
+    for (const x of ageFields()) {
+      const date = toDate(props.form[x.ageOf]);
+      if (date && !Number.isNaN(date.getTime())) props.form[x.key] = ageYears(date);
+      else if (!x.optional) props.form[x.key] = "";
+    }
+  },
+  { immediate: true },
+);
+
+/* Isian pekerjaan (tipe `occupation`): cari di daftar bernomor (sama dengan Data Warga) atau ketik bebas.
+   Dropdown menampilkan "5. Pegawai Negeri Sipil (PNS)", tetapi yang disimpan hanya namanya tanpa nomor. */
+const bareJob = (v) => String(v ?? "").replace(/^\s*\d+\s*[.)\-:]\s*/, "").trim();
+const jobSuggestions = ref([]);
+const searchJobs = (event, options) => {
+  const query = String(event?.query ?? "").trim().toLowerCase();
+  jobSuggestions.value = (options ?? []).filter((option) => !query || String(option).toLowerCase().includes(query));
+};
+const setJob = (target, key, value) => { target[key] = value ?? ""; };
+
+/* Kolom baris yang tidak berlaku (mis. Akta Perkawinan saat belum kawin) dinonaktifkan dan dikosongkan. */
+const colDisabled = (c, row) => !!c.disabledWhen && !!c.disabledWhen(row);
+function syncRow(field, row) {
+  for (const c of field.columns) if (colDisabled(c, row) && isFilled(row[c.key])) row[c.key] = c.default ?? "";
+}
+
+// Kolom terkunci dikosongkan otomatis setiap ada perubahan (mis. status akta diganti "Tidak Ada" → nomor akta ikut kosong).
+watch(
+  () => props.form,
+  () => {
+    for (const section of props.sections) {
+      for (const field of section.fields) {
+        if (field.type === "rows" && Array.isArray(props.form[field.key])) for (const row of props.form[field.key]) syncRow(field, row);
+      }
+    }
+  },
+  { deep: true },
+);
+
 const rowInvalid = (field, row, c) =>
   !!props.errors[field.key] && !c.optional && !isFilled(row[c.key]) && Object.values(row).some(isFilled);
+
+/* Kolom tanggal dengan `lifetime: true` (Masa Berlaku KTP): centang "Seumur hidup" mengisi teks pengganti tanggal. */
+const LIFETIME = "SEUMUR HIDUP";
+const isLifetime = (v) => String(v ?? "").trim().toUpperCase() === LIFETIME;
+const setLifetime = (row, c, on) => { row[c.key] = on ? LIFETIME : ""; };
 const minRows = (field) => field.min ?? (field.optional ? 0 : 1);
+
+/* ---------- Keluarga yang pindah: mengikuti Jenis Kepindahan (field rows dengan `autoByType`) ----------
+   mode: head | all | others → baris otomatis & terkunci (tanpa tambah/hapus baris); partial → kepala keluarga otomatis,
+   anggota lain ditambah manual. Tanpa data KK → tampil sebagai baris manual biasa. */
+const rowMode = (field) => {
+  if (!field.autoByType) return null;
+  const household = householdOf(props.autoFilled);
+  return household.length ? familyModeFor(props.form[field.autoByType], household) : null;
+};
+const noAutoMatch = (field) =>
+  !!field.autoByType && householdOf(props.autoFilled).length > 0 && !!relocationMode(props.form[field.autoByType]) && !rowMode(field);
+const isHeadRow = (row) => {
+  const nik = String(row?.nik ?? "");
+  return !!nik && pickFamily("head", householdOf(props.autoFilled)).some((p) => String(p.nik ?? "") === nik);
+};
+const isLocked = (field, row) => {
+  const mode = rowMode(field);
+  return !!mode && (mode !== "partial" || isHeadRow(row));
+};
+const canAddRow = (field) => {
+  const mode = rowMode(field);
+  return !mode || mode === "partial";
+};
+const MODE_HINT = {
+  head: "Hanya kepala keluarga yang pindah (terisi otomatis dari KK).",
+  all: "Seluruh anggota keluarga ikut pindah (terisi otomatis dari KK).",
+  partial: "Kepala keluarga terisi otomatis. Tambahkan anggota keluarga yang ikut pindah dengan tombol di bawah.",
+  others: "Seluruh anggota keluarga kecuali kepala keluarga (terisi otomatis dari KK).",
+};
+const NO_MATCH_HINT = "Tidak ada anggota KK yang sesuai dengan Jenis Kepindahan ini, jadi isi anggota keluarga secara manual (atau ubah Jenis Kepindahan).";
+const modeHint = (field) => {
+  if (noAutoMatch(field)) return NO_MATCH_HINT;
+  return field.fromHousehold ? (props.autoFilled[field.key] ? "Terisi otomatis dari anggota KK yang terdaftar. Periksa, lengkapi, atau ubah bila perlu." : "") : MODE_HINT[rowMode(field)] ?? "";
+};
+const overflowCount = (field) => {
+  if (field.fromHousehold) return Math.max(0, householdOf(props.autoFilled).length - (field.max ?? 20));
+  const mode = rowMode(field);
+  return mode ? Math.max(0, pickFamily(mode, householdOf(props.autoFilled)).length - (field.max ?? 20)) : 0;
+};
+// Di baris manual (mode partial / tanpa kecocokan): NIK anggota KK yang diketik lengkap → nama & SHDK terisi otomatis.
+function onRowInput(field, row, c) {
+  syncRow(field, row);
+  if (!field.autoByType || c.key !== "nik") return;
+  const nik = String(row.nik ?? "").trim();
+  const person = nik.length === 16 ? householdOf(props.autoFilled).find((p) => String(p.nik ?? "") === nik) : null;
+  if (!person) return;
+  if (!isFilled(row.name)) row.name = person.fullName ?? "";
+  if (!isFilled(row.shdk)) row.shdk = person.familyRelationship ?? "";
+}
+const resyncFamily = () => syncFamilyRows(props.form, props.sections, props.autoFilled);
+watch(
+  () => props.sections.flatMap((s) => s.fields).filter((x) => x.autoByType).map((x) => props.form[x.autoByType]).join("|"),
+  resyncFamily,
+);
+onMounted(resyncFamily);
 </script>
 
 <template>
@@ -84,6 +235,7 @@ const minRows = (field) => field.min ?? (field.optional ? 0 : 1);
         <template v-for="field in section.fields" :key="field.key">
           <div
             v-if="visible(field, form)"
+            :data-field-key="field.key"
             class="flex flex-col gap-1"
             :class="field.span === 2 || field.type === 'rows' || field.type === 'checks' || field.type === 'signature' ? 'sm:col-span-2' : ''"
           >
@@ -98,8 +250,10 @@ const minRows = (field) => field.min ?? (field.optional ? 0 : 1);
               </span>
             </label>
 
-            <Select v-if="field.type === 'select'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :options="field.options" :optionLabel="hasObjectOptions(field.options) ? 'label' : undefined" :optionValue="hasObjectOptions(field.options) ? 'value' : undefined" :editable="field.editable" :disabled="field.readonly || field.disabled" placeholder="Pilih" :invalid="!!errors[field.key]" class="w-full" @update:modelValue="edit(field.key)" />
+            <Select v-if="field.type === 'select'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :options="field.options" :optionLabel="hasObjectOptions(field.options) ? 'label' : undefined" :optionValue="hasObjectOptions(field.options) ? 'value' : undefined" :editable="field.editable" :filter="!!field.filter" :disabled="field.readonly || field.disabled" placeholder="Pilih" :invalid="fieldInvalid(field, form[field.key])" class="w-full" @update:modelValue="edit(field.key)" />
             <DatePicker v-else-if="field.type === 'date'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" showIcon iconDisplay="input" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :disabled="field.readonly || field.disabled" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
+            <AutoComplete v-else-if="field.type === 'occupation'" :inputId="`${idPrefix}-${field.key}`" :modelValue="form[field.key]" :suggestions="jobSuggestions" dropdown :forceSelection="false" :disabled="field.readonly || field.disabled" :invalid="!!errors[field.key]" placeholder="Cari atau ketik pekerjaan" class="w-full" inputClass="w-full" @complete="searchJobs($event, field.options)" @item-select="setJob(form, field.key, bareJob($event.value)); edit(field.key)" @update:modelValue="setJob(form, field.key, $event); edit(field.key)" />
+            <AutoComplete v-else-if="field.type === 'combo'" :inputId="`${idPrefix}-${field.key}`" :modelValue="form[field.key]" :suggestions="comboSuggestions" dropdown :forceSelection="false" placeholder="Pilih atau ketik manual" :disabled="field.readonly || field.disabled" :invalid="!!errors[field.key]" class="w-full" inputClass="w-full" @complete="searchCombo($event, field)" @update:modelValue="form[field.key] = $event ?? ''; edit(field.key)" />
             <AutoComplete v-else-if="field.type === 'hamlet'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :suggestions="hamletSuggestions" dropdown placeholder="Pilih atau ketik nama dusun" :disabled="field.readonly || field.disabled" :invalid="!!errors[field.key]" class="w-full" inputClass="w-full" @complete="searchHamlets" @update:modelValue="edit(field.key)" />
             <Textarea v-else-if="field.type === 'textarea'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" rows="3" autoResize :placeholder="field.placeholder" :readonly="field.readonly" :disabled="field.disabled" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
             <InputText v-else-if="field.type === 'time'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" type="time" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
@@ -123,27 +277,43 @@ const minRows = (field) => field.min ?? (field.optional ? 0 : 1);
 
             <!-- baris berulang -->
             <div v-else-if="field.type === 'rows'" class="flex flex-col gap-3">
+              <p v-if="modeHint(field)" class="text-xs" :class="noAutoMatch(field) ? 'text-amber-700' : 'text-[var(--color-text-muted)]'">{{ modeHint(field) }}</p>
+              <p v-if="overflowCount(field)" class="text-xs text-amber-700">Formulir hanya memuat {{ field.max }} baris; {{ overflowCount(field) }} anggota keluarga lainnya tidak tercantum.</p>
               <div v-for="(row, i) in form[field.key]" :key="i" class="rounded-xl border border-white bg-white/80 p-3 shadow-sm">
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-medium text-[var(--color-text-muted)]">#{{ i + 1 }}</span>
-                  <Button v-if="form[field.key].length > minRows(field)" icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Hapus baris" @click="form[field.key].splice(i, 1)" />
+                  <span v-if="isLocked(field, row)" class="text-[11px] text-emerald-700">otomatis</span>
+                  <Button v-else-if="form[field.key].length > minRows(field)" icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Hapus baris" @click="form[field.key].splice(i, 1)" />
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
                   <div v-for="c in field.columns" :key="c.key" class="flex flex-col gap-1">
-                    <label class="text-xs text-[var(--color-text-h)]">{{ c.label }}</label>
-                    <Select v-if="c.type === 'select'" v-model="row[c.key]" :options="c.options" :optionLabel="hasObjectOptions(c.options) ? 'label' : undefined" :optionValue="hasObjectOptions(c.options) ? 'value' : undefined" placeholder="Pilih" class="w-full" :invalid="rowInvalid(field, row, c)" />
-                    <DatePicker v-else-if="c.type === 'date'" v-model="row[c.key]" showIcon iconDisplay="input" dateFormat="dd/mm/yy" :invalid="rowInvalid(field, row, c)" />
-                    <InputText v-else v-model="row[c.key]" :invalid="rowInvalid(field, row, c)" />
+                    <label class="text-xs text-[var(--color-text-h)]">{{ c.label }}<span v-if="c.optional" class="text-[var(--color-text-muted)]"> (opsional)</span></label>
+                    <Select v-if="c.type === 'select'" v-model="row[c.key]" :options="c.options" :optionLabel="hasObjectOptions(c.options) ? 'label' : undefined" :optionValue="hasObjectOptions(c.options) ? 'value' : undefined" :filter="!!c.filter" :disabled="isLocked(field, row) || colDisabled(c, row)" placeholder="Pilih" class="w-full" :invalid="rowInvalid(field, row, c)" @update:modelValue="onRowInput(field, row, c)" />
+                    <AutoComplete v-else-if="c.type === 'occupation'" :modelValue="row[c.key]" :suggestions="jobSuggestions" dropdown :forceSelection="false" :disabled="isLocked(field, row) || colDisabled(c, row)" :invalid="rowInvalid(field, row, c)" placeholder="Cari atau ketik pekerjaan" class="w-full" inputClass="w-full" @complete="searchJobs($event, c.options)" @item-select="setJob(row, c.key, bareJob($event.value))" @update:modelValue="setJob(row, c.key, $event)" />
+                    <!-- kolom tanggal; bila c.lifetime: ada centang "Seumur hidup" (nilai tersimpan = teks SEUMUR HIDUP) -->
+                    <template v-else-if="c.type === 'date'">
+                      <InputText v-if="c.lifetime && isLifetime(row[c.key])" model-value="SEUMUR HIDUP" readonly class="bg-surface-100" />
+                      <!-- baris keluarga otomatis dari KK terkunci, tetapi Masa Berlaku KTP (tanggal / seumur hidup) tetap harus bisa diisi -->
+                      <DatePicker v-else v-model="row[c.key]" showIcon iconDisplay="input" dateFormat="dd/mm/yy" :disabled="(isLocked(field, row) && !c.lifetime) || colDisabled(c, row)" :invalid="rowInvalid(field, row, c)" />
+                      <label v-if="c.lifetime" class="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                        <Checkbox binary :modelValue="isLifetime(row[c.key])" :disabled="colDisabled(c, row)" @update:modelValue="setLifetime(row, c, $event)" />
+                        Seumur hidup
+                      </label>
+                      <small v-if="c.lifetime" class="text-[11px] leading-snug text-[var(--color-text-muted)]">Centang &quot;Seumur hidup&quot; bila KTP berlaku seumur hidup; kolom tanggal diganti tulisan SEUMUR HIDUP. Jika tidak dicentang, isi tanggal berakhirnya masa berlaku KTP.</small>
+                    </template>
+                    <InputText v-else v-model="row[c.key]" :maxlength="isNikField(c) ? 16 : undefined" :inputmode="isNikField(c) ? 'numeric' : undefined" :readonly="isLocked(field, row)" :disabled="colDisabled(c, row)" :invalid="rowInvalid(field, row, c) || nikInvalid(c, row[c.key])" @update:modelValue="onRowInput(field, row, c)" />
+                    <small v-if="nikInvalid(c, row[c.key])" class="text-red-500">{{ c.label }} harus tepat 16 digit angka.</small>
                   </div>
                 </div>
               </div>
               <div>
-                <Button v-if="form[field.key].length < (field.max ?? 20)" label="Tambah baris" icon="pi pi-plus" size="small" severity="secondary" outlined @click="form[field.key].push(emptyRow(field.columns))" />
+                <Button v-if="canAddRow(field) && form[field.key].length < (field.max ?? 20)" label="Tambah baris" icon="pi pi-plus" size="small" severity="secondary" outlined @click="form[field.key].push(emptyRow(field.columns))" />
               </div>
             </div>
 
-            <InputText v-else :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :maxlength="field.digits" :inputmode="field.digits ? 'numeric' : undefined" :placeholder="field.placeholder" :readonly="field.readonly" :disabled="field.disabled" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
+            <InputText v-else :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :maxlength="isNikField(field) ? 16 : field.digits" :inputmode="isNikField(field) || field.digits ? 'numeric' : undefined" :placeholder="field.placeholder" :readonly="field.readonly || ageLocked(field)" :class="ageLocked(field) ? 'bg-surface-100' : ''" :disabled="field.disabled" :invalid="fieldInvalid(field, form[field.key])" @update:modelValue="edit(field.key)" />
 
+            <small v-if="nikInvalid(field, form[field.key])" class="text-red-500">{{ field.label }} harus tepat 16 digit angka.</small>
             <small v-if="errors[field.key]" class="text-red-500">{{ errors[field.key] }}</small>
           </div>
         </template>

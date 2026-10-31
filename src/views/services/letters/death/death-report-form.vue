@@ -5,53 +5,27 @@
 // Template PDF: letters/death/death-report-form.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { OPT, almarhum, arrange, birthWitness, dokJenazah, f, keluarga, ortu, pelaporKematian } from "@/data/letterFields";
+import { DEATH_JENAZAH_FORM, PELAPOR_FULL, dokJenazah, deathDeceased, deathParent, deathWitness, keluarga, pelaporKematian, f, forPublic } from "@/data/letterFields";
 
-// Langkah 1: isian sesuai surat yang diajukan
-// Template terdiri dari: No. KK & Kepala Keluarga, JENAZAH (14 baris), IBU (6), AYAH (6),
-// PELAPOR (7), SAKSI I (4), SAKSI II (4). "Data Administrasi" diisi petugas, bukan pemohon.
-// Hari meninggal dihitung dari tanggal meninggal di Blade.
-// Tanggal Lapor diisi sistem/petugas saat pengajuan masuk.
-
-// Jenazah: tambahan yang ada di template tapi belum ada di almarhum()
-const deceased = almarhum();
-deceased.fields.push(
-  f.text("deceasedAge", "Umur (tahun)", { placeholder: "Contoh: 65" }),
-  f.text("deathCertifiedBy", "Yang Menerangkan"),
-);
-
-// Pelapor: template memuat tempat/tanggal lahir dan pekerjaan
-const reporter = pelaporKematian();
-reporter.fields.push(
-  f.text("reporterBirthPlace", "Tempat Lahir", { from: "birthPlace" }),
-  f.date("reporterBirthDate", "Tanggal Lahir", { from: "birthDate" }),
-  f.select("reporterOccupation", "Pekerjaan", OPT.occupation, { from: "occupation", editable: true }),
-);
-
-// arrange() hanya mengubah salinan untuk surat ini, surat lain tidak ikut berubah.
-export const sections = arrange(
-  [keluarga(), deceased, ortu("mother", "Data Ibu Almarhum/ah"), ortu("father", "Data Ayah Almarhum/ah"), reporter, birthWitness(1), birthWitness(2)],
+// Langkah 1: No KK, Nama KK, Jenazah, Ibu, Ayah, Pelapor, Saksi I & II, Data Administrasi (Pelapor & Data Administrasi diisi petugas/admin kalurahan, khusus admin)
+export const sections = forPublic([
+  keluarga(),
+  deathDeceased(DEATH_JENAZAH_FORM),
+  deathParent("mother", "Data Ibu", ["nik", "name", "birthPlace", "birthDate", "occupation", "addressKtp", "nationality"]),
+  deathParent("father", "Data Ayah", ["nik", "name", "birthPlace", "birthDate", "occupation", "address", "nationality"]),
+  pelaporKematian(PELAPOR_FULL),
+  deathWitness(1),
+  deathWitness(2),
+  // "DATA ADMINISTRASI (di isi oleh petugas)" di kertas (di bawah Saksi I & II): 1. Jenis Pelaporan  2. Nama Petugas Register Desa (+ paraf petugas).
   {
-    fields: {
-      "Data Keluarga": ["familyCardNumber", "headOfFamilyName"],
-      "Data Almarhum/Almarhumah": [
-        "deceasedNik", "deceasedName", "deceasedGender", "deceasedBirthPlace", "deceasedBirthDate", "deceasedAge", "deceasedReligion", "deceasedOccupation",
-        "deceasedAddress", "deathDate", "deathTime", "deathCause", "deathPlace", "deathCertifiedBy",
-      ],
-      "Data Ibu Almarhum/ah": ["motherNik", "motherName", "motherBirthPlace", "motherBirthDate", "motherOccupation", "motherAddress", "motherNationality"],
-      "Data Ayah Almarhum/ah": ["fatherNik", "fatherName", "fatherBirthPlace", "fatherBirthDate", "fatherOccupation", "fatherAddress", "fatherNationality"],
-      "Data Pelapor": ["reporterNik", "reporterName", "reporterBirthPlace", "reporterBirthDate", "reporterOccupation", "reporterAddress"],
-    },
-    patch: {
-      deceasedNik: { optional: false }, // NIK almarhum WAJIB
-      motherNik: { optional: true, placeholder: "16 digit NIK (opsional)" }, // NIK ibu opsional
-      fatherNik: { optional: true, placeholder: "16 digit NIK (opsional)" }, // NIK ayah opsional
-      motherNationality: { default: "" }, // dikosongkan, diisi pemohon
-      fatherNationality: { default: "" },
-    },
-    drop: ["reporterRelation"], // tidak dicetak di template ini
+    officerOnly: true, title: "Data Administrasi (Diisi Petugas)",
+    hint: "Diisi petugas kalurahan. Jenis Pelaporan dicetak dengan pilihan lain dicoret; pilih dari daftar atau ketik sendiri. Nama petugas opsional; kosongkan bila ditulis tangan.",
+    fields: [
+      f.select("reportType", "Jenis Pelaporan", ["Rutin", "Terlambat"], { default: "Rutin", editable: true }),
+      f.text("receivingOfficerName", "Nama Petugas Register Desa", { optional: true }),
+    ],
   },
-);
+]);
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = dokJenazah();

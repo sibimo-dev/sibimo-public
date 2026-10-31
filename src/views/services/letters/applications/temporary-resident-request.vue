@@ -1,6 +1,6 @@
 <script>
 // Surat Permohonan Menjadi Penduduk Sementara / SKTS
-import { f, pemohon, DOC } from "@/data/letterFields";
+import { f, pemohon, DOC, signerNames, OPT, forPublic } from "@/data/letterFields";
 import { signerSection } from "@/views/services/layout/signerFields.js";
 
 const wilayah = (prefix) => [
@@ -10,8 +10,8 @@ const wilayah = (prefix) => [
   f.text(`${prefix}Province`, "Provinsi"),
 ];
 
-export const sections = [
-  pemohon([f.text("education", "Pendidikan", { placeholder: "Contoh: SMA / S1" })]),
+export const sections = forPublic([
+  pemohon([f.select("education", "Pendidikan", OPT.education)]),
 
   {
     title: "Alamat Asal",
@@ -48,8 +48,9 @@ export const sections = [
     ],
   },
 
+  // TTD: Dukuh, Panewu/Camat, dan Pemohon (= Nama Lengkap pemohon di atas)
   signerSection(["hamletHead", "districtHead", ["applicant", "Nama Pemohon", "applicantSignerName"]]),
-];
+]);
 
 export const documents = [
   DOC.ktp,

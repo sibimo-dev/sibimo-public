@@ -4,10 +4,12 @@
 // Template PDF: letters/population-service-authorization-letter.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { f, OPT, person, DOC } from "@/data/letterFields";
+import { f, OPT, person, DOC, forPublic } from "@/data/letterFields";
 
 // Langkah 1: isian sesuai surat yang diajukan
-export const sections = [
+// TTD (2): Yang diberi kuasa (attorneyName), Yang memberi kuasa (name)
+// → kedua penandatangan sudah punya isian nama di bawah, jadi tidak perlu field nama penandatangan tambahan.
+export const sections = forPublic([
   {
     // Surat (pemberi kuasa): Nama, NIK, Tempat & Tanggal Lahir, Pekerjaan, Alamat
     title: "Data Pemberi Kuasa",
@@ -17,7 +19,7 @@ export const sections = [
       f.nik("nik", "NIK", { from: "nik" }),
       f.text("birthPlace", "Tempat Lahir", { from: "birthPlace" }),
       f.date("birthDate", "Tanggal Lahir", { from: "birthDate" }),
-      f.select("occupation", "Pekerjaan", OPT.occupation, { from: "occupation", editable: true }),
+      f.occupation("occupation", "Pekerjaan", { from: "occupation" }),
       f.area("address", "Alamat", { from: "address", span: 2 }),
     ],
   },
@@ -31,7 +33,7 @@ export const sections = [
       f.select("grantorCondition", "Kondisi pemberi kuasa saat ini", ["Sakit", "Lanjut usia", "Penyandang disabilitas", "Berada di luar daerah/luar negeri", "Berhalangan hadir"], { editable: true, span: 2 }),
     ],
   },
-];
+]);
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [

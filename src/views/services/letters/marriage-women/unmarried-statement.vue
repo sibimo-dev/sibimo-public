@@ -5,15 +5,10 @@
 // Template PDF: letters/marriage-women/letters/unmarried-statement.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { DOC, arrange, eduNat, pemohon } from "@/data/letterFields";
+import { DOC, eduNat, pemohon, forPublic } from "@/data/letterFields";
 
 // Langkah 1: isian sesuai surat yang diajukan
-// Semua isian template sudah ada di pemohon() + eduNat(); di sini hanya diurutkan sesuai template:
-// Nama, NIK, Jenis Kelamin, Tempat dan tanggal lahir, Warganegara, Agama, Pekerjaan,
-// Pendidikan Terakhir, Alamat, Status Perkawinan.
-export const sections = arrange([pemohon(eduNat())], {
-  fields: { "Data Pemohon": ["name", "nik", "gender", "birthPlace", "birthDate", "nationality", "religion", "occupation", "education", "address", "maritalStatus"] },
-});
+export const sections = forPublic([pemohon(eduNat())]);
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [DOC.ktp, DOC.kk, DOC.rt];

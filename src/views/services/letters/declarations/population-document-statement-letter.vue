@@ -1,10 +1,10 @@
 <script>
 // Surat Pernyataan Tidak Memiliki Dokumen Kependudukan (F.1-04)
 // Template PDF: letters/population-document-statement-letter.blade.php
-import { f, DOC } from "@/data/letterFields";
+import { f, DOC, forPublic } from "@/data/letterFields";
 
 // Langkah 1: isian sesuai surat yang diajukan
-export const sections = [
+export const sections = forPublic([
   {
     // Surat: Nama, Alamat (RT/RW), Tempat & Tanggal Lahir, Nama Ibu, Nama Ayah
     title: "Data Pemohon",
@@ -15,11 +15,11 @@ export const sections = [
       f.area("address", "Alamat (RT/RW, Kalurahan, Kapanewon)", { from: "address", span: 2 }),
       f.text("birthPlace", "Tempat Lahir", { from: "birthPlace" }),
       f.date("birthDate", "Tanggal Lahir", { from: "birthDate" }),
-      f.text("motherName", "Nama Ibu", { from: "motherName" }),
-      f.text("fatherName", "Nama Ayah", { from: "fatherName" }),
+      f.text("motherName", "Nama Ibu"),
+      f.text("fatherName", "Nama Ayah"),
     ],
   },
-];
+]);
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [

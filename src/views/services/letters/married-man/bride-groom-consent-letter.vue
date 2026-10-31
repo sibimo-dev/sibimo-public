@@ -1,8 +1,8 @@
 <script>
 // Persetujuan Calon Pengantin
-import { DOC, calonIstri, calonSuami } from "@/data/letterFields";
+import { DOC, N7, calonIstri, calonSuami, forPublic } from "@/data/letterFields";
 
-export const sections = [{ ...calonSuami(), title: "Data Calon Suami" }, { ...calonIstri(), title: "Data Calon Istri" }];
+export const sections = forPublic([{ ...calonSuami(N7), title: "Data Catin Pria" }, { ...calonIstri(N7), title: "Data Catin Wanita" }]);
 
 export const documents = ["Fotokopi KTP calon suami", "Fotokopi KTP calon istri", DOC.kk];
 </script>
