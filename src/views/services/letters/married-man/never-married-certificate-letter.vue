@@ -1,8 +1,8 @@
 <script>
 // Surat Keterangan Belum Pernah Menikah
-import { DOC, f, pemohon } from "@/data/letterFields";
+import { DOC, f, pemohon, forPublic } from "@/data/letterFields";
 
-export const sections = [{ ...pemohon([f.text("alias", "Nama alias (bila ada)", { optional: true })]), title: "Data Calon Suami" }];
+export const sections = forPublic([{ ...pemohon([f.text("alias", "Nama alias (bila ada)", { optional: true })]), title: "Data Catin Pria" }]);
 
 export const documents = [DOC.ktp, DOC.kk, DOC.rt];
 </script>

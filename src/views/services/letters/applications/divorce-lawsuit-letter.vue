@@ -1,31 +1,31 @@
-<script setup>
+<script>
 // Surat Permohonan Cerai (Gugat Cerai)
 // Template PDF: letters/divorce-lawsuit-letter.blade.php
-import LetterWizard from "@/views/services/layout/LetterWizard.vue";
-import { f, DOC, opt } from "@/data/letterFields";
+import { f, DOC, opt, OPT, forPublic } from "@/data/letterFields";
 
 // Helper: field biodata sesuai urutan di surat
 // Urutan: Nama, Tempat tgl lhr, [Agama], Pekerjaan, Alamat
-const biodata = (prefix, { religion = true } = {}) => [
-  f.text(`${prefix}Name`, "Nama", { optional: true }),
-  f.text(`${prefix}Birth`, "Tempat, Tanggal Lahir", { optional: true }),
-  ...(religion ? [f.text(`${prefix}Religion`, "Agama", { optional: true })] : []),
-  f.text(`${prefix}Occupation`, "Pekerjaan", { optional: true }),
-  f.text(`${prefix}Address`, "Alamat", { optional: true }),
-];
+const biodata = (prefix, { religion = true, resident = false, relation = "" } = {}) => {
+  const source = (key) => (relation ? `${relation}:${key}` : key);
+  return [
+    f.text(`${prefix}Name`, "Nama", resident ? { from: source("fullName") } : {}),
+    f.text(`${prefix}Birth`, "Tempat, Tanggal Lahir", resident ? { from: source("birthPlaceDate") } : {}),
+    ...(religion ? [f.text(`${prefix}Religion`, "Agama", resident ? { from: source("religion") } : {})] : []),
+    f.text(`${prefix}Occupation`, "Pekerjaan", resident ? { from: source("occupation") } : {}),
+    f.text(`${prefix}Address`, "Alamat", resident ? { from: source("address") } : {}),
+  ];
+};
+const optionalBiodata = (prefix, options = {}) => biodata(prefix, options).map((field) => ({ ...field, optional: true }));
 
 // Langkah 1: isian sesuai surat
-const sections = [
+export const sections = forPublic([
   // "Dengan ini menghadapkan seorang Laki-Laki / Perempuan"
   {
     title: "Data Orang yang Dihadapkan",
     fields: [
-      f.select("applicantGender", "Jenis Kelamin", ["Laki-laki", "Perempuan"]),
-      f.text("applicantName", "Nama", { from: "fullName" }),
-      f.text("applicantBirth", "Tempat, Tanggal Lahir", { from: "birthPlaceDate" }),
-      f.text("applicantReligion", "Agama", { from: "religion" }),
-      f.text("applicantOccupation", "Pekerjaan", { from: "occupation" }),
-      f.text("applicantAddress", "Alamat", { from: "address" }),
+      f.nik("applicantNik", "NIK", { from: "nik" }),
+      f.select("applicantGender", "Jenis Kelamin", OPT.gender, { from: "gender" }),
+      ...biodata("applicant", { resident: true }),
     ],
   },
 
@@ -33,10 +33,7 @@ const sections = [
   {
     title: "Data Suami/Istri",
     fields: [
-      f.text("spouseName", "Nama", { from: "spouseName" }),
-      f.text("spouseBirth", "Tempat, Tanggal Lahir", { from: "spouseBirth" }),
-      f.text("spouseOccupation", "Pekerjaan", { from: "spouseOccupation" }),
-      f.text("spouseAddress", "Alamat", { from: "spouseAddress" }),
+      ...biodata("spouse", { religion: false, resident: true, relation: "spouse" }),
       f.text("marriageCertNumber", "Surat Nikah (Nomor)"),
     ],
   },
@@ -50,12 +47,16 @@ const sections = [
   },
 
   // "Dua orang saksi"
-  { title: "Data Saksi 1", fields: biodata("witness1") },
-  { title: "Data Saksi 2", fields: biodata("witness2") },
-];
+  { title: "Data Saksi 1 (Opsional)", fields: optionalBiodata("witness1") },
+  { title: "Data Saksi 2 (Opsional)", fields: optionalBiodata("witness2") },
+]);
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
-const documents = [DOC.ktp, DOC.kk, DOC.akta, opt(DOC.bukti)];
+export const documents = [DOC.ktp, DOC.kk, DOC.akta, opt(DOC.bukti)];
+</script>
+
+<script setup>
+import LetterWizard from "@/views/services/layout/LetterWizard.vue";
 </script>
 
 <template>

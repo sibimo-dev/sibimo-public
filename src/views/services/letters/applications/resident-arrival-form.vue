@@ -1,17 +1,24 @@
 <script>
 // Formulir Permohonan Pindah Datang WNI
-import { f, OPT, pemohon, DOC } from "@/data/letterFields";
+import { f, OPT, pemohon, DOC, wilayahByScope, wilayahDropdown, BIMOMARTANI, forPublic } from "@/data/letterFields";
 import { signerSection } from "@/views/services/layout/signerFields.js";
-const alamatLengkap = (prefix, title, addressLabel = "Alamat") => ({
+
+// scopeKey (opsional): bila diisi, Desa/Kecamatan/Kab/Provinsi berupa dropdown yang boleh diketik manual.
+// Nilai awalnya ditentukan oleh wilayahDropdown (bukan lagi otomatis menurut Cakupan Kepindahan).
+const alamatLengkap = (prefix, title, addressLabel = "Alamat", scopeKey) => ({
   title,
   fields: [
     f.area(`${prefix}Address`, addressLabel, { span: 2 }),
     f.text(`${prefix}Rt`, "RT"),
     f.text(`${prefix}Rw`, "RW"),
-    f.text(`${prefix}Village`, "Desa/Kelurahan"),
-    f.text(`${prefix}District`, "Kecamatan"),
-    f.text(`${prefix}Regency`, "Kabupaten/Kota"),
-    f.text(`${prefix}Province`, "Provinsi"),
+    ...(scopeKey
+      ? wilayahByScope(prefix, scopeKey)
+      : [
+          f.text(`${prefix}Village`, "Desa/Kelurahan"),
+          f.text(`${prefix}District`, "Kecamatan"),
+          f.text(`${prefix}Regency`, "Kabupaten/Kota"),
+          f.text(`${prefix}Province`, "Provinsi"),
+        ]),
     f.text(`${prefix}PostalCode`, "Kode Pos", { optional: true }),
     f.text(`${prefix}Phone`, "Nomor Telepon", { optional: true }),
   ],
@@ -34,13 +41,17 @@ const RELOCATION_TYPES = [
   "4. Anggota Keluarga",
 ];
 
-export const sections = [
+export const sections = forPublic([
+  {
+    officerOnly: true, title: "Kode Dusun (Diisi Oleh Petugas)",
+    hint: "Kode & nama Provinsi, Kab/Kota, Kecamatan, dan Desa sudah tercetak otomatis di PDF. Petugas mengisi kode dusun dan memilih dusun/dukuh tujuan (atau ketik manual).",
+    fields: [f.text("hamletCode", "Kode Dusun", { optional: true, placeholder: "Contoh: 01" })],
+  },
+
   {
     title: "Wilayah Tujuan",
     hint: "Pilih dari data dusun/dukuh yang tersedia atau ketik nama secara manual.",
-    fields: [
-      f.hamlet("hamlet", "Dusun/Dukuh/Kampung"),
-    ],
+    fields: [f.hamlet("hamlet", "Dusun/Dukuh/Kampung Tujuan")], // key sama dengan dropdown dusun di blok petugas (admin)
   },
 
   pemohon(),
@@ -53,7 +64,21 @@ export const sections = [
     ],
   },
 
-  alamatLengkap("origin", "Alamat Asal"),
+  {
+    title: "Cakupan Kepindahan",
+    hint: "Dipakai untuk subjudul formulir. Alamat Asal dipilih dari dropdown atau diketik manual.",
+    fields: [
+      f.select("relocationTypeLabel", "Cakupan Kepindahan", OPT.relocationScope, { default: OPT.relocationScope[0], span: 2 }),
+    ],
+  },
+
+  // Alamat asal: dropdown (boleh diketik), kosong / dipilih sendiri
+  wilayahDropdown(
+    alamatLengkap("origin", "Alamat Asal", "Alamat", "relocationTypeLabel"),
+    "origin",
+    "relocationTypeLabel",
+    {},
+  ),
 
   {
     title: "Data Kepindahan",
@@ -78,7 +103,13 @@ export const sections = [
     ],
   },
 
-  alamatLengkap("destination", "Alamat Tujuan (di kalurahan ini)", "Alamat yang Dituju"),
+  // Alamat tujuan (di kalurahan ini): dropdown (boleh diketik), default Bimomartani/Ngemplak/Sleman/DIY
+  wilayahDropdown(
+    alamatLengkap("destination", "Alamat Tujuan (di kalurahan ini)", "Alamat yang Dituju", "relocationTypeLabel"),
+    "destination",
+    "relocationTypeLabel",
+    BIMOMARTANI,
+  ),
 
   {
     title: "Keluarga yang Datang",
@@ -87,14 +118,14 @@ export const sections = [
         { key: "nik", label: "NIK" },
         { key: "name", label: "Nama" },
         { key: "shdk", label: "Status Hubungan dalam Keluarga", type: "select", options: OPT.shdk },
-        { key: "validUntil", label: "Masa Berlaku KTP", type: "date", optional: true },
-      ], { max: 6 }),
+        { key: "validUntil", label: "Masa Berlaku KTP", type: "date", optional: true, lifetime: true },
+      ], { max: 6, autoByType: "relocationType" }),
     ],
   },
 
-  // TTD: Petugas registrasi, Lurah Bimomartani (tetap, diisi sistem), Pemohon (= data pemohon di atas, sudah dicetak)
+  // TTD (3): 1. Petugas registrasi  2. Lurah Bimomartani  3. Pemohon (= Nama Lengkap pemohon di atas)
   signerSection([["officer", "Nama Petugas Registrasi", "registrationOfficer"]]),
-];
+]);
 
 export const documents = [
   "Surat keterangan pindah (SKPWNI) dari daerah asal",

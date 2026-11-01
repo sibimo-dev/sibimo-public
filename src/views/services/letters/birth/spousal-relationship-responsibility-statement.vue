@@ -5,15 +5,15 @@
 // Template PDF: letters/birth/spousal-relationship-responsibility-statement.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { arrange, DOC, f, opt, birthSpouseApplicant, birthSpousePerson } from "@/data/letterFields";
+import { arrange, DOC, f, opt, birthSpouseApplicant, birthSpousePerson, forPublic } from "@/data/letterFields";
 
 // Langkah 1: isian sesuai surat yang diajukan. PELAPOR tidak ada di sini: diisi petugas/admin kalurahan.
-export const sections = arrange(
+export const sections = forPublic(arrange(
   [
     birthSpouseApplicant(),
     birthSpousePerson("husband", "Data Suami"),
     birthSpousePerson("wife", "Data Istri"),
-    { title: "Saksi", fields: [f.rows("marriageWitnesses", "Saksi", [{ key: "name", label: "Nama" }, { key: "nik", label: "NIK" }], { min: 2, max: 2 })] },
+    { title: "Saksi", hint: "Opsional. Lewati bila data saksi belum tersedia.", fields: [f.rows("marriageWitnesses", "Saksi", [{ key: "name", label: "Nama" }, { key: "nik", label: "NIK" }], { optional: true, max: 2 })] },
   ],
   {
     // Urutan blok (judul). Pindahkan baris untuk mengubah urutan.
@@ -61,7 +61,7 @@ export const sections = arrange(
     // Buang isian dari surat ini. Contoh:
     // drop: ["childWeight"],
   },
-);
+));
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = ["Fotokopi KTP suami dan istri", DOC.kk, opt(DOC.ktpSaksi)];

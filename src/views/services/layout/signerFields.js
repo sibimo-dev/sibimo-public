@@ -5,9 +5,11 @@
    - Semua penandatangan dibuatkan field (pemohon, dukuh, camat, petugas, notaris, dst.) KECUALI Lurah
      (termasuk Kepala Desa / "Mengetahui Lurah"): namanya diisi sistem/petugas, jadi TIDAK ada rolenya di
      SIGNERS. Memakai role Lurah akan error "Peran penandatangan tidak dikenal".
-   - Pemohon (role "applicant") terisi otomatis dari data warga. Hanya dipakai di surat yang pemohonnya
-     memang menandatangani. Bila yang ttd bisa orang lain (mis. anak pada KIA), pakai "applicantManual"
-     + "applicantNik": diisi manual, TIDAK otomatis dari data pemohon. Penanda tangan yang namanya SUDAH
+   - Pemohon (role "applicant") = nama pemohon dari NIK yang PERTAMA dicari/diinput: terisi otomatis dari data warga
+     terverifikasi (atau, bila NIK belum terdaftar, dari nama yang diketik pemohon; lihat BundleWizard). Field-nya
+     ditandai `applicantSigner: true`. Tetap bisa dikoreksi; setelah diedit tidak ditimpa lagi. Pada KIA, pemohon
+     (orang tua/wali) = orang yang NIK-nya dicari pertama, BUKAN anak. "applicantManual" (diisi manual) masih tersedia
+     bila suatu surat memang butuh penandatangan bebas. Penanda tangan yang namanya SUDAH
      ada di isian surat (penerima kuasa, pihak pertama/kedua, saksi) tidak diulang di sini.
    - Blade PDF membaca kunci ini; bila kosong, garis tanda tangan dibiarkan tanpa nama. */
 import { f } from "@/data/letterFields";
@@ -41,7 +43,11 @@ export function signerSection(roles) {
       const [role, label, key] = Array.isArray(r) ? r : [r];
       const s = SIGNERS[role];
       if (!s) throw new Error(`[signerFields] Peran penandatangan tidak dikenal: ${role}`);
-      return f[s.type ?? "text"](key ?? s.key, label ?? s.label, { optional: true, ...(s.from ? { from: s.from } : {}) });
+      return f[s.type ?? "text"](key ?? s.key, label ?? s.label, {
+        optional: true,
+        ...(s.from ? { from: s.from } : {}),
+        ...(role === "applicant" ? { applicantSigner: true } : {}), // diikutkan ke nama pemohon dari NIK pertama
+      });
     }),
   };
 }

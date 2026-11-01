@@ -6,10 +6,10 @@
 // Nama field (key) = variabel di blade (aturan penamaan: lihat komentar di data/letterFields.js).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
 
-import { arrange, DOC, opt, birthReportSections } from "@/data/letterFields";
+import { arrange, DOC, opt, birthReportSections, forPublic } from "@/data/letterFields";
 
-// Langkah 1: isian sesuai surat yang diajukan. PELAPOR tidak ada di sini: diisi petugas/admin kalurahan.
-export const sections = arrange(
+// Langkah 1: isian sesuai surat yang diajukan. Blok "Data Pelapor" diisi petugas/admin kalurahan (khusus admin, tidak ada di form public).
+export const sections = forPublic(arrange(
   birthReportSections(),
   {
     // Urutan blok (judul). Pindahkan baris untuk mengubah urutan.
@@ -18,6 +18,7 @@ export const sections = arrange(
       "Data Bayi/Anak",
       "Data Ibu Kandung",
       "Data Ayah Kandung",
+      "Data Pelapor",
       "Data Saksi 1",
       "Data Saksi 2",
     ],
@@ -49,7 +50,8 @@ export const sections = arrange(
         "motherBirthDate",      // Tanggal Lahir
         "motherOccupation",     // Pekerjaan
         "motherAddress",        // Alamat
-        "motherRtRw",           // RT / RW
+        "motherRt",           // RT
+        "motherRw",           // RW
         "motherNationality",    // Kewarganegaraan
         "marriageRecordPlace",  // Tempat Pencatatan Perkawinan
         "marriageRecordDate",   // Tanggal Pencatatan Perkawinan
@@ -61,8 +63,19 @@ export const sections = arrange(
         "fatherBirthDate",    // Tanggal Lahir
         "fatherOccupation",   // Pekerjaan
         "fatherAddress",      // Alamat
-        "fatherRtRw",         // RT / RW
+        "fatherRt",         // RT
+        "fatherRw",         // RW
         "fatherNationality",  // Kewarganegaraan
+      ],
+      "Data Pelapor": [
+        "reporterNik",            // NIK
+        "reporterName",           // Nama Lengkap
+        "reporterBirthPlace",     // Tempat Lahir
+        "reporterBirthDate",      // Tanggal Lahir
+        "reporterAge",            // Umur (tahun)
+        "reporterOccupation",     // Pekerjaan
+        "reporterAddress",        // Alamat
+        "reporterReportDate",     // Tanggal Lapor
       ],
       "Data Saksi 1": [
         "witness1Nik",      // NIK
@@ -82,7 +95,7 @@ export const sections = arrange(
     // Buang isian dari surat ini. Contoh:
     // drop: ["childWeight"],
   },
-);
+));
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [DOC.kk, "Fotokopi KTP ayah dan ibu", DOC.akta, opt("Surat keterangan lahir dari penolong kelahiran")];

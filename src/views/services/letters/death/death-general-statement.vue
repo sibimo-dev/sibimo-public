@@ -5,45 +5,13 @@
 // Template PDF: letters/death/death-general-statement.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { DOC, GENDER_OPTIONS } from "@/data/letterFields";
+import { DOC, arrange, f, pemohon, forPublic } from "@/data/letterFields";
 
-// Langkah 1: isian sesuai urutan template surat
-// (Nama pejabat, Jabatan, Nomor surat, dan Keperluan diisi sistem/petugas di Blade, bukan oleh pemohon)
-export const sections = [
-  {
-    title: "Data Yang Diterangkan",
-    fields: [
-      { key: "nama", label: "Nama", type: "text", required: true },
-      { key: "tempat_lahir", label: "Tempat Lahir", type: "text", required: true },
-      { key: "tanggal_lahir", label: "Tanggal Lahir", type: "date", required: true },
-      { key: "nik", label: "NIK", type: "nik", required: true },
-      {
-        key: "jenis_kelamin",
-        label: "Jenis Kelamin",
-        type: "select",
-        options: GENDER_OPTIONS,
-        required: true,
-      },
-      {
-        key: "status_perkawinan",
-        label: "Status Perkawinan",
-        type: "select",
-        options: ["Belum Kawin", "Kawin", "Cerai Hidup", "Cerai Mati"],
-        required: true,
-      },
-      {
-        key: "agama",
-        label: "Agama",
-        type: "select",
-        options: ["Islam", "Kristen", "Katolik", "Hindu", "Buddha", "Konghucu", "Kepercayaan"],
-        required: true,
-      },
-      { key: "pekerjaan", label: "Pekerjaan", type: "text", required: true },
-      { key: "alamat", label: "Alamat", type: "textarea", required: true },
-      { key: "pergi_ke", label: "Pergi ke", type: "text", placeholder: "contoh: Kantor Dukcapil", required: true },
-    ],
-  },
-];
+// Langkah 1: urutan xlsx: Nama, TTL, NIK, JK, Status Perkawinan, Agama, Pekerjaan, Alamat, Pergi Ke, Keperluan
+export const sections = forPublic(arrange(
+  [pemohon(), { title: "Keperluan Surat", fields: [f.text("travelTo", "Pergi Ke"), f.area("purpose", "Keperluan", { span: 2 })] }],
+  { fields: { "Data Pemohon": ["name", "birthPlace", "birthDate", "nik", "gender", "maritalStatus", "religion", "occupation", "address"] } },
+));
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [DOC.suratKematian, DOC.ktp, DOC.kk];

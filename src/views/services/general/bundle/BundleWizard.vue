@@ -10,7 +10,7 @@
 
    Isian dipakai bersama antar surat: kunci field yang sama (dan pasangan kunci di `bundle.aliases`)
    terisi otomatis dari surat di atasnya, tetap bisa direvisi. */
-import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
+import { computed, nextTick, onMounted, reactive, ref, watch, watchEffect } from "vue";
 import { useRouter } from "vue-router";
 import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
@@ -23,7 +23,7 @@ import FileThumb from "@/views/services/layout/FileThumb.vue";
 import FilePreviewDialog from "@/views/services/layout/FilePreviewDialog.vue";
 import { copyText } from "@/views/services/layout/copyText";
 import WizardStepper from "@/views/services/layout/WizardStepper.vue";
-import { applyAliases, buildAliasIndex, display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, fmtDate, normalizeDocs, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "@/views/services/layout/formLogic";
+import { applyAliases, applyHousehold, buildAliasIndex, cellText, display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, normalizeDocs, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "@/views/services/layout/formLogic";
 import { HUES, SECTION_HUES, hue } from "@/views/services/layout/pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
 import { documentTypeOf, getReusableDocuments, submitOnlineLetter } from "@/services/onlineLetters";
@@ -51,12 +51,15 @@ const lookup = makeResidentLookup(resident);
 const aliasIndex = buildAliasIndex(props.bundle.aliases);
 
 const form = reactive({});
+const autoFilled = reactive({}); // { [fieldKey]: true } — penanda "terisi otomatis"; autoFilled.__household = anggota KK pemohon
 const allFormSections = () => [...props.bundle.letters.flatMap((l) => l.sections), NOTIF_SECTION];
 const syncResidentData = () => {
   // Isi seluruh field yang memiliki sumber data warga, termasuk field yang
   // baru terlihat setelah state verifikasi NIK selesai dipulihkan.
   fillForm(form, allFormSections(), lookup);
-  seedVerifiedApplicant(form, resident);
+  seedVerifiedApplicant(form, resident, allFormSections());
+  // Baris keluarga (surat pindah/datang, biodata keluarga) dari KK warga terverifikasi — bukan pencarian NIK baru.
+  applyHousehold(form, allFormSections(), resident.resident, autoFilled);
 };
 syncResidentData();
 watch(
@@ -64,6 +67,26 @@ watch(
   syncResidentData,
   { deep: true },
 );
+
+/* Nama penandatangan Pemohon (field bertanda `applicantSigner`, lihat signerFields.js) = nama pemohon dari NIK yang
+   PERTAMA dicari/diinput: warga terverifikasi → fullName dari data warga; NIK belum terdaftar → nama yang diketik
+   di isian "Nama Lengkap" (kecuali di surat yang `name`-nya milik orang lain, mis. data anak pada KIA).
+   Hanya mengisi yang masih kosong / yang masih otomatis; isian yang sudah dikoreksi pemohon tidak ditimpa. */
+const applicantSignerKeys = () => [...new Set(allFormSections().flatMap((s) => s.fields).filter((x) => x.applicantSigner).map((x) => x.key))];
+const typedApplicantName = () => {
+  const blocked = new Set(allFormSections().flatMap((s) => s.fields).filter((x) => x.noAutofill && !x.from).map((x) => x.key));
+  return ["name", "fullName"].filter((k) => !blocked.has(k)).map((k) => form[k]).find((v) => isFilled(v)) ?? "";
+};
+const syncApplicantSigner = () => {
+  const name = resident.resident?.fullName || typedApplicantName();
+  if (!isFilled(name)) return;
+  for (const key of applicantSignerKeys()) {
+    if (isFilled(form[key]) && !autoFilled[key]) continue;
+    if (form[key] !== name) form[key] = name;
+    autoFilled[key] = true;
+  }
+};
+watch([() => resident.resident?.fullName, () => form.name, () => form.fullName], syncApplicantSigner, { immediate: true });
 
 // Segarkan cache verifikasi lama agar field tambahan dari endpoint public
 // (termasuk nomor KK dan nama ayah/ibu) ikut tersedia di paket surat.
@@ -108,7 +131,6 @@ async function loadSavedDocuments() {
 }
 const preview = reactive({ open: false, file: null, title: "" });
 const openPreview = (d) => Object.assign(preview, { open: true, file: files[d.id], title: d.label });
-const autoFilled = reactive({}); // { [fieldKey]: true } — penanda "terisi otomatis"
 const errors = ref({});
 const fileErrors = ref({});
 const stepAlert = ref("");
@@ -158,6 +180,76 @@ watch([() => resident.nik, selected], loadSavedDocuments, { deep: true, immediat
 const docsOf = (letter) => normalizeDocs(letter.documents, letter.id);
 const sectionsOf = (letter) => (letter.id === selectedLetters.value[0]?.id ? [...letter.sections, NOTIF_SECTION] : letter.sections);
 
+/* Surat status-perkawinan tertentu hanya boleh diproses untuk duda/janda.
+   Surat yang otomatis dikeluarkan disimpan di `temporarilyRemoved` supaya
+   dapat dikembalikan saat status diubah lagi ke status yang sesuai. */
+const conditionalLetterRules = computed(() => {
+  if (props.bundle.slug === "permohonan-nikah-laki-laki") {
+    return [
+      { id: "pbm", statusKey: "groomStatus", allowed: ["Duda"] },
+      { id: "kkn", statusKey: "groomStatus", allowed: ["Duda"] },
+    ];
+  }
+  if (props.bundle.slug === "permohonan-nikah-perempuan") {
+    return [
+      { id: "pbn", statusKey: "brideStatus", allowed: ["Janda"] },
+      { id: "n6", statusKey: "brideStatus", allowed: ["Janda"] },
+    ];
+  }
+  return [];
+});
+const temporarilyRemoved = reactive(new Set());
+const conditionalRuleFor = (id) => conditionalLetterRules.value.find((rule) => rule.id === id) ?? null;
+const normalizedStatus = (value) => {
+  const raw = value && typeof value === "object" ? (value.value ?? value.label ?? "") : value;
+  return String(raw ?? "").trim().replace(/^\d+\.\s*/, "").toLocaleLowerCase("id-ID");
+};
+const isConditionalLetterAllowed = (letterOrId) => {
+  const id = typeof letterOrId === "string" ? letterOrId : letterOrId?.id;
+  const rule = conditionalRuleFor(id);
+  if (!rule) return true;
+  const statusValue = form[rule.statusKey];
+  return !statusValue || rule.allowed.map(normalizedStatus).includes(normalizedStatus(statusValue));
+};
+const syncConditionalLetters = () => {
+  for (const rule of conditionalLetterRules.value) {
+    const statusValue = form[rule.statusKey];
+    if (!statusValue) continue;
+
+    const eligible = rule.allowed.map(normalizedStatus).includes(normalizedStatus(statusValue));
+    if (!eligible && selected.value.includes(rule.id)) {
+      selected.value = selected.value.filter((id) => id !== rule.id);
+      temporarilyRemoved.add(rule.id);
+      delete reviewed[rule.id];
+      continue;
+    }
+
+    if (eligible && temporarilyRemoved.has(rule.id)) {
+      if (props.bundle.letters.some((letter) => letter.id === rule.id)) {
+        selected.value = [...new Set([...selected.value, rule.id])];
+      }
+      temporarilyRemoved.delete(rule.id);
+    }
+  }
+};
+watchEffect(syncConditionalLetters);
+const conditionalNotice = computed(() => {
+  const isMale = props.bundle.slug === "permohonan-nikah-laki-laki";
+  const isFemale = props.bundle.slug === "permohonan-nikah-perempuan";
+  if (!isMale && !isFemale) return "";
+
+  const statusKey = isMale ? "groomStatus" : "brideStatus";
+  const status = normalizedStatus(form[statusKey]);
+  if (!status) return "";
+
+  const role = isMale ? "calon suami" : "calon istri";
+  const expected = isMale ? "Duda" : "Janda";
+  const letters = isMale ? "PBM dan KKN" : "PBN dan N6";
+  return status === normalizedStatus(expected)
+    ? `Status ${role} dipilih ${expected}. Surat ${letters} dapat diproses.`
+    : `Status ${role} bukan ${expected}. Surat ${letters} otomatis dikeluarkan dari proses dan akan tersedia kembali jika status diubah ke ${expected}.`;
+});
+
 const STEPS = ["Pilih Surat", "Isian Surat", "Dokumen", "Cek & Kirim"];
 const STEP_SELECT = 0;
 const STEP_FIELDS = 1;
@@ -179,7 +271,6 @@ const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 // Surat yang sudah ditinjau pemohon (menekan "Lanjut" di surat itu).
 // Centang pada chip hanya muncul bila surat sudah ditinjau DAN isiannya lengkap,
 // jadi data yang terisi otomatis dari verifikasi NIK tidak langsung membuat surat tampak "selesai".
-const reviewed = reactive({});
 const isDone = (l) => !!reviewed[l.id] && !Object.keys(fieldErrorsOf(l)).length;
 
 const groups = computed(() => {
@@ -443,13 +534,17 @@ function downloadInvoice() {
 const unavailableLetters = computed(() => selectedLetters.value.filter((letter) => !getOnlineLetterConfig(letter.slug)));
 const canSubmitOnline = computed(() => selectedLetters.value.length > 0 && unavailableLetters.value.length === 0);
 
+/* Surat yang sudah berhasil terkirim. Bila pengiriman terhenti di tengah paket lalu dicoba lagi,
+   surat yang sudah terkirim dilewati supaya tidak terkirim dobel. */
+const submittedLetters = reactive({}); // { [letter.id]: { title, code } }
+
 async function sendApplication() {
   if (!canSubmitOnline.value) {
     throw new Error(`Surat berikut belum tersedia untuk pengajuan online: ${unavailableLetters.value.map((letter) => letter.title).join(", ")}.`);
   }
 
-  const codes = [];
   for (const letter of selectedLetters.value) {
+    if (submittedLetters[letter.id]) continue;
     const letterForm = Object.fromEntries(
       sectionsOf(letter)
         .flatMap((section) => section.fields)
@@ -466,9 +561,9 @@ async function sendApplication() {
       serviceFlow: "general",
       isNewResident,
     });
-    codes.push({ title: letter.title, code: response.request_code });
+    submittedLetters[letter.id] = { title: letter.title, code: response.request_code };
   }
-  return { codes };
+  return { codes: selectedLetters.value.map((letter) => submittedLetters[letter.id]).filter(Boolean) };
 }
 async function submit() {
   isSubmitting.value = true;
@@ -477,7 +572,7 @@ async function submit() {
     invoice.value = {
       entries: res.codes,
       senderName: form.name || form.applicantName || form.fullName || resident.resident?.fullName || "Pemohon",
-      documentTitle: bundle.title,
+      documentTitle: props.bundle.title,
       submittedAt: new Date(),
     };
     invoiceDownloaded.value = false;
@@ -555,15 +650,19 @@ async function copyOne(code) {
               v-for="l in g.letters"
               :key="l.id"
               class="relative flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
-              :class="isSelected(l.id) ? cardHue(l, gi).selected : cardHue(l, gi).idle"
+              :class="[
+                isSelected(l.id) ? cardHue(l, gi).selected : cardHue(l, gi).idle,
+                !isConditionalLetterAllowed(l) ? 'cursor-not-allowed opacity-60 hover:translate-y-0 hover:shadow-none' : '',
+              ]"
             >
-              <Checkbox :modelValue="isSelected(l.id)" binary class="mt-0.5" @update:modelValue="toggle(l.id)" />
+              <Checkbox :modelValue="isSelected(l.id)" binary class="mt-0.5" :disabled="!isConditionalLetterAllowed(l)" @update:modelValue="toggle(l.id)" />
               <span class="min-w-0 flex-1">
                 <span class="flex items-center gap-2">
                   <span class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold tracking-wide" :class="cardHue(l, gi).icon"><i v-if="l.icon" :class="l.icon" class="text-[10px]" />{{ l.cardCode ?? l.code }}</span>
                   <span class="text-sm font-semibold text-[var(--color-text-h)]">{{ l.cardTitle ?? l.title }}</span>
                 </span>
                 <span class="block text-xs mt-1 text-[var(--color-text-muted)]">{{ l.cardDescription ?? l.description }}</span>
+                <span v-if="!isConditionalLetterAllowed(l)" class="mt-1 block text-xs font-medium text-amber-700">Hanya tersedia untuk status {{ conditionalRuleFor(l.id)?.allowed.join("/") }}.</span>
               </span>
             </label>
           </div>
@@ -578,6 +677,9 @@ async function copyOne(code) {
 
       <!-- ============ LANGKAH 2: ISIAN — 1 SURAT PER HALAMAN ============ -->
       <div v-else-if="isFields && fLetter" :key="`f-${fLetter.id}`">
+        <Message v-if="conditionalNotice" severity="info" :closable="false" class="mb-5">
+          {{ conditionalNotice }}
+        </Message>
         <!-- penanda sub-langkah per surat -->
         <div v-if="selectedLetters.length > 1" class="flex flex-wrap items-center gap-2">
           <button
@@ -672,7 +774,7 @@ async function copyOne(code) {
                       <dt class="text-xs text-[var(--color-text-muted)]">{{ field.label }}</dt>
                       <dd v-if="!filledRows(field, form).length" class="text-[var(--color-text-h)]">-</dd>
                       <ol v-else class="mt-1 list-decimal pl-5 text-[var(--color-text-h)]">
-                        <li v-for="(row, i) in filledRows(field, form)" :key="i">{{ field.columns.map((c) => (c.type === 'date' ? fmtDate(row[c.key]) : row[c.key])).filter(Boolean).join(" · ") }}</li>
+                        <li v-for="(row, i) in filledRows(field, form)" :key="i">{{ field.columns.map((c) => cellText(c, row[c.key])).filter(Boolean).join(" · ") }}</li>
                       </ol>
                     </div>
                     <div v-else :class="field.span === 2 || field.type === 'checks' ? 'sm:col-span-2' : ''">
@@ -802,18 +904,22 @@ async function copyOne(code) {
       </div>
 
       <template #footer>
-        <template v-if="result.ok && ui.done">
-          <Button :label="ui.done.label" :icon="ui.done.icon" :class="h.btn" @click="ui.done.run(router)" />
-        </template>
-        <template v-else-if="result.ok">
-          <Button v-if="invoice" label="Unduh Invoice PDF" icon="pi pi-file-pdf" severity="secondary" outlined @click="downloadInvoice" />
-          <Button label="Ke Katalog" severity="secondary" outlined @click="router.push({ name: 'general-catalog', query: { category: 'permohonan' } })" />
-          <Button label="Lihat Dokumen Saya" :class="h.btn" @click="router.push({ name: 'my-documents' })" />
-        </template>
-        <template v-else>
-          <Button label="Tutup" severity="secondary" outlined @click="result.open = false" />
-          <Button label="Coba Lagi" icon="pi pi-refresh" :class="h.btn" :loading="isSubmitting" @click="result.open = false; submit()" />
-        </template>
+        <!-- Tombol sejajar selebar pop-up (sama dengan pop-up surat tunggal): rata, tidak menumpuk/menempel ke teks -->
+        <div class="flex w-full flex-wrap gap-2">
+          <template v-if="result.ok && ui.done">
+            <Button v-if="invoice" label="Unduh Invoice PDF" icon="pi pi-file-pdf" severity="secondary" outlined class="flex-1 basis-40" @click="downloadInvoice" />
+            <Button :label="ui.done.label" :icon="ui.done.icon" :class="[h.btn, 'flex-1 basis-40']" @click="ui.done.run(router)" />
+          </template>
+          <template v-else-if="result.ok">
+            <Button v-if="invoice" label="Unduh Invoice PDF" icon="pi pi-file-pdf" severity="secondary" outlined class="flex-1 basis-32" @click="downloadInvoice" />
+            <Button label="Ke Katalog" severity="secondary" outlined class="flex-1 basis-32" @click="router.push({ name: 'general-catalog', query: { category: 'permohonan' } })" />
+            <Button label="Lihat Dokumen Saya" :class="[h.btn, 'flex-1 basis-32']" @click="router.push({ name: 'my-documents' })" />
+          </template>
+          <template v-else>
+            <Button label="Tutup" severity="secondary" outlined class="flex-1" @click="result.open = false" />
+            <Button label="Coba Lagi" icon="pi pi-refresh" :class="[h.btn, 'flex-1']" :loading="isSubmitting" @click="result.open = false; submit()" />
+          </template>
+        </div>
       </template>
     </Dialog>
   </div>

@@ -1,24 +1,25 @@
-<script setup>
+<script>
 // Formulir Permohonan Penerbitan Kartu Identitas Anak (KIA)
 // Template PDF: letters/kia-application-form.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import LetterWizard from "@/views/services/layout/LetterWizard.vue";
-import { f, OPT } from "@/data/letterFields";
+import { f, OPT, signerNames, forPublic } from "@/data/letterFields";
 import { signerSection } from "@/views/services/layout/signerFields.js";
 
 // Langkah 1: isian sesuai formulir (kunci mengikuti $kia di template PDF)
 // Urutan mengikuti formulir: NIK, Nama, Tempat/Tgl Lahir, Jenis Kelamin, Gol. Darah,
 // No. KK, Nama Kepala Keluarga, No. Akta Kelahiran, Agama, Kewarganegaraan, Alamat (RT/RW, Kelurahan, Kecamatan)
-const sections = [
+export const sections = forPublic([
   {
     title: "Data Anak",
     fields: [
-      f.nik("nik", "NIK"),
-      f.text("name", "Nama Lengkap"),
-      f.text("birthPlace", "Tempat Lahir"),
-      f.date("birthDate", "Tanggal Lahir"),
-      f.select("gender", "Jenis Kelamin", OPT.gender),
+      // Data anak = BUKAN pemohon. Kunci generik (name/nik/...) sengaja dikecualikan dari isian otomatis,
+      // karena hasil pencarian NIK adalah orang tua/wali yang mengajukan, bukan anaknya.
+      f.nik("nik", "NIK", { noAutofill: true }),
+      f.text("name", "Nama Lengkap", { noAutofill: true }),
+      f.text("birthPlace", "Tempat Lahir", { noAutofill: true }),
+      f.date("birthDate", "Tanggal Lahir", { noAutofill: true }),
+      f.select("gender", "Jenis Kelamin", OPT.gender, { noAutofill: true }),
       f.select("bloodType", "Golongan Darah", ["A", "B", "AB", "O", "Tidak Tahu"], { optional: true }),
     ],
   },
@@ -33,7 +34,7 @@ const sections = [
   {
     title: "Agama & Kewarganegaraan",
     fields: [
-      f.select("religion", "Agama", OPT.religion),
+      f.select("religion", "Agama", OPT.religion, { noAutofill: true }), // agama anak
       f.text("citizenship", "Kewarganegaraan", { from: "nationality", default: "WNI" }),
     ],
   },
@@ -46,20 +47,22 @@ const sections = [
       f.text("district", "Kecamatan", { from: "district", default: "Ngemplak" }),
     ],
   },
-  // TTD: Pemohon. Yang ttd bisa orang tua/wali atau anaknya, jadi nama & NIK pemohon diisi
-  // MANUAL (tidak otomatis dari data pemohon). Nama Petugas TIDAK ada di form: tempatnya ada di blade
-  // (officer_name) dan diisi lewat otorisasi.
+  // TTD (2): 1. Pemohon (orang tua/wali = NIK yang dicari pertama, terisi otomatis)  2. Petugas
   signerSection([
-    ["applicantManual", "Nama Pemohon (penandatangan)"],
+    ["applicant", "Nama Pemohon (penandatangan)"],
     ["applicantNik", "NIK Pemohon (penandatangan)"],
   ]),
-];
+]);
 
 // Langkah 2: dokumen pendukung (string biasa, keduanya wajib)
-const documents = [
+export const documents = [
   "Fotokopi Kartu Keluarga (KK)",
   "Fotokopi KTP",
 ];
+</script>
+
+<script setup>
+import LetterWizard from "@/views/services/layout/LetterWizard.vue";
 </script>
 
 <template>

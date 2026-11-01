@@ -6,25 +6,35 @@
 // Nama field (key) = variabel di blade (aturan penamaan: lihat komentar di data/letterFields.js).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
 
-import { arrange, DOC, DOC_LAHIR, opt, birthChild, birthFather, birthMother } from "@/data/letterFields";
+import { arrange, DOC, DOC_LAHIR, opt, PELAPOR_DECREE, birthChild, birthFather, birthMother, pelapor, signerNames, forPublic } from "@/data/letterFields";
 
-// Langkah 1: isian sesuai surat yang diajukan
-export const sections = arrange(
+// Langkah 1: isian sesuai surat yang diajukan. Urutan xlsx: Nama Pelapor, Tanggal Lapor, lalu data anak, ibu, ayah.
+// "Data Pelapor" diisi petugas/admin kalurahan (khusus admin, tidak ada di form public).
+export const sections = forPublic(arrange(
   [
+    pelapor(PELAPOR_DECREE),
     birthChild(["name", "nik", "gender", "birthOrder", "birthPlace", "birthDate"]),
     birthMother(["name"], "Data Ibu"),
     birthFather(["name"], "Data Ayah"),
+    // Surat ini berkop Dukcapil dan ditandatangani Kepala Dinas: nama & NIP-nya dicetak di bawah tanda tangan (opsional).
+    { ...signerNames(["departmentHead"], "Opsional. Isi nama dan NIP Kepala Dinas bila ingin dicetak di bawah tanda tangan; kosongkan bila ditulis tangan."), title: "Kepala Dinas" },
   ],
   {
     // Urutan blok (judul). Pindahkan baris untuk mengubah urutan.
     order: [
+      "Data Pelapor",
       "Data Bayi/Anak",
       "Data Ibu",
       "Data Ayah",
+      "Kepala Dinas",
     ],
     // Urutan isian di tiap blok (key = variabel blade). Pindahkan baris untuk mengatur posisi.
     // Taruh key blok lain di sini untuk memindahkannya ke blok ini.
     fields: {
+      "Data Pelapor": [
+        "reporterName",           // Nama Lengkap
+        "reporterReportDate",     // Tanggal Lapor
+      ],
       "Data Bayi/Anak": [
         "childName",        // Nama Lengkap Anak
         "childNik",         // NIK Anak
@@ -39,13 +49,17 @@ export const sections = arrange(
       "Data Ayah": [
         "fatherName",  // Nama Lengkap
       ],
+      "Kepala Dinas": [
+        "departmentHeadName",  // Nama Kepala Dinas
+        "departmentHeadNip",   // NIP Kepala Dinas
+      ],
     },
     // Ubah label/placeholder/span satu isian khusus surat ini. Contoh:
     // patch: { childBirthOrder: { placeholder: "Contoh: Kedua" } },
     // Buang isian dari surat ini. Contoh:
     // drop: ["childWeight"],
   },
-);
+));
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [DOC_LAHIR, DOC.kk, "Fotokopi KTP ayah dan ibu", DOC.akta, opt("Surat pernyataan keterlambatan pelaporan")];

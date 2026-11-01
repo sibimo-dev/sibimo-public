@@ -4,13 +4,10 @@
 // Template PDF: letters/statement-population-data-change.blade.php
 // 1 file = 1 surat. Isi `sections` (langkah 1) dan `documents` (langkah 2).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
-import { f, OPT, DOC, opt } from "@/data/letterFields";
+import { f, OPT, DOC, opt, forPublic } from "@/data/letterFields";
 
-// Pilihan "Pendidikan Terakhir" mengikuti istilah pada KK.
-const EDUCATION = [
-  "Tidak/Belum Sekolah", "Belum Tamat SD/Sederajat", "Tamat SD/Sederajat", "SLTP/Sederajat", "SLTA/Sederajat",
-  "Diploma I/II", "Akademi/Diploma III/S. Muda", "Diploma IV/Strata I", "Strata II", "Strata III",
-];
+// Pilihan "Pendidikan Terakhir" sama dengan form Data Warga (OPT.education).
+const EDUCATION = OPT.education;
 
 // Tabel perubahan hanya tampil (dan wajib diisi) bila jenis perubahannya dicentang.
 const CHANGES = { education: "Pendidikan Terakhir", job: "Pekerjaan", religion: "Agama", other: "Lainnya (status perkawinan, dll)" };
@@ -20,7 +17,7 @@ const who = { key: "name", label: "Nama anggota keluarga" };
 const basis = (label = "Dasar perubahan (mis. ijazah, akta nikah)") => ({ key: "basis", label });
 
 // Langkah 1: isian sesuai surat yang diajukan
-export const sections = [
+export const sections = forPublic([
   {
     // Surat: Nama, NIK, Nomor KK, Alamat
     title: "Data Pemohon (Kepala Keluarga)",
@@ -61,8 +58,8 @@ export const sections = [
 
       f.rows("jobChanges", "A. Perubahan pekerjaan", [
         who,
-        { key: "before", label: "Semula (opsional)", optional: true },
-        { key: "after", label: "Menjadi (mis. Petani/Pekebun)" },
+        { key: "before", label: "Semula (opsional)", type: "occupation", options: OPT.occupation, optional: true },
+        { key: "after", label: "Menjadi (mis. Petani/Pekebun)", type: "occupation", options: OPT.occupation },
         basis("Dasar perubahan (mis. surat keterangan)"),
       ], { max: 7, showIf: changing(CHANGES.job) }),
 
@@ -83,7 +80,7 @@ export const sections = [
       ], { max: 7, showIf: changing(CHANGES.other) }),
     ],
   },
-];
+]);
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [
