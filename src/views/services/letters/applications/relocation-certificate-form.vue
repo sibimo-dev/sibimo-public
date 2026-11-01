@@ -1,16 +1,44 @@
 <script>
 
-import { f, OPT, DOC, opt, alamat } from "@/data/letterFields";
+import { f, OPT, DOC, opt, alamat, kodeWilayah, wilayahDropdown, BIMOMARTANI, forPublic } from "@/data/letterFields";
 
 // Langkah 1: urutan mengikuti formulir PDF
-export const sections = [
+export const sections = forPublic([
+  // DIISI OLEH PETUGAS: kode wilayah (default). Dusun/Dukuh/Kampung diisi di blok ini (key originHamlet); Nomor KK dari "Data Daerah Asal".
+  kodeWilayah({ names: false, hamlet: true, hamletCode: true, hamletKey: "originHamlet", hamletOptional: true }, "Kode Wilayah (Diisi Oleh Petugas)"),
   // DATA DAERAH ASAL: 1. Nomor KK, 2. Nama Kepala Keluarga
   {
     title: "Data Daerah Asal",
-    fields: [f.kk("kkNumber", "Nomor Kartu Keluarga"), f.text("headOfFamily", "Nama Kepala Keluarga")],
+    fields: [
+      f.kk("kkNumber", "Nomor Kartu Keluarga", { from: "familyCardNumber" }),
+      f.text("headOfFamily", "Nama Kepala Keluarga", { from: "headOfFamilyName" }),
+    ],
   },
-  // 3. Alamat (RT, RW, Dusun, Desa, Kecamatan, Kab/Kota, Provinsi, Kode Pos, Telepon)
-  alamat("origin", "Alamat Daerah Asal"),
+  // 3. Alamat asal = alamat pemohon → terisi dari data warga.
+  //    Desa/Kecamatan/Kab/Provinsi: dropdown (boleh diketik), default Bimomartani/Ngemplak/Sleman/DIY.
+  wilayahDropdown(
+    alamat("origin", "Alamat Daerah Asal", {
+      from: "address",
+      phoneFrom: "phoneNumber",
+      fieldFrom: {
+        rt: "rt",
+        hamlet: "dusun",
+        rw: "rw",
+        village: "village",
+        district: "district",
+        regency: "regency",
+        province: "province",
+        postalCode: "postalCode",
+        phone: "phoneNumber",
+      },
+      defaults: BIMOMARTANI,
+      hamlet: true, // Dusun/Dukuh/Kampung asal: dropdown, terisi dari dusun warga
+      scopeKey: "relocationTypeLabel",
+    }),
+    "origin",
+    "relocationTypeLabel",
+    BIMOMARTANI,
+  ),
   // 4. NIK Pemohon, 5. Tempat/Tanggal Lahir, 6. Nama Lengkap
   {
     title: "Data Pemohon",
@@ -26,24 +54,25 @@ export const sections = [
   {
     title: "Data Kepindahan",
     fields: [
-      f.select("relocationReason", "Alasan Pindah", ["Pekerjaan", "Pendidikan", "Keamanan", "Kesehatan", "Perumahan", "Keluarga", "Lainnya"]),
-      f.text("relocationReasonOther", "Sebutkan alasan lainnya", { showIf: (form) => form.relocationReason === "Lainnya" }),
+      f.select("relocationReason", "Alasan Pindah", OPT.relocationReason),
+      f.text("relocationReasonOther", "Sebutkan alasan lainnya", { showIf: (form) => String(form.relocationReason || "").startsWith("7") }),
+      f.select("relocationTypeLabel", "Cakupan Kepindahan (subjudul formulir)", OPT.relocationScope, { default: OPT.relocationScope[0], span: 2 }),
     ],
   },
-  // 2. Alamat Tujuan Pindah
-  alamat("destination", "Alamat Tujuan Pindah"),
+  // 2. Alamat Tujuan Pindah: dropdown (boleh diketik), kosong / dipilih sendiri. Dusun diketik manual.
+  wilayahDropdown(
+    alamat("destination", "Alamat Tujuan Pindah", { scopeKey: "relocationTypeLabel" }),
+    "destination",
+    "relocationTypeLabel",
+    {},
+  ),
   // 3. Jenis Kepindahan, 4. Status KK bagi yang tidak pindah, 5. Status Nomor KK bagi yang pindah
   {
     title: "Jenis Kepindahan & Status KK",
     fields: [
-      f.select("relocationType", "Jenis Kepindahan", [
-        "Kep. Keluarga",
-        "Kep. Keluarga dan seluruh Angg. Keluarga",
-        "Kep. Keluarga dan sbg Angg. Keluarga",
-        "Anggota Keluarga",
-      ], { span: 2 }),
-      f.select("originKkStatus", "Status KK bagi yang tidak pindah", OPT.kkStatus),
-      f.select("destinationKkStatus", "Status Nomor KK bagi yang pindah", OPT.kkStatus),
+      f.select("relocationType", "Jenis Kepindahan", OPT.relocationType, { span: 2 }),
+      f.select("originKkStatus", "Status KK bagi yang tidak pindah", OPT.kkStatusNo),
+      f.select("destinationKkStatus", "Status Nomor KK bagi yang pindah", OPT.kkStatusNo),
     ],
   },
   // 6. Keluarga yang Pindah (tabel 7 baris: NIK, Nama, Masa Berlaku KTP s/d, SHDK)
@@ -53,12 +82,12 @@ export const sections = [
       f.rows("familyMembers", "Anggota keluarga yang pindah", [
         { key: "nik", label: "NIK" },
         { key: "name", label: "Nama" },
-        { key: "validUntil", label: "Masa berlaku KTP s/d", type: "date", optional: true },
+        { key: "validUntil", label: "Masa berlaku KTP s/d", type: "date", optional: true, lifetime: true },
         { key: "shdk", label: "SHDK", type: "select", options: OPT.shdk },
-      ], { max: 7 }),
+      ], { max: 7, autoByType: "relocationType" }),
     ],
   },
-];
+]);
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [

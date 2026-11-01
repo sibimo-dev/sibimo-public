@@ -6,16 +6,17 @@
 // Nama field (key) = variabel di blade (aturan penamaan: lihat komentar di data/letterFields.js).
 // Langkah 3 (cek ulang, ceklis dokumen asli, kirim, pop-up hasil) sudah ditangani LetterWizard.
 
-import { arrange, DOC, DOC_LAHIR, opt, BIRTH_MARRIAGE_APPLICATION, BIRTH_PARENT_BRIEF, birthChild, birthFather, birthDocumentsChecklist, birthMother, birthFamily, birthParentsMarriage } from "@/data/letterFields";
+import { arrange, DOC, DOC_LAHIR, opt, PELAPOR_APPLICATION, BIRTH_MARRIAGE_APPLICATION, BIRTH_PARENT_BRIEF, birthChild, birthFather, birthDocumentsChecklist, birthMother, birthFamily, birthParentsMarriage, pelapor, forPublic } from "@/data/letterFields";
 
-// Langkah 1: isian sesuai surat yang diajukan
-export const sections = arrange(
+// Langkah 1: isian sesuai surat yang diajukan. F. "Data Pelapor" diisi petugas/admin kalurahan (khusus admin, tidak ada di form public).
+export const sections = forPublic(arrange(
   [
     birthFamily(),
     birthChild(["nik", "name", "birthPlace", "birthDate", "gender"]),
     birthMother(BIRTH_PARENT_BRIEF, "Data Ibu Kandung"),
     birthFather(BIRTH_PARENT_BRIEF, "Data Ayah Kandung"),
     birthParentsMarriage(BIRTH_MARRIAGE_APPLICATION),
+    pelapor(PELAPOR_APPLICATION),
     birthDocumentsChecklist(),
   ],
   {
@@ -26,6 +27,7 @@ export const sections = arrange(
       "Data Ibu Kandung",
       "Data Ayah Kandung",
       "Data Perkawinan Orang Tua",
+      "Data Pelapor",
       "Dokumen yang Dilampirkan",
     ],
     // Urutan isian di tiap blok (key = variabel blade). Pindahkan baris untuk mengatur posisi.
@@ -46,17 +48,26 @@ export const sections = arrange(
         "motherNik",      // NIK
         "motherName",     // Nama Lengkap
         "motherAddress",  // Alamat
-        "motherRtRw",     // RT / RW
+        "motherRt",     // RT
+        "motherRw",     // RW
       ],
       "Data Ayah Kandung": [
         "fatherNik",      // NIK
         "fatherName",     // Nama Lengkap
         "fatherAddress",  // Alamat
-        "fatherRtRw",     // RT / RW
+        "fatherRt",     // RT
+        "fatherRw",     // RW
       ],
       "Data Perkawinan Orang Tua": [
         "marriageCertificateNumber",  // Nomor Kutipan Akta Perkawinan
         "marriageDate",               // Tanggal Pernikahan
+      ],
+      "Data Pelapor": [
+        "reporterNik",            // NIK
+        "reporterName",           // Nama Lengkap
+        "reporterAddress",        // Alamat
+        "reporterPhone",          // No HP / Telepon / Email Aktif
+        "reporterApplicationDate",// Tanggal Permohonan
       ],
       "Dokumen yang Dilampirkan": [
         "documents",  // Dokumen yang dilampirkan
@@ -67,7 +78,7 @@ export const sections = arrange(
     // Buang isian dari surat ini. Contoh:
     // drop: ["childWeight"],
   },
-);
+));
 
 // Langkah 2: dokumen pendukung (opt(...) = tidak wajib)
 export const documents = [DOC_LAHIR, DOC.kk, "Fotokopi KTP ayah dan ibu/wali/pelapor", DOC.akta, opt(DOC.ktpSaksi), opt("Surat kuasa dan fotokopi KTP penerima kuasa"), opt("Fotokopi paspor (bagi WNI bukan penduduk/orang asing)"), opt("SPTJM kebenaran data kelahiran"), opt("SPTJM kebenaran sebagai pasangan suami istri")];

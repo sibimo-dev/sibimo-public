@@ -172,7 +172,9 @@ export async function submitOnlineLetter({ slug, form, files, documents, reusedD
     "reporterAddress",
     "ownerAddress",
     "letterCOwnerAddress",
-  );
+  )
+    // Surat tanpa isian alamat pemohon (mis. surat pindah): pakai alamat asal / alamat KTP warga agar backend tidak menolak.
+    || applicantValue(form, resident, "originAddress", "ktpAddress", "destinationAddress");
   const applicantPhone = applicantValue(form, resident, "whatsapp", "phone", "applicantPhone", "phoneNumber");
   const formData = cleanFormValue({
     ...form,
