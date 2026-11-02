@@ -225,7 +225,7 @@ const infoRows = computed(() => {
         </div>
 
         <h1
-          class="bg-gradient-to-r from-primary-600 via-sky-500 to-emerald-500 bg-clip-text text-2xl font-bold text-transparent md:text-3xl"
+          class="bg-gradient-to-r from-sky-600 via-cyan-500 to-violet-600 bg-clip-text text-2xl font-bold text-transparent md:text-3xl"
         >
           {{ item.title }}
         </h1>
@@ -332,7 +332,7 @@ const infoRows = computed(() => {
       <!-- related -->
       <div v-if="related.length" class="flex flex-col gap-5">
         <h2
-          class="bg-gradient-to-r from-primary-600 via-sky-500 to-emerald-500 bg-clip-text text-lg font-bold text-transparent"
+          class="bg-gradient-to-r from-sky-600 via-cyan-500 to-violet-600 bg-clip-text text-lg font-bold text-transparent"
         >
           Pembangunan Lainnya
         </h2>

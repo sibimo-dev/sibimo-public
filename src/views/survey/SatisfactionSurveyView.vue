@@ -170,22 +170,24 @@ const satisfiedPercent = computed(() => getSatisfiedPercent(summary.value?.eleme
 </script>
 
 <template>
-  <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8">
+  <div class="flex w-full flex-col gap-6 py-6 lg:py-8">
 
     <!-- ============ HEADER ============ -->
-    <section class="flex flex-col gap-3 pt-2">
-      <span class="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-violet-500">
-        <span class="h-2 w-2 rounded-full bg-violet-400" />
-        Suara Warga
-      </span>
-      <h1 class="m-0 text-3xl font-extrabold leading-tight text-neutral-900 sm:text-4xl">
-        Survei Kepuasan
-        <span class="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent">Masyarakat</span>
-      </h1>
-      <p class="m-0 max-w-xl text-[15px] text-neutral-500">
-        Ceritakan pengalaman Anda saat mengurus layanan di Kalurahan Bimomartani.
-        Masukan Anda menjadi dasar kami memperbaiki pelayanan.
-      </p>
+    <section class="flex flex-col gap-3">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-sky-500" />
+          <span class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-sky-500">Suara Warga</span>
+        </div>
+        <h1 class="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
+          Survei Kepuasan
+          <span class="bg-gradient-to-r from-sky-600 via-cyan-500 to-violet-600 bg-clip-text text-transparent">Masyarakat</span>
+        </h1>
+        <p class="mt-1 max-w-xl text-[13.5px] text-muted sm:text-[14.5px]">
+          Ceritakan pengalaman Anda saat mengurus layanan di Kalurahan Bimomartani.
+          Masukan Anda menjadi dasar kami memperbaiki pelayanan.
+        </p>
+      </div>
       <div class="flex flex-wrap items-center gap-2 text-[12px] font-semibold">
         <span class="rounded-full bg-violet-100 px-3 py-1 text-violet-700">Anonim</span>
         <span class="rounded-full bg-amber-100 px-3 py-1 text-amber-700">Sekitar 2 menit</span>

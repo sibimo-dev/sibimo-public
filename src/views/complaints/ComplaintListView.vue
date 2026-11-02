@@ -188,30 +188,29 @@ function onRowClick(event) {
 
 const tablePt = {
   bodyRow: () => ({
-    class: ['cursor-pointer', 'transition-all duration-150 ease-out', 'hover:translate-x-0.5 hover:bg-slate-50', 'hover:shadow-[inset_3px_0_0_0_#6366f1]'],
+    class: ['cursor-pointer', 'transition-all duration-150 ease-out', 'hover:translate-x-0.5 hover:bg-slate-50', 'hover:shadow-[inset_3px_0_0_0_#0ea5e9]'],
   }),
 }
 </script>
 
 <template>
-  <div class="relative mx-auto max-w-6xl overflow-hidden px-4 py-8 md:px-6">
-    <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 rounded-full bg-indigo-400/10 blur-3xl" />
-    <div class="pointer-events-none absolute -right-16 top-24 -z-10 h-64 w-64 animate-pulse rounded-full bg-amber-400/10 blur-3xl motion-reduce:animate-none" />
-    <div class="pointer-events-none absolute left-1/4 bottom-0 -z-10 h-56 w-56 animate-pulse rounded-full bg-emerald-400/10 blur-3xl motion-reduce:animate-none" />
+  <div class="relative overflow-hidden py-6 lg:py-8">
+    <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 animate-pulse rounded-full bg-sky-400/10 blur-3xl motion-reduce:animate-none" />
+    <div class="pointer-events-none absolute -right-16 top-24 -z-10 h-64 w-64 animate-pulse rounded-full bg-rose-400/10 blur-3xl motion-reduce:animate-none" />
+    <div class="pointer-events-none absolute left-1/4 bottom-0 -z-10 h-56 w-56 animate-pulse rounded-full bg-violet-400/10 blur-3xl motion-reduce:animate-none" />
 
     <Transition appear enter-active-class="transition-all duration-500 ease-out" enter-from-class="opacity-0 translate-y-3 scale-[0.98]" enter-to-class="opacity-100 translate-y-0 scale-100">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div class="inline-flex items-center gap-2">
-            <span class="h-2 w-2 animate-pulse rounded-full bg-indigo-500 motion-reduce:animate-none" />
-            <span class="text-xs font-bold uppercase tracking-[0.25em] text-indigo-600">Suarakan</span>
+          <div class="flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-sky-500" />
+            <span class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-sky-500">Suarakan</span>
           </div>
-          <h1 class="mt-2 text-2xl font-bold text-slate-900 md:text-3xl">
-            Daftar
-            <span class="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">Aduan</span>
-            Masyarakat
+          <h1 class="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
+            Daftar Aduan
+            <span class="bg-gradient-to-r from-sky-600 via-cyan-500 to-violet-600 bg-clip-text text-transparent">Masyarakat</span>
           </h1>
-          <p class="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">Pantau seluruh laporan yang masuk beserta status penanganannya.</p>
+          <p class="mt-1 text-[13.5px] text-muted sm:text-[14.5px]">Pantau seluruh laporan yang masuk beserta status penanganannya.</p>
         </div>
         <Button
           label="Laporkan Aduan"
@@ -354,8 +353,8 @@ const tablePt = {
     <Dialog v-model:visible="showDetailDialog" modal dismissableMask :style="{ width: '34rem' }" class="mx-4">
       <template #header>
         <div class="flex items-center gap-2">
-          <span class="h-2 w-2 rounded-full bg-indigo-500" />
-          <span class="text-sm font-bold uppercase tracking-wider text-indigo-600">Detail Aduan</span>
+          <span class="h-2 w-2 rounded-full bg-sky-500" />
+          <span class="text-sm font-bold uppercase tracking-wider text-sky-600">Detail Aduan</span>
         </div>
       </template>
 

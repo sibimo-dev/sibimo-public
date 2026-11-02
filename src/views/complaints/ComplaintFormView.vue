@@ -409,27 +409,28 @@ const popEnterActive = `transition duration-400 ${EASE_BOUNCE} motion-reduce:tra
 </script>
 
 <template>
-  <div class="relative mx-auto max-w-6xl overflow-hidden px-4 py-8 md:px-6">
-    <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 rounded-full bg-indigo-400/10 blur-3xl motion-safe:animate-[pulse_10s_ease-in-out_infinite]" />
-    <div class="pointer-events-none absolute -right-16 top-24 -z-10 h-64 w-64 rounded-full bg-amber-400/10 blur-3xl motion-safe:animate-[pulse_13s_ease-in-out_infinite]" />
-    <div class="pointer-events-none absolute left-1/4 bottom-0 -z-10 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl motion-safe:animate-[pulse_16s_ease-in-out_infinite]" />
+  <div class="relative overflow-hidden py-6 lg:py-8">
+    <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 rounded-full bg-sky-400/10 blur-3xl motion-safe:animate-[pulse_10s_ease-in-out_infinite]" />
+    <div class="pointer-events-none absolute -right-16 top-24 -z-10 h-64 w-64 rounded-full bg-rose-400/10 blur-3xl motion-safe:animate-[pulse_13s_ease-in-out_infinite]" />
+    <div class="pointer-events-none absolute left-1/4 bottom-0 -z-10 h-56 w-56 rounded-full bg-violet-400/10 blur-3xl motion-safe:animate-[pulse_16s_ease-in-out_infinite]" />
 
     <Transition appear :enter-active-class="fadeUpEnter" enter-from-class="opacity-0 translate-y-3" enter-to-class="opacity-100 translate-y-0">
       <div class="mb-2">
-        <Button text icon="pi pi-arrow-left" label="Kembali ke Daftar Aduan" class="!px-0 !text-slate-500 hover:!text-indigo-600" @click="goToComplaintList" />
+        <Button text icon="pi pi-arrow-left" label="Kembali ke Daftar Aduan" class="!px-0 !text-slate-500 hover:!text-sky-600" @click="goToComplaintList" />
       </div>
     </Transition>
 
     <Transition appear :enter-active-class="fadeUpEnter" enter-from-class="opacity-0 translate-y-3" enter-to-class="opacity-100 translate-y-0">
       <div>
-        <div class="inline-flex items-center gap-2">
-          <span class="h-2 w-2 rounded-full bg-indigo-500 motion-safe:animate-pulse" />
-          <span class="text-xs font-bold uppercase tracking-[0.25em] text-indigo-600">Suarakan</span>
+        <div class="flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-sky-500 motion-safe:animate-pulse" />
+          <span class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-sky-500">Suarakan</span>
         </div>
-        <h1 class="mt-2 text-2xl font-bold text-slate-900 md:text-3xl">
-          Laporkan <span class="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">Aduan</span>
+        <h1 class="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
+          Laporkan
+          <span class="bg-gradient-to-r from-sky-600 via-cyan-500 to-violet-600 bg-clip-text text-transparent">Aduan</span>
         </h1>
-        <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-500">
+        <p class="mt-1 max-w-2xl text-[13.5px] leading-relaxed text-muted sm:text-[14.5px]">
           Sampaikan permasalahan infrastruktur, pelayanan publik, atau kejadian di lingkungan kalurahan.
           Laporan Anda membantu kami membangun kalurahan yang lebih baik.
         </p>
