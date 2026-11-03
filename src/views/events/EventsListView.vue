@@ -1,10 +1,9 @@
 <script setup>
-
-import { computed, ref, onMounted} from "vue";
+import { computed, ref, watch, onMounted } from "vue";
 import { RouterLink } from "vue-router";
 import Button from "primevue/button";
+import Select from "primevue/select";
 import { fetchAgendaMonths } from "@/services/events.js";
-
 
 const agendaMonths = ref([]);
 const loading = ref(true);
@@ -19,14 +18,61 @@ onMounted(async () => {
   }
 });
 
+/* ---------- Nomor bulan untuk lingkaran ---------- */
+const monthNames = [
+  "januari", "februari", "maret", "april", "mei", "juni",
+  "juli", "agustus", "september", "oktober", "november", "desember",
+];
+
+// Nomor bulan 01-12, dari item.key (format "2026-11") atau dari nama bulannya
+function monthNumber(item) {
+  const match = String(item.key ?? "").match(/^(\d{4})-(\d{1,2})/);
+  const number = match
+    ? Number(match[2])
+    : monthNames.indexOf(String(item.monthLabel ?? "").toLowerCase()) + 1;
+
+  return number > 0 ? String(number).padStart(2, "0") : "-";
+}
+
+/* ---------- Filter tahun ---------- */
+const currentYear = new Date().getFullYear();
+const selectedYear = ref(currentYear); // default: tahun sekarang
+
+// 10 tahun sebelumnya s/d 50 tahun yang akan datang
+const yearOptions = Array.from({ length: 61 }, (_, i) => {
+  const year = currentYear - 10 + i;
+  return { label: String(year), value: year };
+});
+
 const timelineMonths = computed(() => [...agendaMonths.value].reverse());
+
+const filteredMonths = computed(() =>
+  timelineMonths.value.filter((m) => Number(m.year) === selectedYear.value),
+);
+
 const visibleCount = ref(3);
-const visibleTimelineMonths = computed(() => timelineMonths.value.slice(0, visibleCount.value));
-const hasMoreTimeline = computed(() => visibleCount.value < timelineMonths.value.length);
+const visibleTimelineMonths = computed(() =>
+  filteredMonths.value.slice(0, visibleCount.value),
+);
+const hasMoreTimeline = computed(
+  () => visibleCount.value < filteredMonths.value.length,
+);
+
+// Ganti tahun -> kembali ke 3 item pertama
+watch(selectedYear, () => {
+  visibleCount.value = 3;
+});
 
 function loadMore() {
-  visibleCount.value = Math.min(visibleCount.value + 2, timelineMonths.value.length);
+  visibleCount.value = Math.min(
+    visibleCount.value + 2,
+    filteredMonths.value.length,
+  );
 }
+
+const emptyMessage = computed(
+  () => `Belum ada agenda yang ditambahkan pada tahun ${selectedYear.value}.`,
+);
 </script>
 
 <template>
@@ -51,15 +97,44 @@ function loadMore() {
 
     <!-- ============ LINIMASA ============ -->
     <section v-reveal class="mt-8">
+      <!-- Filter tahun -->
+      <div class="mb-6 flex items-center gap-3">
+        <label for="filterTahun" class="text-[13px] font-semibold text-heading">
+          Tahun
+        </label>
+        <Select
+          id="filterTahun"
+          v-model="selectedYear"
+          :options="yearOptions"
+          optionLabel="label"
+          optionValue="value"
+          filter
+          scrollHeight="240px"
+          class="w-32"
+        />
+      </div>
+
+      <!-- Memuat -->
       <div v-if="loading" class="py-16 text-center text-muted">Memuat agenda...</div>
-      <div>
+
+      <!-- Kosong -->
+      <div
+        v-else-if="filteredMonths.length === 0"
+        class="rounded-2xl border border-dashed border-border-default bg-surface py-16 text-center"
+      >
+        <i class="pi pi-calendar text-3xl text-sky-300" />
+        <p class="mt-3 text-[13.5px] text-muted">{{ emptyMessage }}</p>
+      </div>
+
+      <!-- Daftar -->
+      <div v-else>
         <div v-for="(item, idx) in visibleTimelineMonths" :key="item.key" class="flex gap-3 sm:gap-4">
-          <!-- rel: bulatan tanggal + garis linimasa -->
+          <!-- rel: bulatan nomor bulan + garis linimasa -->
           <div class="flex flex-col items-center shrink-0">
             <div
               class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-sky-500 to-violet-600 text-white font-extrabold text-[13px] sm:text-[15px] flex items-center justify-center shrink-0 shadow-sm shadow-sky-600/25"
             >
-              {{ item.dayHighlight }}
+              {{ monthNumber(item) }}
             </div>
             <div
               v-if="idx !== visibleTimelineMonths.length - 1"
