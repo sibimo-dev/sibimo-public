@@ -377,25 +377,30 @@ const satisfiedPercent = computed(() => getSatisfiedPercent(summary.value?.eleme
               </div>
             </div>
 
-            <div class="flex flex-wrap gap-2" role="radiogroup" :aria-label="element.title">
+            <!-- Bentuk sama di semua ukuran layar: tumpuk ke bawah, bintang lebar tetap agar label sejajar -->
+            <div
+              class="flex w-full max-w-xl flex-col gap-2"
+              role="radiogroup"
+              :aria-label="element.title"
+            >
               <button
                 v-for="(option, optionIndex) in element.options"
                 :key="option"
                 type="button"
                 role="radio"
                 :aria-checked="answers[element.key] === optionIndex + 1"
-                class="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[13px] font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-700/40"
+                class="flex w-full items-center gap-3 rounded-xl border px-4 py-2.5 text-left text-[13px] font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-700/40"
                 :class="scoreOptionClass(optionIndex + 1, answers[element.key] === optionIndex + 1)"
                 @click="selectAnswer(element.key, optionIndex + 1)"
               >
-                <span class="flex items-center" aria-hidden="true">
+                <span class="flex w-[72px] shrink-0 items-center" aria-hidden="true">
                   <i
                     v-for="star in optionIndex + 1"
                     :key="star"
-                    class="pi pi-star-fill text-[15px] text-amber-400"
+                    class="pi pi-star-fill text-[14px] text-amber-400"
                   />
                 </span>
-                <span>{{ option }}</span>
+                <span class="flex-1">{{ option }}</span>
               </button>
             </div>
 
