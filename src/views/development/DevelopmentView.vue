@@ -144,9 +144,10 @@ function getCategoryStyle(category) {
 
 <template>
   <div class="relative flex flex-col gap-8 overflow-hidden py-6 lg:py-8">
-    <!-- Ambient glow -->
-    <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 animate-pulse rounded-full bg-primary-400/10 blur-3xl" />
-    <div class="pointer-events-none absolute -right-20 top-64 -z-10 h-64 w-64 animate-pulse rounded-full bg-emerald-400/10 blur-3xl [animation-delay:0.4s]" />
+    <!-- Ambient glow (sama dengan halaman Berita) -->
+    <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 animate-pulse rounded-full bg-sky-400/10 blur-3xl" />
+    <div class="pointer-events-none absolute -right-20 top-64 -z-10 h-64 w-64 animate-pulse rounded-full bg-rose-400/10 blur-3xl [animation-delay:0.4s]" />
+    <div class="pointer-events-none absolute bottom-0 left-1/3 -z-10 h-56 w-56 animate-pulse rounded-full bg-violet-400/10 blur-3xl [animation-delay:0.8s]" />
 
     <!-- Header + pencarian -->
     <Transition
@@ -158,14 +159,14 @@ function getCategoryStyle(category) {
       <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div class="flex items-center gap-2">
-            <span class="h-2 w-2 rounded-full bg-primary-500" />
-            <span class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-primary-500">
+            <span class="h-2 w-2 rounded-full bg-sky-500" />
+            <span class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-sky-500">
               Transparansi
             </span>
           </div>
           <h1 class="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
             Pembangunan
-            <span class="bg-gradient-to-r from-primary-600 via-sky-500 to-emerald-500 bg-clip-text text-transparent">
+            <span class="bg-gradient-to-r from-sky-600 via-cyan-500 to-violet-600 bg-clip-text text-transparent">
               Kalurahan
             </span>
           </h1>

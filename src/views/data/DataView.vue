@@ -20,10 +20,8 @@ const categories = reactive([
     key: "age",
     label: "Kelompok Umur",
     icon: "pi-calendar",
-    labels: [
-      "0–4", "5–9", "10–14", "15–19", "20–24", "25–29", "30–34", "35–39",
-      "40–44", "45–49", "50–54", "55–59", "60–64", "65–69", "70–74", "75+",
-    ],
+    // Harus sama persis (termasuk tanda "–") dengan `group` yang dikirim backend.
+    labels: ["0–2", "3–5", "6–12", "13–18", "19–29", "30–40", "41–50", "51–60", "61–70", "71+"],
     rows: [],
   },
   {
@@ -238,6 +236,38 @@ const summaryCardIconClass = {
   rose: "bg-rose-50 text-rose-700",
 };
 
+/* ---------------- Gaya kolom tabel ----------------
+   - Semua judul, isi, dan footer kolom angka diratakan TENGAH. Dipaksa lewat
+     style inline (bukan hanya class) supaya tidak bisa ditimpa CSS bawaan tabel,
+     dan lewat pt.columnHeaderContent karena judul kolom PrimeVue dibungkus flex.
+   - Tiap kelompok kolom punya warna sendiri: No/Kelompok = abu, Jumlah = violet,
+     Laki-laki = sky, Perempuan = rose. Judul diberi warna lebih pekat, isi
+     diberi tint tipis dengan warna yang sama. */
+const CENTER_STYLE = "text-align: center";
+const centerHeaderPt = { columnHeaderContent: { style: "justify-content: center" } };
+
+const colTone = {
+  label: {
+    head: "!bg-slate-100 !text-slate-700",
+    body: "",
+    foot: "!bg-slate-100 !text-slate-700",
+  },
+  total: {
+    head: "!bg-violet-100 !text-violet-800",
+    body: "!bg-violet-50/60",
+    foot: "!bg-violet-100 !text-violet-800",
+  },
+  male: {
+    head: "!bg-sky-100 !text-sky-800",
+    body: "!bg-sky-50/60",
+    foot: "!bg-sky-100 !text-sky-800",
+  },
+  female: {
+    head: "!bg-rose-100 !text-rose-800",
+    body: "!bg-rose-50/60",
+    foot: "!bg-rose-100 !text-rose-800",
+  },
+};
 
 const PALETTE = [
   "#ff8fa3", 
@@ -508,45 +538,97 @@ onMounted(async () => {
           >
             <ColumnGroup type="header">
               <Row>
-                <Column header="No" :rowspan="2" style="width: 52px" />
-                <Column header="Kelompok" :rowspan="2" />
-                <Column header="Jumlah" :colspan="2" class="!text-center" />
-                <Column header="Laki-laki" :colspan="2" class="!text-center" />
-                <Column header="Perempuan" :colspan="2" class="!text-center" />
+                <Column
+                  header="No"
+                  :rowspan="2"
+                  style="width: 52px"
+                  :headerClass="colTone.label.head"
+                  :headerStyle="CENTER_STYLE"
+                  :pt="centerHeaderPt"
+                />
+                <Column
+                  header="Kelompok"
+                  :rowspan="2"
+                  :headerClass="colTone.label.head"
+                />
+                <Column
+                  header="Jumlah"
+                  :colspan="2"
+                  :headerClass="colTone.total.head"
+                  :headerStyle="CENTER_STYLE"
+                  :pt="centerHeaderPt"
+                />
+                <Column
+                  header="Laki-laki"
+                  :colspan="2"
+                  :headerClass="colTone.male.head"
+                  :headerStyle="CENTER_STYLE"
+                  :pt="centerHeaderPt"
+                />
+                <Column
+                  header="Perempuan"
+                  :colspan="2"
+                  :headerClass="colTone.female.head"
+                  :headerStyle="CENTER_STYLE"
+                  :pt="centerHeaderPt"
+                />
               </Row>
               <Row>
-                <Column header="n" class="!text-center" style="width: 90px" />
-                <Column header="%" class="!text-center" style="width: 80px" />
-                <Column header="n" class="!text-center" style="width: 90px" />
-                <Column header="%" class="!text-center" style="width: 80px" />
-                <Column header="n" class="!text-center" style="width: 90px" />
-                <Column header="%" class="!text-center" style="width: 80px" />
+                <Column header="n" style="width: 90px" :headerClass="colTone.total.head" :headerStyle="CENTER_STYLE" :pt="centerHeaderPt" />
+                <Column header="%" style="width: 80px" :headerClass="colTone.total.head" :headerStyle="CENTER_STYLE" :pt="centerHeaderPt" />
+                <Column header="n" style="width: 90px" :headerClass="colTone.male.head" :headerStyle="CENTER_STYLE" :pt="centerHeaderPt" />
+                <Column header="%" style="width: 80px" :headerClass="colTone.male.head" :headerStyle="CENTER_STYLE" :pt="centerHeaderPt" />
+                <Column header="n" style="width: 90px" :headerClass="colTone.female.head" :headerStyle="CENTER_STYLE" :pt="centerHeaderPt" />
+                <Column header="%" style="width: 80px" :headerClass="colTone.female.head" :headerStyle="CENTER_STYLE" :pt="centerHeaderPt" />
               </Row>
             </ColumnGroup>
 
-            <Column field="no" />
+            <Column field="no" :bodyStyle="CENTER_STYLE" />
             <Column field="group" />
-            <Column field="totalN" class="!text-center" />
-            <Column field="totalPct" class="!text-center" />
-            <Column field="maleN" class="!text-center" />
-            <Column field="malePct" class="!text-center" />
-            <Column field="femaleN" class="!text-center" />
-            <Column field="femalePct" class="!text-center" />
+            <Column field="totalN" :bodyClass="colTone.total.body" :bodyStyle="CENTER_STYLE" />
+            <Column field="totalPct" :bodyClass="colTone.total.body" :bodyStyle="CENTER_STYLE" />
+            <Column field="maleN" :bodyClass="colTone.male.body" :bodyStyle="CENTER_STYLE" />
+            <Column field="malePct" :bodyClass="colTone.male.body" :bodyStyle="CENTER_STYLE" />
+            <Column field="femaleN" :bodyClass="colTone.female.body" :bodyStyle="CENTER_STYLE" />
+            <Column field="femalePct" :bodyClass="colTone.female.body" :bodyStyle="CENTER_STYLE" />
 
             <ColumnGroup type="footer">
               <Row>
-                <Column footer="" :colspan="2" footerStyle="font-weight: 800" />
-                <Column :footer="formatNumber(footerTotals.total)" class="!text-center !font-extrabold" />
-                <Column footer="100%" class="!text-center !font-extrabold" />
-                <Column :footer="formatNumber(footerTotals.male)" class="!text-center !font-extrabold" />
+                <Column
+                  footer="Total"
+                  :colspan="2"
+                  :footerClass="colTone.label.foot"
+                  footerStyle="font-weight: 800"
+                />
+                <Column
+                  :footer="formatNumber(footerTotals.total)"
+                  :footerClass="`${colTone.total.foot} !font-extrabold`"
+                  :footerStyle="CENTER_STYLE"
+                />
+                <Column
+                  footer="100%"
+                  :footerClass="`${colTone.total.foot} !font-extrabold`"
+                  :footerStyle="CENTER_STYLE"
+                />
+                <Column
+                  :footer="formatNumber(footerTotals.male)"
+                  :footerClass="`${colTone.male.foot} !font-extrabold`"
+                  :footerStyle="CENTER_STYLE"
+                />
                 <Column
                   :footer="`${formatPct(footerTotals.male)}%`"
-                  class="!text-center !font-extrabold"
+                  :footerClass="`${colTone.male.foot} !font-extrabold`"
+                  :footerStyle="CENTER_STYLE"
                 />
-                <Column :footer="formatNumber(footerTotals.female)" class="!text-center !font-extrabold" />
+                <Column
+                  :footer="formatNumber(footerTotals.female)"
+                  :footerClass="`${colTone.female.foot} !font-extrabold`"
+                  :footerStyle="CENTER_STYLE"
+                />
                 <Column
                   :footer="`${formatPct(footerTotals.female)}%`"
-                  class="!text-center !font-extrabold"
+                  :footerClass="`${colTone.female.foot} !font-extrabold`"
+                  :footerStyle="CENTER_STYLE"
                 />
               </Row>
             </ColumnGroup>
