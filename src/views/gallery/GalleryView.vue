@@ -19,7 +19,6 @@ function stripHtml(html) {
   return new DOMParser().parseFromString(html, 'text/html').body.textContent.trim()
 }
 
-// event_date dibaca sebagai string (bukan new Date) supaya tidak geser karena timezone
 function toEvent(g) {
   const date = (g.event_date ?? g.uploaded_at ?? '').slice(0, 10)
   const [, m, d] = date.split('-')
@@ -56,7 +55,6 @@ const categories = computed(() => [
   ...apiCategories.value.map((c) => ({ slug: c.slug, label: c.name })),
 ])
 
-// Opsi waktu dibuat otomatis dari bulan yang benar-benar ada di data
 const timeOptions = computed(() => {
   const keys = [...new Set(events.value.map((e) => e.monthKey).filter(Boolean))].sort().reverse()
   return [
@@ -105,7 +103,6 @@ function categoryLabel(slug) {
 
 const categoryStyles = {
   musyawarah: {
-    icon: 'pi pi-users',
     sidebarActive: 'bg-sky-600 text-white shadow-sky-600/25',
     sidebarCount: 'bg-white/15 text-white',
     dot: 'bg-sky-500',
@@ -119,7 +116,6 @@ const categoryStyles = {
     ring: 'hover:shadow-sky-600/10',
   },
   'kegiatan-sosial': {
-    icon: 'pi pi-heart',
     sidebarActive: 'bg-rose-600 text-white shadow-rose-600/25',
     sidebarCount: 'bg-white/15 text-white',
     dot: 'bg-rose-500',
@@ -133,7 +129,6 @@ const categoryStyles = {
     ring: 'hover:shadow-rose-600/10',
   },
   budaya: {
-    icon: 'pi pi-star',
     sidebarActive: 'bg-violet-600 text-white shadow-violet-600/25',
     sidebarCount: 'bg-white/15 text-white',
     dot: 'bg-violet-500',
@@ -148,7 +143,6 @@ const categoryStyles = {
   },
 }
 const defaultStyle = {
-  icon: 'pi pi-th-large',
   sidebarActive: 'bg-gradient-to-r from-primary-600 via-violet-600 to-sky-600 text-white shadow-primary-600/25',
   sidebarCount: 'bg-white/15 text-white',
   dot: 'bg-primary-500',
@@ -161,8 +155,73 @@ const defaultStyle = {
   dateNum: 'text-heading',
   ring: 'hover:shadow-primary-600/10',
 }
+
+const fallbackStyles = [
+  {
+    sidebarActive: 'bg-amber-600 text-white shadow-amber-600/25',
+    sidebarCount: 'bg-white/15 text-white',
+    dot: 'bg-amber-500',
+    badge: 'bg-amber-50 text-amber-700',
+    location: 'text-amber-700',
+    imageGrad: 'from-amber-100 via-orange-100 to-amber-200',
+    shimmer: 'via-amber-200/70',
+    topBar: 'bg-gradient-to-r from-amber-400 to-orange-500',
+    dateBg: 'bg-amber-50',
+    dateNum: 'text-amber-700',
+    ring: 'hover:shadow-amber-600/10',
+  },
+  {
+    sidebarActive: 'bg-emerald-600 text-white shadow-emerald-600/25',
+    sidebarCount: 'bg-white/15 text-white',
+    dot: 'bg-emerald-500',
+    badge: 'bg-emerald-50 text-emerald-700',
+    location: 'text-emerald-700',
+    imageGrad: 'from-emerald-100 via-green-100 to-emerald-200',
+    shimmer: 'via-emerald-200/70',
+    topBar: 'bg-gradient-to-r from-emerald-400 to-green-500',
+    dateBg: 'bg-emerald-50',
+    dateNum: 'text-emerald-700',
+    ring: 'hover:shadow-emerald-600/10',
+  },
+  {
+    sidebarActive: 'bg-orange-600 text-white shadow-orange-600/25',
+    sidebarCount: 'bg-white/15 text-white',
+    dot: 'bg-orange-500',
+    badge: 'bg-orange-50 text-orange-700',
+    location: 'text-orange-700',
+    imageGrad: 'from-orange-100 via-amber-100 to-orange-200',
+    shimmer: 'via-orange-200/70',
+    topBar: 'bg-gradient-to-r from-orange-400 to-amber-500',
+    dateBg: 'bg-orange-50',
+    dateNum: 'text-orange-700',
+    ring: 'hover:shadow-orange-600/10',
+  },
+  {
+    sidebarActive: 'bg-teal-600 text-white shadow-teal-600/25',
+    sidebarCount: 'bg-white/15 text-white',
+    dot: 'bg-teal-500',
+    badge: 'bg-teal-50 text-teal-700',
+    location: 'text-teal-700',
+    imageGrad: 'from-teal-100 via-cyan-100 to-teal-200',
+    shimmer: 'via-teal-200/70',
+    topBar: 'bg-gradient-to-r from-teal-400 to-cyan-500',
+    dateBg: 'bg-teal-50',
+    dateNum: 'text-teal-700',
+    ring: 'hover:shadow-teal-600/10',
+  },
+]
+
+function hashString(value) {
+  let hash = 0
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0
+  }
+  return hash
+}
+
 function styleFor(slug) {
-  return categoryStyles[slug] || defaultStyle
+  if (!slug || slug === 'all') return defaultStyle
+  return categoryStyles[slug] || fallbackStyles[hashString(slug) % fallbackStyles.length]
 }
 </script>
 
@@ -172,7 +231,6 @@ function styleFor(slug) {
     <div class="pointer-events-none absolute -right-20 top-52 -z-10 h-64 w-64 rounded-full bg-rose-400/10 blur-3xl animate-blob-float" />
     <div class="pointer-events-none absolute left-1/3 bottom-0 -z-10 h-56 w-56 rounded-full bg-violet-400/10 blur-3xl animate-blob-float-slow" />
 
-    <!-- ===== HEADER ===== -->
     <div class="fade-in-up">
       <div class="inline-flex items-center gap-2">
         <span class="header-kicker-dot h-2 w-2 rounded-full bg-sky-500" />
@@ -188,7 +246,6 @@ function styleFor(slug) {
     </div>
 
     <div class="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[260px_1fr]">
-      <!-- ===== SIDEBAR: FILTERS ===== -->
       <aside class="fade-in-up space-y-6" style="animation-delay: 60ms">
         <div>
           <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
@@ -206,13 +263,7 @@ function styleFor(slug) {
                   : 'text-default hover:bg-surface-hover hover:translate-x-0.5'
               "
             >
-              <span class="flex items-center gap-2">
-                <i
-                  :class="[styleFor(c.slug).icon, activeCategory === c.slug ? 'text-white' : styleFor(c.slug).location]"
-                  class="text-xs"
-                />
-                {{ c.label }}
-              </span>
+              <span>{{ c.label }}</span>
               <span
                 class="rounded-full px-2 py-0.5 text-xs font-semibold"
                 :class="
@@ -241,7 +292,6 @@ function styleFor(slug) {
         </div>
       </aside>
 
-      <!-- ===== CARD GRID ===== -->
       <div>
         <div v-if="loading" class="py-14 text-center text-sm text-muted">
           <i class="pi pi-spin pi-spinner mb-3 block text-3xl text-muted/40" />
@@ -272,10 +322,8 @@ function styleFor(slug) {
             :class="styleFor(event.category).ring"
             :style="{ transitionDelay: `${(i % pageSize) * 60}ms` }"
           >
-            <!-- colored top accent bar, one per category -->
             <span class="absolute inset-x-0 top-0 z-10 h-1" :class="styleFor(event.category).topBar" />
 
-            <!-- image + date badge -->
             <div class="relative">
               <div
                 class="relative flex h-44 w-full items-center justify-center overflow-hidden transition-transform duration-500 group-hover:scale-105"
@@ -304,7 +352,6 @@ function styleFor(slug) {
               </div>
             </div>
 
-            <!-- content -->
             <div class="p-5 pt-7">
               <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide" :class="styleFor(event.category).location">
                 <i class="pi pi-map-marker text-[11px]" />
@@ -320,14 +367,12 @@ function styleFor(slug) {
                 class="mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
                 :class="styleFor(event.category).badge"
               >
-                <i :class="styleFor(event.category).icon" class="text-[10px]" />
                 {{ categoryLabel(event.category) }}
               </span>
             </div>
           </article>
         </TransitionGroup>
 
-        <!-- ===== LOAD MORE ===== -->
         <div v-if="hasMore" class="mt-8 flex justify-center">
           <Button
             label="Muat Lebih Banyak"
