@@ -237,7 +237,19 @@ function scrollTabs(direction) {
 
 function selectCategory(value, event) {
   activeCategory.value = value
-  event?.currentTarget?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" })
+
+  const container = tabsRef.value
+  const chip = event?.currentTarget
+  if (!container || !chip) return
+
+  const containerRect = container.getBoundingClientRect()
+  const chipRect = chip.getBoundingClientRect()
+  const chipCenterOffset = chipRect.left - containerRect.left + chipRect.width / 2
+
+  container.scrollTo({
+    left: container.scrollLeft + chipCenterOffset - container.clientWidth / 2,
+    behavior: "smooth",
+  })
 }
 
 const tabsMaskClass = computed(() => {
@@ -261,7 +273,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="relative flex flex-col gap-8 overflow-hidden py-6 lg:py-8">
+  <div class="relative flex flex-col gap-8 overflow-clip py-6 lg:py-8">
     <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 animate-pulse rounded-full bg-sky-400/10 blur-3xl" />
     <div class="pointer-events-none absolute -right-20 top-64 -z-10 h-64 w-64 animate-pulse rounded-full bg-rose-400/10 blur-3xl [animation-delay:0.4s]" />
     <div class="pointer-events-none absolute bottom-0 left-1/3 -z-10 h-56 w-56 animate-pulse rounded-full bg-violet-400/10 blur-3xl [animation-delay:0.8s]" />
@@ -309,7 +321,7 @@ onBeforeUnmount(() => {
     <template v-else>
       <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div class="relative min-w-0 lg:flex-1">
-          <div v-if="canScrollLeft" class="absolute left-0 top-1/2 z-10 hidden -translate-y-1/2 sm:block">
+          <div v-if="canScrollLeft" class="absolute left-0 top-1/2 z-10 -translate-y-1/2">
             <Button
               unstyled
               aria-label="Geser ke kiri"
@@ -347,7 +359,7 @@ onBeforeUnmount(() => {
             </Button>
           </div>
 
-          <div v-if="canScrollRight" class="absolute right-0 top-1/2 z-10 hidden -translate-y-1/2 sm:block">
+          <div v-if="canScrollRight" class="absolute right-0 top-1/2 z-10 -translate-y-1/2">
             <Button
               unstyled
               aria-label="Geser ke kanan"
@@ -418,70 +430,70 @@ onBeforeUnmount(() => {
           enter-to-class="opacity-100 translate-y-0 scale-100"
         >
           <RouterLink
-          v-for="item in pagedDevelopments"
-          :key="item.slug"
-          :to="{ name: 'development-detail', params: { slug: item.slug } }"
-          class="group relative flex flex-col overflow-hidden rounded-2xl border border-border-default bg-surface transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary-900/10"
-        >
-          <span
-            class="absolute inset-x-0 top-0 z-10 h-1.5 origin-left scale-x-50 opacity-70 transition-all duration-500 ease-out group-hover:scale-x-100 group-hover:opacity-100"
-            :class="getCategoryStyle(item.category).topBar"
-          />
-
-          <div
-            class="relative aspect-[16/10] overflow-hidden bg-gradient-to-br"
-            :class="item.image ? 'bg-primary-50' : getCategoryStyle(item.category).imageGradient"
+            v-for="item in pagedDevelopments"
+            :key="item.slug"
+            :to="{ name: 'development-detail', params: { slug: item.slug } }"
+            class="group relative flex flex-col overflow-hidden rounded-2xl border border-border-default bg-surface transition-all duration-300 ease-out hover:-translate-y-1.5 hover:shadow-xl hover:shadow-primary-900/10"
           >
-            <Image
-              v-if="item.image"
-              :src="item.image"
-              :alt="item.title"
-              class="!block h-full w-full"
-              imageClass="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+            <span
+              class="absolute inset-x-0 top-0 z-10 h-1.5 origin-left scale-x-50 opacity-70 transition-all duration-500 ease-out group-hover:scale-x-100 group-hover:opacity-100"
+              :class="getCategoryStyle(item.category).topBar"
             />
-            <div v-else class="flex h-full w-full items-center justify-center">
-              <i
-                :class="categoryIcon(item.category)"
-                class="text-4xl text-white/60 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6"
+
+            <div
+              class="relative aspect-[16/10] overflow-hidden bg-gradient-to-br"
+              :class="item.image ? 'bg-primary-50' : getCategoryStyle(item.category).imageGradient"
+            >
+              <Image
+                v-if="item.image"
+                :src="item.image"
+                :alt="item.title"
+                class="!block h-full w-full"
+                imageClass="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+              />
+              <div v-else class="flex h-full w-full items-center justify-center">
+                <i
+                  :class="categoryIcon(item.category)"
+                  class="text-4xl text-white/60 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6"
+                />
+              </div>
+
+              <Tag
+                :value="item.category"
+                unstyled
+                class="absolute left-3 top-3 rounded-full px-3 py-1 text-[10.5px] font-bold uppercase tracking-wide backdrop-blur-sm transition-transform duration-300 group-hover:-translate-y-0.5"
+                :class="getCategoryStyle(item.category).badge"
+              />
+              <Tag
+                :value="statusMeta[item.status].label"
+                :severity="statusMeta[item.status].severity"
+                class="absolute right-3 top-3 !text-[10.5px]"
               />
             </div>
 
-            <Tag
-              :value="item.category"
-              unstyled
-              class="absolute left-3 top-3 rounded-full px-3 py-1 text-[10.5px] font-bold uppercase tracking-wide backdrop-blur-sm transition-transform duration-300 group-hover:-translate-y-0.5"
-              :class="getCategoryStyle(item.category).badge"
-            />
-            <Tag
-              :value="statusMeta[item.status].label"
-              :severity="statusMeta[item.status].severity"
-              class="absolute right-3 top-3 !text-[10.5px]"
-            />
-          </div>
-
-          <div class="flex flex-1 flex-col gap-2 p-4 sm:p-5">
-            <h3 class="line-clamp-2 text-[14.5px] font-extrabold leading-snug text-heading transition-colors duration-300 group-hover:text-primary-700">
-              {{ item.title }}
-            </h3>
-            <span class="flex flex-1 items-start gap-1.5 text-[12.5px] leading-relaxed text-muted">
-              <i class="pi pi-map-marker mt-0.5 text-[11px] text-primary-500" />
-              <span class="line-clamp-2">{{ item.location }}</span>
-            </span>
-
-            <div class="flex items-center justify-between border-t border-border-default pt-3 text-[11.5px] text-muted">
-              <span class="flex items-center gap-1.5">
-                <i class="pi pi-calendar text-[10.5px]" />
-                {{ formatDate(item.startDate) }}
+            <div class="flex flex-1 flex-col gap-2 p-4 sm:p-5">
+              <h3 class="line-clamp-2 text-[14.5px] font-extrabold leading-snug text-heading transition-colors duration-300 group-hover:text-primary-700">
+                {{ item.title }}
+              </h3>
+              <span class="flex flex-1 items-start gap-1.5 text-[12.5px] leading-relaxed text-muted">
+                <i class="pi pi-map-marker mt-0.5 text-[11px] text-primary-500" />
+                <span class="line-clamp-2">{{ item.location }}</span>
               </span>
-              <span
-                class="flex h-7 w-7 items-center justify-center rounded-full text-primary-700 transition-all duration-300 ease-out group-hover:translate-x-1 group-hover:scale-110"
-                :class="getCategoryStyle(item.category).softBadge"
-              >
-                <i class="pi pi-arrow-right text-[11px]" />
-              </span>
+
+              <div class="flex items-center justify-between border-t border-border-default pt-3 text-[11.5px] text-muted">
+                <span class="flex items-center gap-1.5">
+                  <i class="pi pi-calendar text-[10.5px]" />
+                  {{ formatDate(item.startDate) }}
+                </span>
+                <span
+                  class="flex h-7 w-7 items-center justify-center rounded-full text-primary-700 transition-all duration-300 ease-out group-hover:translate-x-1 group-hover:scale-110"
+                  :class="getCategoryStyle(item.category).softBadge"
+                >
+                  <i class="pi pi-arrow-right text-[11px]" />
+                </span>
+              </div>
             </div>
-          </div>
-        </RouterLink>
+          </RouterLink>
         </TransitionGroup>
 
         <Paginator
