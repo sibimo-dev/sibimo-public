@@ -1,8 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import Select from "primevue/select";
 import { useRouter } from "vue-router";
 import { RouterLink } from "vue-router";
-import Select from "primevue/select";
 import Button from "primevue/button";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
@@ -27,28 +27,84 @@ const props = defineProps({
 
 const router = useRouter();
 
-const monthOptions = computed(() =>
-  agendaMonths.value.map((m) => ({ label: `${m.monthLabel} ${m.year}`, value: m.key }))
-);
+const MONTH_NAMES = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+
+/* Opsi Tahun (sekarang ± 30 tahun + tahun yang ada di data) dan Bulan */
+// tanpa opsi "Semua": halaman ini selalu menampilkan satu bulan tertentu
+const yearOptions = computed(() => buildYearOptions(agendaMonths.value.map((m) => m.year)).slice(1));
+const monthOptions = MONTH_NAMES.map((label, i) => ({ label, value: String(i + 1).padStart(2, "0") }));
+
+const keyMatch = computed(() => /^(\d{4})-(\d{2})$/.exec(props.month));
+const selectedYear = computed(() => (keyMatch.value ? Number(keyMatch.value[1]) : null));
+const selectedMonthNumber = computed(() => (keyMatch.value ? keyMatch.value[2] : null));
 
 const currentMonthIndex = computed(() => agendaMonths.value.findIndex((m) => m.key === props.month));
 
 const selectedMonth = computed(() => {
   if (!agendaMonths.value.length) return null;
-  return agendaMonths.value[currentMonthIndex.value] ?? agendaMonths.value[agendaMonths.value.length - 1];
+  const found = agendaMonths.value[currentMonthIndex.value];
+  if (found) return found;
+  // Bulan yang dipilih belum punya agenda → tampilkan bulan kosong (bukan loncat ke bulan lain)
+  if (keyMatch.value) {
+    return {
+      key: props.month,
+      monthLabel: MONTH_NAMES[Number(keyMatch.value[2]) - 1] ?? "",
+      year: Number(keyMatch.value[1]),
+      items: [],
+    };
+  }
+  return agendaMonths.value[agendaMonths.value.length - 1];
 });
 
 function goToMonth(key) {
   router.push({ name: "events-detail", params: { month: key } });
 }
 
+function goToYear(year) {
+  goToMonth(`${year}-${selectedMonthNumber.value ?? "01"}`);
+}
+
+function goToMonthNumber(monthNumber) {
+  goToMonth(`${selectedYear.value ?? new Date().getFullYear()}-${monthNumber}`);
+}
+
+// Bulan sebelumnya / berikutnya yang punya agenda
+const prevKey = computed(() => {
+  const keys = agendaMonths.value.map((m) => m.key).sort();
+  return [...keys].reverse().find((k) => k < props.month) ?? null;
+});
+const nextKey = computed(() => {
+  const keys = agendaMonths.value.map((m) => m.key).sort();
+  return keys.find((k) => k > props.month) ?? null;
+});
+
 function goPrevMonth() {
-  if (currentMonthIndex.value > 0) goToMonth(agendaMonths.value[currentMonthIndex.value - 1].key);
+  if (prevKey.value) goToMonth(prevKey.value);
 }
 function goNextMonth() {
-  if (currentMonthIndex.value < agendaMonths.value.length - 1)
-    goToMonth(agendaMonths.value[currentMonthIndex.value + 1].key);
+  if (nextKey.value) goToMonth(nextKey.value);
 }
+
+/* ---------- Helper dropdown filter (Tahun, Status, Bulan) ---------- */
+// Pilihan tahun: tahun sekarang +/- 30 tahun, digabung dengan tahun yang ada di data.
+function buildYearOptions(dataYears = [], span = 30, allLabel = "Semua") {
+  const now = new Date().getFullYear();
+  const years = new Set();
+  for (let y = now - span; y <= now + span; y++) years.add(y);
+  for (const raw of dataYears) {
+    const y = Number(raw);
+    if (Number.isFinite(y) && y > 0) years.add(y);
+  }
+  return [
+    { label: allLabel, value: "all" },
+    ...[...years].sort((a, b) => b - a).map((y) => ({ label: String(y), value: y })),
+  ];
+}
+
+const optionLabelOf = (options, value) => options.find((o) => o.value === value)?.label ?? "";
 </script>
 
 <template>
@@ -64,17 +120,17 @@ function goNextMonth() {
 
     <!-- ============ HEADER ============ -->
     <div class="max-w-2xl mt-4">
-      <div class="inline-flex items-center gap-2">
-        <span class="h-2 w-2 rounded-full bg-sky-500 animate-pulse" />
-        <span class="text-xs font-bold uppercase tracking-[0.25em] text-sky-600">Agenda</span>
+      <div class="flex items-center gap-2">
+        <span class="h-2 w-2 rounded-full bg-sky-500" />
+        <span class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-sky-500">Agenda</span>
       </div>
-      <h1 class="mt-2 text-2xl sm:text-3xl font-extrabold text-heading">
+      <h1 class="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
         Agenda
-        <span class="bg-gradient-to-r from-sky-600 to-violet-600 bg-clip-text text-transparent">
+        <span class="bg-gradient-to-r from-sky-600 via-cyan-500 to-violet-600 bg-clip-text text-transparent">
           Bimomartani
         </span>
       </h1>
-      <p class="text-[13.5px] sm:text-[15px] text-muted mt-2 leading-relaxed">
+      <p class="mt-1 text-[13.5px] text-muted sm:text-[14.5px]">
         Jadwal kegiatan, musyawarah, dan acara penting komunitas Kalurahan untuk bulan terpilih.
       </p>
     </div>
@@ -83,30 +139,57 @@ function goNextMonth() {
 
     <template v-else>
       <!-- ============ NAVIGATOR BULAN ============ -->
-      <div class="flex items-center gap-2 mt-6 mb-4">
+      <div class="flex flex-wrap items-center gap-2 mt-6 mb-4">
         <Button
           icon="pi pi-chevron-left"
           text
           rounded
           aria-label="Bulan sebelumnya"
-          :disabled="currentMonthIndex <= 0"
+          :disabled="!prevKey"
           class="!text-sky-700 hover:!bg-sky-50"
           @click="goPrevMonth"
         />
         <Select
-          :modelValue="selectedMonth.key"
+          :modelValue="selectedYear ?? 'all'"
+          :options="yearOptions"
+          optionLabel="label"
+          optionValue="value"
+          scrollHeight="280px"
+          @update:modelValue="goToYear"
+          class="w-full !rounded-xl !border-border-default !bg-surface !shadow-none sm:w-auto sm:min-w-[11.5rem]"
+          :pt="{ label: { class: '!py-2.5' } }"
+        >
+          <template #value="{ value }">
+            <span class="flex items-center gap-2 text-[13.5px] font-semibold text-heading">
+              <i class="pi pi-calendar text-[12px] text-primary-500" />
+              <span class="font-bold text-muted">Tahun:</span>
+              {{ optionLabelOf(yearOptions, value) }}
+            </span>
+          </template>
+        </Select>
+        <Select
+          :modelValue="selectedMonthNumber ?? 'all'"
           :options="monthOptions"
           optionLabel="label"
           optionValue="value"
-          class="w-48 sm:w-56"
-          @update:modelValue="goToMonth"
-        />
+          scrollHeight="280px"
+          @update:modelValue="goToMonthNumber"
+          class="w-full !rounded-xl !border-border-default !bg-surface !shadow-none sm:w-auto sm:min-w-[11.5rem]"
+          :pt="{ label: { class: '!py-2.5' } }"
+        >
+          <template #value="{ value }">
+            <span class="flex items-center gap-2 text-[13.5px] font-semibold text-heading">
+              <span class="font-bold text-muted">Bulan:</span>
+              {{ optionLabelOf(monthOptions, value) }}
+            </span>
+          </template>
+        </Select>
         <Button
           icon="pi pi-chevron-right"
           text
           rounded
           aria-label="Bulan berikutnya"
-          :disabled="currentMonthIndex >= agendaMonths.length - 1"
+          :disabled="!nextKey"
           class="!text-sky-700 hover:!bg-sky-50"
           @click="goNextMonth"
         />

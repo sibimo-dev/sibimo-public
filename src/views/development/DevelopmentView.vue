@@ -1,10 +1,9 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
 import { RouterLink } from "vue-router";
 import InputText from "primevue/inputtext";
 import IconField from "primevue/iconfield";
 import InputIcon from "primevue/inputicon";
-import SelectButton from "primevue/selectbutton";
 import Select from "primevue/select";
 import Paginator from "primevue/paginator";
 import Message from "primevue/message";
@@ -12,15 +11,27 @@ import Button from "primevue/button";
 import ProgressSpinner from "primevue/progressspinner";
 import Image from "primevue/image";
 import Tag from "primevue/tag";
+import api from "@/services/api";
 import { fetchAllDevelopments, developmentStatusOptions, statusMeta, categoryIcon, formatDate } from "@/services/development.js";
 
 const developments = ref([]);
+const apiCategories = ref([]);
 const loading = ref(true);
 const hasError = ref(false);
 
+async function loadCategories() {
+  try {
+    const response = await api.get("/development-categories");
+    apiCategories.value = response.data.data ?? [];
+  } catch (err) {
+    apiCategories.value = [];
+  }
+}
+
 onMounted(async () => {
   try {
-    developments.value = await fetchAllDevelopments();
+    const [list] = await Promise.all([fetchAllDevelopments(), loadCategories()]);
+    developments.value = list;
   } catch (err) {
     console.error("Gagal memuat data pembangunan:", err);
     hasError.value = true;
@@ -37,10 +48,12 @@ const activeYear = ref("all");
 const pageSize = 6;
 const currentPage = ref(1);
 
-const categoryOptions = computed(() => [
-  { label: "Semua Kategori", value: "all" },
-  ...[...new Set(developments.value.map((item) => item.category))].map((name) => ({ label: name, value: name })),
-]);
+const categoryOptions = computed(() => {
+  const fromApi = apiCategories.value.map((category) => category.name);
+  const fromData = developments.value.map((item) => item.category);
+  const names = [...new Set([...fromApi, ...fromData].filter(Boolean))];
+  return [{ label: "Semua Kategori", value: "all" }, ...names.map((name) => ({ label: name, value: name }))];
+});
 
 const yearOptions = computed(() => [
   { label: "Semua Tahun", value: "all" },
@@ -48,6 +61,13 @@ const yearOptions = computed(() => [
     .sort((a, b) => b - a)
     .map((year) => ({ label: String(year), value: year })),
 ]);
+
+const selectedStatusLabel = computed(() => {
+  if (activeStatus.value === "all") return "Semua";
+  return developmentStatusOptions.find((option) => option.value === activeStatus.value)?.label ?? "Semua";
+});
+
+const selectedYearLabel = computed(() => (activeYear.value === "all" ? "Semua" : String(activeYear.value)));
 
 const filteredDevelopments = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
@@ -97,6 +117,9 @@ const CATEGORY_PALETTE = [
     badge: "bg-gradient-to-r from-sky-500 to-cyan-500 text-white shadow-lg shadow-sky-500/30",
     softBadge: "bg-sky-50 text-sky-700 border border-sky-200",
     hoverRing: "hover:border-sky-300",
+    tabActive: "border-sky-500 bg-sky-500 text-white shadow-sky-500/30",
+    tabIdle: "border-border-default bg-surface text-default hover:border-sky-300 hover:bg-sky-50",
+    dot: "bg-sky-500",
   },
   {
     topBar: "bg-gradient-to-r from-rose-400 to-pink-500",
@@ -104,6 +127,9 @@ const CATEGORY_PALETTE = [
     badge: "bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-lg shadow-rose-500/30",
     softBadge: "bg-rose-50 text-rose-700 border border-rose-200",
     hoverRing: "hover:border-rose-300",
+    tabActive: "border-rose-500 bg-rose-500 text-white shadow-rose-500/30",
+    tabIdle: "border-border-default bg-surface text-default hover:border-rose-300 hover:bg-rose-50",
+    dot: "bg-rose-500",
   },
   {
     topBar: "bg-gradient-to-r from-amber-400 to-orange-500",
@@ -111,6 +137,9 @@ const CATEGORY_PALETTE = [
     badge: "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30",
     softBadge: "bg-amber-50 text-amber-700 border border-amber-200",
     hoverRing: "hover:border-amber-300",
+    tabActive: "border-amber-500 bg-amber-500 text-white shadow-amber-500/30",
+    tabIdle: "border-border-default bg-surface text-default hover:border-amber-300 hover:bg-amber-50",
+    dot: "bg-amber-500",
   },
   {
     topBar: "bg-gradient-to-r from-violet-400 to-purple-500",
@@ -118,6 +147,9 @@ const CATEGORY_PALETTE = [
     badge: "bg-gradient-to-r from-violet-500 to-purple-500 text-white shadow-lg shadow-violet-500/30",
     softBadge: "bg-violet-50 text-violet-700 border border-violet-200",
     hoverRing: "hover:border-violet-300",
+    tabActive: "border-violet-500 bg-violet-500 text-white shadow-violet-500/30",
+    tabIdle: "border-border-default bg-surface text-default hover:border-violet-300 hover:bg-violet-50",
+    dot: "bg-violet-500",
   },
   {
     topBar: "bg-gradient-to-r from-emerald-400 to-teal-500",
@@ -125,6 +157,9 @@ const CATEGORY_PALETTE = [
     badge: "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30",
     softBadge: "bg-emerald-50 text-emerald-700 border border-emerald-200",
     hoverRing: "hover:border-emerald-300",
+    tabActive: "border-emerald-500 bg-emerald-500 text-white shadow-emerald-500/30",
+    tabIdle: "border-border-default bg-surface text-default hover:border-emerald-300 hover:bg-emerald-50",
+    dot: "bg-emerald-500",
   },
 ];
 
@@ -140,16 +175,97 @@ function getCategoryStyle(category) {
   if (!category) return CATEGORY_PALETTE[0];
   return CATEGORY_PALETTE[hashString(category) % CATEGORY_PALETTE.length];
 }
+
+const ALL_TAB_ACTIVE = "border-slate-800 bg-slate-800 text-white shadow-slate-800/30";
+const ALL_TAB_IDLE = "border-border-default bg-surface text-default hover:border-slate-300 hover:bg-slate-50";
+
+function getTabClass(option, isActive) {
+  const isAll = option.value === "all";
+  if (isActive) return [isAll ? ALL_TAB_ACTIVE : getCategoryStyle(option.value).tabActive, "shadow-md"];
+  return isAll ? ALL_TAB_IDLE : getCategoryStyle(option.value).tabIdle;
+}
+
+watch(
+  () => categoryOptions.value.length,
+  () => nextTick(updateScrollState)
+);
+
+const tabsRef = ref(null)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(false)
+let tabsResizeObserver = null
+
+const leftArrowClass = ref("bg-slate-800")
+const rightArrowClass = ref("bg-slate-800")
+
+function arrowClassFor(option) {
+  return option.value === "all" ? "bg-slate-800" : getCategoryStyle(option.value).dot
+}
+
+function findChipIndexAt(x) {
+  const chips = Array.from(tabsRef.value.children)
+  let nearestIndex = 0
+  let nearestDistance = Infinity
+  chips.forEach((chip, index) => {
+    const rect = chip.getBoundingClientRect()
+    const distance = x < rect.left ? rect.left - x : x > rect.right ? x - rect.right : 0
+    if (distance < nearestDistance) {
+      nearestIndex = index
+      nearestDistance = distance
+    }
+  })
+  return nearestIndex
+}
+
+function updateScrollState() {
+  const el = tabsRef.value
+  if (!el) return
+  canScrollLeft.value = el.scrollLeft > 4
+  canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 4
+  const rect = el.getBoundingClientRect()
+  const leftOption = categoryOptions.value[findChipIndexAt(rect.left + 24)]
+  const rightOption = categoryOptions.value[findChipIndexAt(rect.right - 24)]
+  if (leftOption) leftArrowClass.value = arrowClassFor(leftOption)
+  if (rightOption) rightArrowClass.value = arrowClassFor(rightOption)
+}
+
+function scrollTabs(direction) {
+  const el = tabsRef.value
+  if (!el) return
+  el.scrollBy({ left: direction * el.clientWidth * 0.7, behavior: "smooth" })
+}
+
+function selectCategory(value, event) {
+  activeCategory.value = value
+  event?.currentTarget?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" })
+}
+
+const tabsMaskClass = computed(() => {
+  if (canScrollLeft.value && canScrollRight.value) {
+    return "[mask-image:linear-gradient(to_right,transparent,black_3rem,black_calc(100%-3rem),transparent)]"
+  }
+  if (canScrollRight.value) return "[mask-image:linear-gradient(to_right,black_calc(100%-3rem),transparent)]"
+  if (canScrollLeft.value) return "[mask-image:linear-gradient(to_left,black_calc(100%-3rem),transparent)]"
+  return ""
+})
+
+onMounted(() => {
+  updateScrollState()
+  tabsResizeObserver = new ResizeObserver(updateScrollState)
+  if (tabsRef.value) tabsResizeObserver.observe(tabsRef.value)
+})
+
+onBeforeUnmount(() => {
+  tabsResizeObserver?.disconnect()
+})
 </script>
 
 <template>
   <div class="relative flex flex-col gap-8 overflow-hidden py-6 lg:py-8">
-    <!-- Ambient glow (sama dengan halaman Berita) -->
     <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 animate-pulse rounded-full bg-sky-400/10 blur-3xl" />
     <div class="pointer-events-none absolute -right-20 top-64 -z-10 h-64 w-64 animate-pulse rounded-full bg-rose-400/10 blur-3xl [animation-delay:0.4s]" />
     <div class="pointer-events-none absolute bottom-0 left-1/3 -z-10 h-56 w-56 animate-pulse rounded-full bg-violet-400/10 blur-3xl [animation-delay:0.8s]" />
 
-    <!-- Header + pencarian -->
     <Transition
       appear
       enter-active-class="transition-all duration-500 ease-out"
@@ -182,57 +298,108 @@ function getCategoryStyle(category) {
       </div>
     </Transition>
 
-    <!-- Loading -->
     <div v-if="loading" class="flex justify-center py-20">
       <ProgressSpinner :strokeWidth="4" class="!h-10 !w-10" />
     </div>
 
-    <!-- Error -->
     <Message v-else-if="hasError" severity="error" icon="pi pi-exclamation-triangle">
       Data pembangunan gagal dimuat. Silakan muat ulang halaman beberapa saat lagi.
     </Message>
 
     <template v-else>
-      <!-- Filter -->
-      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <SelectButton
-          v-model="activeStatus"
-          :options="developmentStatusOptions"
-          optionLabel="label"
-          optionValue="value"
-          :allowEmpty="false"
-          class="w-fit max-w-full overflow-x-auto"
-        />
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div class="relative min-w-0 lg:flex-1">
+          <div v-if="canScrollLeft" class="absolute left-0 top-1/2 z-10 hidden -translate-y-1/2 sm:block">
+            <Button
+              unstyled
+              aria-label="Geser ke kiri"
+              class="flex h-9 w-9 items-center justify-center rounded-full text-white shadow-md transition-colors duration-200 active:scale-95"
+              :class="leftArrowClass"
+              @click="scrollTabs(-1)"
+            >
+              <i class="pi pi-chevron-left text-xs" />
+            </Button>
+          </div>
 
-        <div class="flex flex-col gap-3 sm:flex-row">
+          <div
+            ref="tabsRef"
+            role="tablist"
+            class="flex snap-x snap-proximity gap-2 overflow-x-auto scroll-smooth px-1 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            :class="tabsMaskClass"
+            @scroll.passive="updateScrollState"
+          >
+            <Button
+              v-for="option in categoryOptions"
+              :key="option.value"
+              unstyled
+              role="tab"
+              :aria-selected="activeCategory === option.value"
+              class="flex shrink-0 snap-start items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-xs font-semibold transition-all duration-200 active:scale-95 sm:text-sm"
+              :class="getTabClass(option, activeCategory === option.value)"
+              @click="selectCategory(option.value, $event)"
+            >
+              <span
+                v-if="option.value !== 'all'"
+                class="h-1.5 w-1.5 rounded-full"
+                :class="activeCategory === option.value ? 'bg-white' : getCategoryStyle(option.value).dot"
+              />
+              <span>{{ option.label }}</span>
+            </Button>
+          </div>
+
+          <div v-if="canScrollRight" class="absolute right-0 top-1/2 z-10 hidden -translate-y-1/2 sm:block">
+            <Button
+              unstyled
+              aria-label="Geser ke kanan"
+              class="flex h-9 w-9 items-center justify-center rounded-full text-white shadow-md transition-colors duration-200 active:scale-95"
+              :class="rightArrowClass"
+              @click="scrollTabs(1)"
+            >
+              <i class="pi pi-chevron-right text-xs" />
+            </Button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 lg:flex lg:shrink-0 lg:items-center">
           <Select
-            v-model="activeCategory"
-            :options="categoryOptions"
+            v-model="activeStatus"
+            :options="developmentStatusOptions"
             optionLabel="label"
             optionValue="value"
-            placeholder="Kategori"
-            class="w-full sm:w-52"
-          />
+            class="w-full lg:w-48"
+          >
+            <template #value>
+              <span class="text-muted">Status:</span>
+              <span class="ml-1 font-semibold text-heading">{{ selectedStatusLabel }}</span>
+            </template>
+          </Select>
+
           <Select
             v-model="activeYear"
             :options="yearOptions"
             optionLabel="label"
             optionValue="value"
-            placeholder="Tahun"
-            class="w-full sm:w-40"
-          />
+            class="w-full lg:w-44"
+          >
+            <template #value>
+              <i class="pi pi-calendar mr-2 text-xs text-sky-500" />
+              <span class="text-muted">Tahun:</span>
+              <span class="ml-1 font-semibold text-heading">{{ selectedYearLabel }}</span>
+            </template>
+          </Select>
+
           <Button
             v-if="hasActiveFilter"
             label="Reset"
             icon="pi pi-filter-slash"
             severity="secondary"
             text
+            class="col-span-2 lg:col-auto"
             @click="resetFilters"
           />
         </div>
       </div>
 
-      <!-- Empty state -->
       <Message v-if="filteredDevelopments.length === 0" severity="info" icon="pi pi-inbox">
         Belum ada data pembangunan yang sesuai. Coba ubah kata kunci atau filter yang dipilih.
       </Message>

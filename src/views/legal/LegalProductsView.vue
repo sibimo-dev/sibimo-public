@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import Select from 'primevue/select'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -32,14 +32,12 @@ onMounted(async () => {
   }
 })
 
-const yearOptions = computed(() => {
-  const years = [...new Set(items.value.map((i) => i.year).filter(Boolean))].sort((a, b) => b - a)
-  return [{ label: 'Semua Tahun Penerbitan', value: 'all' }, ...years.map((y) => ({ label: String(y), value: y }))]
-})
+// Tahun: sekarang ± 30 tahun, digabung dengan tahun yang ada di data
+const yearOptions = computed(() => buildYearOptions(items.value.map((i) => i.year)))
 
 const typeOptions = computed(() => {
   const types = [...new Set(items.value.map((i) => i.type).filter(Boolean))].sort()
-  return [{ label: 'Semua', value: 'all' }, ...types.map((t) => ({ label: t, value: t }))]
+  return [{ label: 'Semua Kategori', value: 'all' }, ...types.map((t) => ({ label: t, value: t }))]
 })
 
 const statusOptions = computed(() => {
@@ -49,10 +47,6 @@ const statusOptions = computed(() => {
 
 /* Filter Status hanya muncul bila data memang punya status */
 const hasStatus = computed(() => statusOptions.value.length > 1)
-
-function labelOf(options, value) {
-  return options.find((o) => o.value === value)?.label ?? ''
-}
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -73,10 +67,10 @@ watch([yearFilter, typeFilter, statusFilter, search], () => {
 /* Warna badge kategori ditentukan dari nama jenis (hash), konsisten seperti halaman Berita */
 const TYPE_BADGES = [
   'bg-sky-50 text-sky-700 border border-sky-200',
-  'bg-teal-50 text-teal-700 border border-teal-200',
-  'bg-violet-50 text-violet-700 border border-violet-200',
-  'bg-amber-50 text-amber-700 border border-amber-200',
   'bg-rose-50 text-rose-700 border border-rose-200',
+  'bg-amber-50 text-amber-700 border border-amber-200',
+  'bg-violet-50 text-violet-700 border border-violet-200',
+  'bg-emerald-50 text-emerald-700 border border-emerald-200',
 ]
 
 function hashString(value) {
@@ -114,11 +108,6 @@ function downloadFile(item) {
   a.remove()
 }
 
-/* ============ Styling filter bar (tanpa CSS murni) ============ */
-const filterBoxCls =
-  'w-full !rounded-xl !border-0 !bg-indigo-50 !shadow-none transition-colors hover:!bg-indigo-100/70'
-const filterPt = { label: { class: '!py-3 !text-[14px] !font-medium !text-heading' } }
-
 /* ============ Styling DataTable (tanpa CSS murni) ============
    Gaya header meniru kartu tabel di halaman Agenda:
    gradasi sky-50 → violet-50 dengan teks gelap. Gradasi dipasang di <thead>,
@@ -146,6 +135,92 @@ const headStart = (extra = '') =>
 
 const cellCenter = '!py-5 !align-middle !text-center !text-[15px]'
 const cellStart = '!py-5 !align-middle !text-left !text-[15px]'
+
+/* ---------- Deretan kategori yang bisa digeser (slider, sama dengan halaman Berita) ----------
+   Ada tombol panah + efek pudar di tepi yang masih punya kelanjutan, supaya jelas bisa digeser. */
+const chipScroller = ref(null);
+const canScrollLeft = ref(false);
+const canScrollRight = ref(false);
+const nextLeftOption = ref(null);
+const nextRightOption = ref(null);
+let chipObserver = null;
+
+/* Warna chip per kategori (otomatis dari nama, palet sama dengan halaman Berita) */
+const CHIP_PALETTE = [
+  { dot: "bg-sky-500", activeBadge: "bg-gradient-to-r from-sky-500 to-cyan-500 text-white border-transparent shadow-lg shadow-sky-500/30", hoverRing: "hover:border-sky-300" },
+  { dot: "bg-rose-500", activeBadge: "bg-gradient-to-r from-rose-500 to-pink-500 text-white border-transparent shadow-lg shadow-rose-500/30", hoverRing: "hover:border-rose-300" },
+  { dot: "bg-amber-500", activeBadge: "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-transparent shadow-lg shadow-amber-500/30", hoverRing: "hover:border-amber-300" },
+  { dot: "bg-violet-500", activeBadge: "bg-gradient-to-r from-violet-500 to-purple-500 text-white border-transparent shadow-lg shadow-violet-500/30", hoverRing: "hover:border-violet-300" },
+  { dot: "bg-emerald-500", activeBadge: "bg-gradient-to-r from-emerald-500 to-teal-500 text-white border-transparent shadow-lg shadow-emerald-500/30", hoverRing: "hover:border-emerald-300" },
+];
+const chipStyle = (option) => CHIP_PALETTE[hashString(String(option.label)) % CHIP_PALETTE.length];
+
+function updateScrollState() {
+  const el = chipScroller.value;
+  if (!el) return;
+  canScrollLeft.value = el.scrollLeft > 4;
+  canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+
+  // Chip pertama yang masih tersembunyi di kiri/kanan -> warnanya dipakai untuk panah.
+  const box = el.getBoundingClientRect();
+  const chips = [...el.querySelectorAll("[data-index]")];
+  const right = chips.find((c) => c.getBoundingClientRect().right > box.right + 2);
+  const left = [...chips].reverse().find((c) => c.getBoundingClientRect().left < box.left - 2);
+  nextRightOption.value = right ? typeOptions.value[Number(right.dataset.index)] : null;
+  nextLeftOption.value = left ? typeOptions.value[Number(left.dataset.index)] : null;
+}
+
+const chipArrowStyle = (option) =>
+  option && option.value !== "all"
+    ? chipStyle(option).activeBadge
+    : "border-transparent bg-primary-800 text-white shadow-lg shadow-primary-900/30";
+
+function scrollChips(direction) {
+  const el = chipScroller.value;
+  if (!el) return;
+  el.scrollBy({ left: direction * Math.max(200, el.clientWidth * 0.6), behavior: "smooth" });
+}
+
+// Pudarkan tepi kiri/kanan hanya bila masih ada chip di sisi itu.
+const chipFadeStyle = computed(() => {
+  const stops = [
+    canScrollLeft.value ? "transparent 0" : "#000 0",
+    canScrollLeft.value ? "#000 48px" : null,
+    canScrollRight.value ? "#000 calc(100% - 64px)" : null,
+    canScrollRight.value ? "transparent 100%" : "#000 100%",
+  ].filter(Boolean);
+  const mask = `linear-gradient(to right, ${stops.join(", ")})`;
+  return { maskImage: mask, WebkitMaskImage: mask };
+});
+
+watch(chipScroller, (el) => {
+  chipObserver?.disconnect();
+  if (!el) return;
+  chipObserver = new ResizeObserver(updateScrollState);
+  chipObserver.observe(el);
+  if (el.firstElementChild) chipObserver.observe(el.firstElementChild);
+  nextTick(updateScrollState);
+});
+watch(typeOptions, () => nextTick(updateScrollState), { deep: true });
+onBeforeUnmount(() => chipObserver?.disconnect());
+
+/* ---------- Helper dropdown filter (Tahun, Status, Bulan) ---------- */
+// Pilihan tahun: tahun sekarang +/- 30 tahun, digabung dengan tahun yang ada di data.
+function buildYearOptions(dataYears = [], span = 30, allLabel = "Semua") {
+  const now = new Date().getFullYear();
+  const years = new Set();
+  for (let y = now - span; y <= now + span; y++) years.add(y);
+  for (const raw of dataYears) {
+    const y = Number(raw);
+    if (Number.isFinite(y) && y > 0) years.add(y);
+  }
+  return [
+    { label: allLabel, value: "all" },
+    ...[...years].sort((a, b) => b - a).map((y) => ({ label: String(y), value: y })),
+  ];
+}
+
+const optionLabelOf = (options, value) => options.find((o) => o.value === value)?.label ?? "";
 </script>
 
 <template>
@@ -153,85 +228,146 @@ const cellStart = '!py-5 !align-middle !text-left !text-[15px]'
     <div class="pointer-events-none absolute -left-24 -top-16 -z-10 h-72 w-72 rounded-full bg-sky-400/10 blur-3xl" />
     <div class="pointer-events-none absolute -right-20 top-52 -z-10 h-64 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
 
-    <!-- ===== HEADER ===== -->
-    <div v-reveal>
-      <div class="flex items-center gap-2">
-        <span class="h-2 w-2 rounded-full bg-sky-500" />
-        <span class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-sky-500">Transparansi</span>
+    <!-- ===== HEADER + PENCARIAN ===== -->
+    <div v-reveal class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-sky-500" />
+          <span class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-sky-500">Transparansi</span>
+        </div>
+        <h1 class="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
+          Produk
+          <span class="bg-gradient-to-r from-sky-600 via-cyan-500 to-violet-600 bg-clip-text text-transparent">
+            Hukum
+          </span>
+        </h1>
+        <p class="mt-1 max-w-2xl text-[13.5px] leading-relaxed text-muted sm:text-[14.5px]">
+          Daftar Surat Keputusan, Peraturan Desa, dan dokumen hukum lainnya yang diterbitkan
+          Kalurahan Bimomartani. Dokumen dapat diunduh langsung.
+        </p>
       </div>
-      <h1 class="mt-2 text-2xl font-extrabold text-heading sm:text-3xl">
-        Produk
-        <span class="bg-gradient-to-r from-sky-600 via-cyan-500 to-violet-600 bg-clip-text text-transparent">
-          Hukum
-        </span>
-      </h1>
-      <p class="mt-1 max-w-2xl text-[13.5px] leading-relaxed text-muted sm:text-[14.5px]">
-        Daftar Surat Keputusan, Peraturan Desa, dan dokumen hukum lainnya yang diterbitkan
-        Kalurahan Bimomartani. Dokumen dapat diunduh langsung.
-      </p>
+
+      <IconField class="w-full shrink-0 lg:w-[300px]">
+        <InputIcon class="pi pi-search text-muted" />
+        <InputText
+          v-model="search"
+          type="search"
+          placeholder="Cari judul, nomor, kata kunci..."
+          class="w-full rounded-xl border-border-default py-2.5 text-[13.5px] focus:border-primary-400 focus:ring-2 focus:ring-primary-100"
+        />
+      </IconField>
     </div>
 
-    <div class="mt-6 rounded-2xl border border-border-default bg-surface p-4 shadow-sm sm:p-6">
-      <!-- ===== FILTER BAR: cari + tahun + kategori + status ===== -->
-      <div
-        class="grid gap-3 sm:grid-cols-2"
-        :class="hasStatus ? 'lg:grid-cols-[1fr_15rem_12rem_12rem]' : 'lg:grid-cols-[1fr_15rem_12rem]'"
-      >
-        <IconField class="sm:col-span-2 lg:col-span-1">
-          <InputIcon class="pi pi-search text-heading" />
-          <InputText
-            v-model="search"
-            type="search"
-            placeholder="Cari kata kunci, nomor, judul (cth: 'APBDes', 'Sampah')..."
-            class="w-full !rounded-xl !border-0 !bg-indigo-50 !py-3 !text-[14px] !shadow-none"
-          />
-        </IconField>
+    <div class="mt-6 flex flex-col gap-5">
+      <!-- ===== FILTER: kategori (slider, sama dengan Berita) + tahun & status (dropdown) ===== -->
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
+        <div class="relative min-w-0 lg:flex-1">
+          <div
+            ref="chipScroller"
+            class="min-w-0 overflow-x-auto overscroll-x-contain scroll-smooth px-1 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            :style="chipFadeStyle"
+            role="tablist"
+            aria-label="Filter kategori produk hukum"
+            @scroll.passive="updateScrollState"
+          >
+            <div class="flex w-max flex-nowrap gap-2 pr-10">
+              <button
+                v-for="(option, index) in typeOptions"
+                :key="option.value"
+                type="button"
+                role="tab"
+                :aria-selected="typeFilter === option.value"
+                :data-index="index"
+                class="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-4 py-2 text-[12.5px] font-bold transition-all duration-200 active:scale-95"
+                :class="
+                  typeFilter === option.value
+                    ? option.value === 'all'
+                      ? 'border-transparent bg-gradient-to-r from-primary-800 to-primary-900 text-white shadow-md'
+                      : [chipStyle(option).activeBadge, 'scale-105']
+                    : ['border-border-default bg-surface text-default', option.value === 'all' ? '' : chipStyle(option).hoverRing]
+                "
+                @click="typeFilter = option.value"
+              >
+                <span
+                  v-if="option.value !== 'all'"
+                  class="h-1.5 w-1.5 rounded-full"
+                  :class="typeFilter === option.value ? 'bg-white/80' : chipStyle(option).dot"
+                />
+                {{ option.label }}
+                <span
+                  v-if="option.count !== undefined"
+                  class="rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold"
+                  :class="typeFilter === option.value ? 'bg-white/20 text-white' : 'bg-surface-hover text-muted'"
+                >
+                  {{ option.count }}
+                </span>
+              </button>
+            </div>
+          </div>
 
-        <!-- Tahun -->
-        <Select
-          v-model="yearFilter"
-          :options="yearOptions"
-          option-label="label"
-          option-value="value"
-          :class="filterBoxCls"
-          :pt="filterPt"
-        >
-          <template #value="{ value }">
-            <span class="flex items-center gap-2">
-              <i class="pi pi-calendar text-[13px]" />
-              {{ labelOf(yearOptions, value) }}
-            </span>
-          </template>
-        </Select>
+          <!-- Panah penunjuk: hanya tampil di sisi yang masih punya kelanjutan -->
+          <button
+            v-if="canScrollLeft"
+            type="button"
+            aria-label="Geser kategori ke kiri"
+            class="absolute left-0 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border transition-all hover:scale-110 active:scale-95"
+            :class="chipArrowStyle(nextLeftOption)"
+            @click="scrollChips(-1)"
+          >
+            <i class="pi pi-chevron-left text-[11px]" />
+          </button>
+          <button
+            v-if="canScrollRight"
+            type="button"
+            aria-label="Geser kategori ke kanan"
+            class="absolute right-0 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border transition-all hover:scale-110 active:scale-95"
+            :class="chipArrowStyle(nextRightOption)"
+            @click="scrollChips(1)"
+          >
+            <i class="pi pi-chevron-right text-[11px]" />
+          </button>
+        </div>
 
-        <!-- Kategori -->
-        <Select
-          v-model="typeFilter"
-          :options="typeOptions"
-          option-label="label"
-          option-value="value"
-          :class="filterBoxCls"
-          :pt="filterPt"
-        >
-          <template #value="{ value }">Kategori: {{ labelOf(typeOptions, value) }}</template>
-        </Select>
-
-        <!-- Status (hanya bila data punya status) -->
-        <Select
-          v-if="hasStatus"
-          v-model="statusFilter"
-          :options="statusOptions"
-          option-label="label"
-          option-value="value"
-          :class="filterBoxCls"
-          :pt="filterPt"
-        >
-          <template #value="{ value }">Status: {{ labelOf(statusOptions, value) }}</template>
-        </Select>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center lg:shrink-0">
+          <Select
+            v-model="yearFilter"
+            :options="yearOptions"
+            optionLabel="label"
+            optionValue="value"
+            scrollHeight="280px"
+            class="w-full !rounded-xl !border-border-default !bg-surface !shadow-none sm:w-auto sm:min-w-[11.5rem]"
+            :pt="{ label: { class: '!py-2.5' } }"
+          >
+            <template #value="{ value }">
+              <span class="flex items-center gap-2 text-[13.5px] font-semibold text-heading">
+                <i class="pi pi-calendar text-[12px] text-primary-500" />
+                <span class="font-bold text-muted">Tahun:</span>
+                {{ optionLabelOf(yearOptions, value) }}
+              </span>
+            </template>
+          </Select>
+          <!-- Status (hanya bila data punya status) -->
+          <Select
+            v-model="statusFilter"
+            :options="statusOptions"
+            optionLabel="label"
+            optionValue="value"
+            scrollHeight="280px"
+            class="w-full !rounded-xl !border-border-default !bg-surface !shadow-none sm:w-auto sm:min-w-[11.5rem]"
+            :pt="{ label: { class: '!py-2.5' } }"
+          >
+            <template #value="{ value }">
+              <span class="flex items-center gap-2 text-[13.5px] font-semibold text-heading">
+                <span class="font-bold text-muted">Status:</span>
+                {{ optionLabelOf(statusOptions, value) }}
+              </span>
+            </template>
+          </Select>
+        </div>
       </div>
 
       <!-- ===== TABEL ===== -->
-      <div class="relative mt-5 overflow-hidden rounded-xl border border-border-default bg-surface">
+      <div class="relative overflow-hidden rounded-xl border border-border-default bg-surface">
         <!-- garis gradasi di atas tabel (seperti halaman Agenda) -->
         <span class="absolute inset-x-0 top-0 z-10 h-1 bg-gradient-to-r from-sky-400 to-violet-500" />
 
