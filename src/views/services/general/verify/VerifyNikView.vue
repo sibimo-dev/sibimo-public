@@ -61,10 +61,9 @@ function goToRegistration() {
 }
 
 function chooseType(type) {
-  draft.reset();
-  draft.residentType = type.value;
   const docs = docsForType(type.value);
-  if (docs.length === 1) draft.selectedDocs = [docs[0].value];
+  const preselected = docs.length === 1 ? [docs[0].value] : [];
+  draft.set(type.value, preselected);
   typeDialogOpen.value = false;
   router.push({ name: "general-register-select-letters" });
 }

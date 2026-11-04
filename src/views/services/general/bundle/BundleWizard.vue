@@ -139,6 +139,9 @@ const stepAlert = ref("");
 const selected = ref([...(props.bundle.ui?.preselected ?? [])].filter((id) => props.bundle.letters.some((l) => l.id === id)));
 const selectError = ref(false);
 const selectionNotice = ref("");
+// Surat yang sudah ditinjau pemohon (menekan "Lanjut" di surat itu): { [letter.id]: true }.
+// HARUS dideklarasikan di atas `watchEffect(syncConditionalLetters)` dan `isDone`.
+const reviewed = reactive({});
 const autoRemovedConditional = new Set();
 const selectedLetters = computed(() => props.bundle.letters.filter((l) => selected.value.includes(l.id)));
 const isDudaStatus = (value) => /^(duda|cerai\s*(hidup|mati))$/i.test(String(value ?? "").trim());
@@ -268,8 +271,7 @@ const fLetter = computed(() => selectedLetters.value[Math.min(fieldIdx.value, se
 const lastIdx = computed(() => selectedLetters.value.length - 1);
 const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
-// Surat yang sudah ditinjau pemohon (menekan "Lanjut" di surat itu).
-// Centang pada chip hanya muncul bila surat sudah ditinjau DAN isiannya lengkap,
+// Centang pada chip hanya muncul bila surat sudah ditinjau (lihat `reviewed`) DAN isiannya lengkap,
 // jadi data yang terisi otomatis dari verifikasi NIK tidak langsung membuat surat tampak "selesai".
 const isDone = (l) => !!reviewed[l.id] && !Object.keys(fieldErrorsOf(l)).length;
 
@@ -543,6 +545,7 @@ async function sendApplication() {
     throw new Error(`Surat berikut belum tersedia untuk pengajuan online: ${unavailableLetters.value.map((letter) => letter.title).join(", ")}.`);
   }
 
+  const bundleId = `BND-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   for (const letter of selectedLetters.value) {
     if (submittedLetters[letter.id]) continue;
     const letterForm = Object.fromEntries(
@@ -553,7 +556,13 @@ async function sendApplication() {
     const isNewResident = Boolean(props.bundle?.slug === "pendaftaran-warga-baru" || !resident.isVerified);
     const response = await submitOnlineLetter({
       slug: letter.slug,
-      form: { ...form, ...letterForm },
+      form: {
+        ...form,
+        ...letterForm,
+        __bundle_id: bundleId,
+        __bundle_slug: props.bundle?.slug,
+        __bundle_name: props.bundle?.title,
+      },
       files,
       reusedDocuments,
       documents: docsOf(letter),
