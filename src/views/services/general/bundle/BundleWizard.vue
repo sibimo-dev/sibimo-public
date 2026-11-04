@@ -543,6 +543,7 @@ async function sendApplication() {
     throw new Error(`Surat berikut belum tersedia untuk pengajuan online: ${unavailableLetters.value.map((letter) => letter.title).join(", ")}.`);
   }
 
+  const bundleId = `BND-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   for (const letter of selectedLetters.value) {
     if (submittedLetters[letter.id]) continue;
     const letterForm = Object.fromEntries(
@@ -553,7 +554,13 @@ async function sendApplication() {
     const isNewResident = Boolean(props.bundle?.slug === "pendaftaran-warga-baru" || !resident.isVerified);
     const response = await submitOnlineLetter({
       slug: letter.slug,
-      form: { ...form, ...letterForm },
+      form: {
+        ...form,
+        ...letterForm,
+        __bundle_id: bundleId,
+        __bundle_slug: props.bundle?.slug,
+        __bundle_name: props.bundle?.title,
+      },
       files,
       reusedDocuments,
       documents: docsOf(letter),
