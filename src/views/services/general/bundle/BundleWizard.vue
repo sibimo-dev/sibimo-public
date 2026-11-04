@@ -202,7 +202,6 @@ const conditionalLetterRules = computed(() => {
   return [];
 });
 const temporarilyRemoved = reactive(new Set());
-const reviewed = reactive({});
 const conditionalRuleFor = (id) => conditionalLetterRules.value.find((rule) => rule.id === id) ?? null;
 const normalizedStatus = (value) => {
   const raw = value && typeof value === "object" ? (value.value ?? value.label ?? "") : value;
