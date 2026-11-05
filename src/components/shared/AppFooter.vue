@@ -68,6 +68,8 @@ const footerLinks = [
   { label: "Potensi Bimomartani", to: { name: "potential" } },
   { label: "Galeri Kalurahan", to: { name: "gallery" } },
   { label: "Agenda Kalurahan", to: { name: "events" } },
+  { label: "Produk Hukum", to: { name: "legal-products" } },
+  { label: "Pembangunan", to: { name: "development" } },
 ];
 
 const mapEmbedSrc =
