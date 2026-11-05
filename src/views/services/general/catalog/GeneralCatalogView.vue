@@ -10,6 +10,7 @@ import { isBundledLetter } from "@/data/letterBundles";
 import { useLetterLauncher } from "@/views/services/layout/useLetterLauncher";
 import { useResidentVerificationStore } from "@/stores/residentVerification";
 import { isOnlineLetter } from "@/data/letterBackendMap";
+import publicService from "@/services/publicService";
 
 
 const router = useRouter();
@@ -43,12 +44,22 @@ const services = computed(() =>
   ),
 );
 
+const totalRequests = ref(null);
+onMounted(async () => {
+  try {
+    const res = await publicService.getLetterStats();
+    totalRequests.value = res.data?.data?.total ?? null;
+  } catch {
+    // Statistik tidak kritis — abaikan bila gagal
+  }
+});
 
 function changeNik() {
   residentStore.reset();
   router.push({ name: "general-verify" });
 }
 </script>
+
 
 <template>
   <LetterOutlet v-if="openFile" :file="openFile" scope="general" />

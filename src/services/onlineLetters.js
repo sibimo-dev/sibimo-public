@@ -1,5 +1,6 @@
 import publicService from "./publicService";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
+import { compressImage } from "./imageCompressor";
 
 let typesPromise;
 
@@ -195,10 +196,11 @@ export async function submitOnlineLetter({ slug, form, files, documents, reusedD
   if (isNewResident) payload.append("is_new_resident", "1");
 
   for (const document of documents ?? []) {
-    const file = files?.[document.id];
+    let file = files?.[document.id];
     const documentId = resolveDocumentId(document.label, type.documents ?? []);
     if (!documentId) throw new Error(`Dokumen ${document.label} belum memiliki konfigurasi backend.`);
     if (file) {
+      file = await compressImage(file);
       payload.append("attachments[]", file, file.name);
       payload.append("attachment_document_ids[]", String(documentId));
     } else if (reusedDocuments[document.id]) {
