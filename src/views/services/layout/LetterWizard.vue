@@ -258,7 +258,7 @@ async function submit() {
       serviceFlow: isPermit ? "permit" : "general",
     });
     invoice.value = {
-      entries: [{ title: props.title, code: res.request_code }],
+      entries: [{ title: props.title, code: res.request_code, category: isPermit ? "Layanan perizinan" : undefined }],
       senderName: form.name || form.applicantName || form.fullName || resident.resident?.fullName || "Pemohon",
       documentTitle: props.title,
       submittedAt: new Date(),
