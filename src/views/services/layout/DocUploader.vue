@@ -6,6 +6,7 @@ import Button from "primevue/button";
 import FileThumb from "./FileThumb.vue";
 import FilePreviewDialog from "./FilePreviewDialog.vue";
 import { MAX_FILE_MB, checkFile, fileSizeLabel } from "./formLogic";
+import { compressImage } from "@/services/imageCompressor";
 
 const props = defineProps({
   docs: { type: Array, required: true }, // [{ id, label, optional }]
@@ -35,11 +36,27 @@ function choose(id) {
   picker.value?.click();
 }
 
-function onPick(event) {
-  const file = event.target.files?.[0];
+async function onPick(event) {
+  const rawFile = event.target.files?.[0];
   const id = pendingId;
   event.target.value = ""; // supaya file yang sama bisa dipilih ulang
-  if (!file || id == null) return;
+  if (!rawFile || id == null) return;
+
+  const isImage = rawFile.type.startsWith("image/") || /\.(jpe?g|png|webp|heic)$/i.test(rawFile.name || "");
+  if (!isImage && rawFile.size > MAX_FILE_MB * 1024 * 1024) {
+    localErrors[id] = `Ukuran file maksimal ${MAX_FILE_MB} MB (file ini ${(rawFile.size / 1024 / 1024).toFixed(1)} MB).`;
+    return;
+  }
+
+  let file = rawFile;
+  if (isImage) {
+    try {
+      file = await compressImage(rawFile);
+    } catch {
+      file = rawFile;
+    }
+  }
+
   const problem = checkFile(file);
   if (problem) {
     localErrors[id] = problem;

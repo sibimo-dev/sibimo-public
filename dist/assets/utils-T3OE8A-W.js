@@ -1,1 +1,0 @@
-import{dt as e,j as t,ot as n}from"./index-4GvMk2cE.js";function r(){e({variableName:t(`scrollbar.width`).name})}function i(){n({variableName:t(`scrollbar.width`).name})}export{i as n,r as t};
