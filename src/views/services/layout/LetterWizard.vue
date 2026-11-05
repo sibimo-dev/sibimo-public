@@ -50,17 +50,30 @@ const isOnlineAvailable = computed(() => Boolean(onlineConfig.value));
 const catalogName = computed(() => (route.path.startsWith("/services/permit") ? "permit-catalog" : "general-catalog"));
 // kembali ke katalog dengan tab kategori yang sama (query ?letter= otomatis hilang)
 const catalogTo = computed(() => ({ name: catalogName.value, query: route.query.category ? { category: route.query.category } : {} }));
+// Layanan Umum (permit) tidak autofill dari data warga & tidak butuh NIK terdaftar
+const injectedScope = inject("letterScope", null);
+const isPermitScope = computed(() => unref(injectedScope) === "permit" || route.path.startsWith("/services/permit"));
 
 /* ---------- Data ---------- */
 // Kontak WhatsApp selalu ada di semua surat (untuk notifikasi status pengajuan).
-const allSections = computed(() => [
-  ...props.sections,
-  {
-    title: "Kontak Notifikasi",
-    hint: "Status verifikasi dan otorisasi surat akan dikirim melalui WhatsApp ke nomor ini.",
-    fields: [{ key: "whatsapp", label: "Nomor WhatsApp", type: "text", from: "phoneNumber", placeholder: "08xx-xxxx-xxxx" }],
-  },
-]);
+const allSections = computed(() => {
+  const baseSections = props.sections.map((sec) => {
+    if (isPermitScope.value && sec.hint && sec.hint.includes("Terisi otomatis")) {
+      const copy = { ...sec };
+      delete copy.hint;
+      return copy;
+    }
+    return sec;
+  });
+  return [
+    ...baseSections,
+    {
+      title: "Kontak Notifikasi",
+      hint: "Status verifikasi dan otorisasi surat akan dikirim melalui WhatsApp ke nomor ini.",
+      fields: [{ key: "whatsapp", label: "Nomor WhatsApp", type: "text", from: "phoneNumber", placeholder: "08xx-xxxx-xxxx" }],
+    },
+  ];
+});
 
 const form = reactive({});
 // Penanda "terisi otomatis" + daftar anggota KK (autoFilled.__household) untuk baris keluarga otomatis.
@@ -85,6 +98,8 @@ const clearUnavailableSpouseFields = () => {
   }
 };
 const syncResidentData = () => {
+  // Layanan Umum (permit) tidak autofill dari data warga — form diisi sendiri oleh pemohon.
+  if (isPermitScope.value) return;
   // Jalankan lagi setelah hasil verifikasi NIK tersedia/berubah. Form public
   // dibuka setelah verifikasi, tetapi watcher ini juga menangani navigasi cepat
   // atau state yang dipulihkan dari sessionStorage.
@@ -135,7 +150,7 @@ const savedDocuments = ref([]);
 const savedDocumentFor = (doc) => savedDocuments.value.find((item) => item.document_type === documentTypeOf(doc.label)) ?? null;
 const reusedDocumentFor = (doc) => reusedDocuments[doc.id] ?? null;
 async function loadSavedDocuments() {
-  if (!resident.nik || !resident.isVerified || !onlineSlug.value) {
+  if (isPermitScope.value || !resident.nik || !resident.isVerified || !onlineSlug.value) {
     savedDocuments.value = [];
     return;
   }
@@ -247,19 +262,19 @@ function downloadInvoice() {
 async function submit() {
   isSubmitting.value = true;
   try {
-    const isPermit = route.path.startsWith("/services/permit");
+    const isPermit = isPermitScope.value;
     const res = await submitOnlineLetter({
       slug: onlineSlug.value,
       form: { ...form },
       files: { ...files },
-      reusedDocuments: { ...reusedDocuments },
+      reusedDocuments: isPermit ? {} : { ...reusedDocuments },
       documents: docList.value,
-      resident: resident.resident || (resident.nik ? { nik: resident.nik } : null),
+      resident: isPermit ? null : (resident.resident || (resident.nik ? { nik: resident.nik } : null)),
       serviceFlow: isPermit ? "permit" : "general",
     });
     invoice.value = {
       entries: [{ title: props.title, code: res.request_code }],
-      senderName: form.name || form.applicantName || form.fullName || resident.resident?.fullName || "Pemohon",
+      senderName: form.name || form.applicantName || form.fullName || (!isPermit && resident.resident?.fullName) || "Pemohon",
       documentTitle: props.title,
       submittedAt: new Date(),
     };

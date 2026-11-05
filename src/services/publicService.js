@@ -18,7 +18,7 @@ export default {
   getReusableCitizenDocuments: ({ nik, letterTypeCode }) =>
     api.post('/public/citizens/reusable-documents', { nik, letter_type_code: letterTypeCode }),
   submitLetterRequest: (payload) => api.post('/public/letter-requests', payload, {
-    timeout: 30000,
+    timeout: 60000, // 60 detik — upload file + backend processing bisa lebih lama di server lokal
   }),
   // Cek Pengajuan: POST supaya NIK tidak masuk URL. Endpoint ada di backend (LetterRequestController).
   lookupLetterRequests: ({ nik, requestCode }) =>

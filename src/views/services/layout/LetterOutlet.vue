@@ -20,6 +20,7 @@ const entry = computed(() => findLetterByFile(props.file, props.scope));
 const component = computed(() => (entry.value ? defineAsyncComponent(entry.value.load) : null));
 const hueName = computed(() => (props.scope === "permit" ? CATEGORY_HUES.perizinan : hueForCategory(entry.value?.category)));
 provide("letterHue", hueName);
+provide("letterScope", computed(() => props.scope));
 
 const catalogName = computed(() => (props.scope === "permit" ? "permit-catalog" : "general-catalog"));
 const toCatalog = () => router.push({ name: catalogName.value, query: route.query.category ? { category: route.query.category } : {} });
