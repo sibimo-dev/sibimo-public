@@ -16,7 +16,7 @@ import FileThumb from "./FileThumb.vue";
 import FilePreviewDialog from "./FilePreviewDialog.vue";
 import { copyText } from "./copyText";
 import WizardStepper from "./WizardStepper.vue";
-import { applyHousehold, cellText, display, fillForm, focusFirstInvalid, makeResidentLookup, seedVerifiedApplicant, filledRows, normalizeDocs, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "./formLogic";
+import { applyHousehold, cellText, display, fillForm, focusFirstInvalid, makeResidentLookup, seedVerifiedApplicant, filledRows, normalizeDocs, uniqueRowsByNik, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "./formLogic";
 import { hue as getHue, HUES, SECTION_HUES } from "./pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
 import { WILAYAH_WATCH_KEYS, resetWilayahChildren } from "@/data/letterFields";
@@ -272,9 +272,13 @@ async function submit() {
   isSubmitting.value = true;
   try {
     const isPermit = isPermitScope.value;
+    const normalizedForm = { ...form };
+    for (const field of allSections.value.flatMap((section) => section.fields)) {
+      if (field.type === "rows") normalizedForm[field.key] = uniqueRowsByNik(normalizedForm[field.key] ?? []);
+    }
     const res = await submitOnlineLetter({
       slug: onlineSlug.value,
-      form: { ...form },
+      form: normalizedForm,
       files: { ...files },
       reusedDocuments: isPermit ? {} : { ...reusedDocuments },
       documents: docList.value,

@@ -23,7 +23,7 @@ import FileThumb from "@/views/services/layout/FileThumb.vue";
 import FilePreviewDialog from "@/views/services/layout/FilePreviewDialog.vue";
 import { copyText } from "@/views/services/layout/copyText";
 import WizardStepper from "@/views/services/layout/WizardStepper.vue";
-import { applyAliases, applyHousehold, buildAliasIndex, cellText, display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, normalizeDocs, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "@/views/services/layout/formLogic";
+import { applyAliases, applyHousehold, buildAliasIndex, cellText, display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, normalizeDocs, uniqueRowsByNik, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "@/views/services/layout/formLogic";
 import { HUES, SECTION_HUES, hue } from "@/views/services/layout/pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
 import { documentTypeOf, getReusableDocuments, submitOnlineLetter } from "@/services/onlineLetters";
@@ -551,7 +551,7 @@ async function sendApplication() {
     const letterForm = Object.fromEntries(
       sectionsOf(letter)
         .flatMap((section) => section.fields)
-        .map((field) => [field.key, form[field.key]]),
+        .map((field) => [field.key, field.type === "rows" ? uniqueRowsByNik(form[field.key] ?? []) : form[field.key]]),
     );
     const isNewResident = Boolean(props.bundle?.slug === "pendaftaran-warga-baru" || !resident.isVerified);
     const response = await submitOnlineLetter({
