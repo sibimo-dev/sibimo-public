@@ -98,7 +98,7 @@ export const f = {
   date: make("date"),
   time: make("time"),
   /** pekerjaan: pilih dari daftar bernomor (sama dengan Data Warga) atau ketik bebas. Yang disimpan = nama pekerjaan tanpa nomor. */
-  occupation: (key, label = "Pekerjaan", opts = {}) => ({ key, label, type: "occupation", options: OPT.occupation, ...opts }),
+  occupation: (key, label = "Pekerjaan", opts = {}) => ({ key, label, type: "occupation", options: OPT.occupationKode, ...opts }),
   /** checkbox banyak pilihan (nilai = array) */
   checks: (key, label, options, opts = {}) => ({ key, label, type: "checks", options, ...opts }),
   /** daftar baris berulang (anggota keluarga, saksi, dst). columns = [{ key, label, type?, options? }] */
