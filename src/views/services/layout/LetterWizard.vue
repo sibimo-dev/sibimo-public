@@ -16,9 +16,10 @@ import FileThumb from "./FileThumb.vue";
 import FilePreviewDialog from "./FilePreviewDialog.vue";
 import { copyText } from "./copyText";
 import WizardStepper from "./WizardStepper.vue";
-import { applyHousehold, cellText, display, fillForm, focusFirstInvalid, makeResidentLookup, seedVerifiedApplicant, filledRows, normalizeDocs, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "./formLogic";
+import { applyHousehold, cellText, display, fillForm, focusFirstInvalid, makeResidentLookup, seedVerifiedApplicant, filledRows, normalizeDocs, uniqueRowsByNik, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "./formLogic";
 import { hue as getHue, HUES, SECTION_HUES } from "./pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
+import { WILAYAH_WATCH_KEYS, resetWilayahChildren } from "@/data/letterFields";
 import { documentTypeOf, getOnlineLetterTypeBySlug, getReusableDocuments, submitOnlineLetter } from "@/services/onlineLetters";
 import { downloadSubmissionInvoice } from "@/services/submissionInvoice";
 import publicService from "@/services/publicService";
@@ -76,6 +77,14 @@ const allSections = computed(() => {
 });
 
 const form = reactive({});
+
+// Ganti Provinsi / Kab-Kota / Kecamatan -> isian wilayah di bawahnya dikosongkan agar pilihannya ikut induk yang baru.
+watch(
+  () => WILAYAH_WATCH_KEYS.map((k) => form[k]),
+  (now, before) => resetWilayahChildren(form, now, before),
+  { flush: "post" },
+);
+
 // Penanda "terisi otomatis" + daftar anggota KK (autoFilled.__household) untuk baris keluarga otomatis.
 const autoFilled = reactive({});
 const onEdit = (key) => delete autoFilled[key];
@@ -263,18 +272,25 @@ async function submit() {
   isSubmitting.value = true;
   try {
     const isPermit = isPermitScope.value;
+    const normalizedForm = { ...form };
+    for (const field of allSections.value.flatMap((section) => section.fields)) {
+      if (field.type === "rows") normalizedForm[field.key] = uniqueRowsByNik(normalizedForm[field.key] ?? []);
+    }
     const res = await submitOnlineLetter({
       slug: onlineSlug.value,
-      form: { ...form },
+      form: normalizedForm,
       files: { ...files },
       reusedDocuments: isPermit ? {} : { ...reusedDocuments },
       documents: docList.value,
       resident: isPermit ? null : (resident.resident || (resident.nik ? { nik: resident.nik } : null)),
       serviceFlow: isPermit ? "permit" : "general",
     });
+    // NIK disamarkan (4 digit awal + 4 digit akhir) karena PDF bisa terbawa/terkirim ke orang lain.
+    const nik = String(form.nik || (!isPermit && resident.nik) || "").replace(/\D/g, "");
     invoice.value = {
-      entries: [{ title: props.title, code: res.request_code }],
+      entries: [{ title: props.title, code: res.request_code, category: isPermit ? "Layanan perizinan" : undefined }],
       senderName: form.name || form.applicantName || form.fullName || (!isPermit && resident.resident?.fullName) || "Pemohon",
+      senderInfo: nik.length === 16 ? `NIK ${nik.slice(0, 4)}${"*".repeat(8)}${nik.slice(-4)}` : "",
       documentTitle: props.title,
       submittedAt: new Date(),
     };

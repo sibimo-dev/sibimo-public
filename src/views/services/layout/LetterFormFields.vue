@@ -8,7 +8,7 @@ import AutoComplete from "primevue/autocomplete";
 import Checkbox from "primevue/checkbox";
 import Button from "primevue/button";
 import { onMounted, ref, watch } from "vue";
-import { visible, isFilled, emptyRow, toDate, syncFamilyRows, relocationMode, familyModeFor, householdOf, pickFamily } from "./formLogic";
+import { visible, isFilled, emptyRow, toDate, syncFamilyRows, uniqueRowsByNik, relocationMode, familyModeFor, householdOf, pickFamily } from "./formLogic";
 import { scopeWilayah } from "@/data/letterFields";
 import { HUES, SECTION_HUES } from "./pastel";
 import SignaturePad from "./SignaturePad.vue";
@@ -51,6 +51,22 @@ onMounted(async () => {
 /* Field tanggal dengan `dayKey`: isi field hari (Senin–Minggu) otomatis tiap tanggal berubah. */
 const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const allFields = () => props.sections.flatMap((s) => s.fields);
+const normalizeRows = () => {
+  const seenKeys = new Set();
+  for (const field of allFields()) {
+    if (field.type !== "rows" || seenKeys.has(field.key)) continue;
+    seenKeys.add(field.key);
+    const current = Array.isArray(props.form[field.key]) ? props.form[field.key] : [];
+    const unique = uniqueRowsByNik(current);
+    if (unique.length !== current.length) props.form[field.key] = unique;
+  }
+};
+const rowsForDisplay = (field) => uniqueRowsByNik(Array.isArray(props.form[field.key]) ? props.form[field.key] : []);
+const removeRow = (field, row) => {
+  const rows = Array.isArray(props.form[field.key]) ? props.form[field.key] : [];
+  const index = rows.indexOf(row);
+  if (index >= 0) rows.splice(index, 1);
+};
 watch(
   () => allFields().filter((x) => x.dayKey).map((x) => +toDate(props.form[x.key]) || 0),
   () => {
@@ -143,6 +159,8 @@ function syncRow(field, row) {
 watch(
   () => props.form,
   () => {
+    // State lama dari bundle tidak boleh membuat satu orang tampil lebih dari sekali.
+    normalizeRows();
     for (const section of props.sections) {
       for (const field of section.fields) {
         if (field.type === "rows" && Array.isArray(props.form[field.key])) for (const row of props.form[field.key]) syncRow(field, row);
@@ -215,6 +233,7 @@ watch(
   resyncFamily,
 );
 onMounted(resyncFamily);
+onMounted(normalizeRows);
 </script>
 
 <template>
@@ -279,11 +298,11 @@ onMounted(resyncFamily);
             <div v-else-if="field.type === 'rows'" class="flex flex-col gap-3">
               <p v-if="modeHint(field)" class="text-xs" :class="noAutoMatch(field) ? 'text-amber-700' : 'text-[var(--color-text-muted)]'">{{ modeHint(field) }}</p>
               <p v-if="overflowCount(field)" class="text-xs text-amber-700">Formulir hanya memuat {{ field.max }} baris; {{ overflowCount(field) }} anggota keluarga lainnya tidak tercantum.</p>
-              <div v-for="(row, i) in form[field.key]" :key="i" class="rounded-xl border border-white bg-white/80 p-3 shadow-sm">
+              <div v-for="(row, i) in rowsForDisplay(field)" :key="row.nik || i" class="rounded-xl border border-white bg-white/80 p-3 shadow-sm">
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-medium text-[var(--color-text-muted)]">#{{ i + 1 }}</span>
                   <span v-if="isLocked(field, row)" class="text-[11px] text-emerald-700">otomatis</span>
-                  <Button v-else-if="form[field.key].length > minRows(field)" icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Hapus baris" @click="form[field.key].splice(i, 1)" />
+                  <Button v-else-if="rowsForDisplay(field).length > minRows(field)" icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Hapus baris" @click="removeRow(field, row)" />
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
                   <div v-for="c in field.columns" :key="c.key" class="flex flex-col gap-1">

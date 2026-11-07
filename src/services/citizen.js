@@ -1,6 +1,6 @@
 import api from './api'
 
-const CACHE_KEY = 'sibimo-public-citizen-statistics-v1'
+const CACHE_KEY = 'sibimo-public-citizen-statistics-v2'
 
 function unwrap(response) {
   return response?.data?.data ?? response?.data ?? null
