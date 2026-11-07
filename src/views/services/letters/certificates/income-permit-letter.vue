@@ -9,15 +9,17 @@ import { f, DOC, OPT, forPublic } from "@/data/letterFields";
 export const sections = forPublic([
   {
     title: "Data Pemohon",
+    hint: "Terisi otomatis dari data warga. Koreksi bila ada yang tidak sesuai.",
     fields: [
-      f.text("name", "Nama"),
-      f.text("birthPlaceDate", "Tempat/Tgl. Lahir", { placeholder: "Contoh: Sleman, 17 Agustus 1990" }),
-      f.text("nik", "NIK"),
-      f.select("maritalStatus", "Status Perkawinan", OPT.marital),
-      f.select("gender", "Jenis Kelamin", OPT.gender),
-      f.select("religion", "Agama", OPT.religion),
-      f.occupation("occupation", "Pekerjaan"),
-      f.area("address", "Alamat", { span: 2 }),
+      f.text("name", "Nama Lengkap", { from: "fullName" }),
+      f.nik("nik", "NIK", { from: "nik" }),
+      f.text("birthPlace", "Tempat Lahir", { from: "birthPlace" }),
+      f.date("birthDate", "Tanggal Lahir", { from: "birthDate" }),
+      f.select("gender", "Jenis Kelamin", OPT.gender, { from: "gender" }),
+      f.select("maritalStatus", "Status Perkawinan", OPT.marital, { from: "maritalStatus" }),
+      f.select("religion", "Agama", OPT.religion, { from: "religion" }),
+      f.occupation("occupation", "Pekerjaan", { from: "occupation" }),
+      f.area("address", "Alamat", { from: "address", span: 2 }),
     ],
   },
   {

@@ -1,45 +1,30 @@
 <script>
 // Formulir Permohonan Pindah Datang WNI
-import { f, OPT, pemohon, DOC, wilayahByScope, wilayahDropdown, BIMOMARTANI, forPublic } from "@/data/letterFields";
+import { f, OPT, pemohon, DOC, wilayahDropdown, BIMOMARTANI, forPublic } from "@/data/letterFields";
 import { signerSection } from "@/views/services/layout/signerFields.js";
 
-// scopeKey (opsional): bila diisi, Desa/Kecamatan/Kab/Provinsi berupa dropdown yang boleh diketik manual.
-// Nilai awalnya ditentukan oleh wilayahDropdown (bukan lagi otomatis menurut Cakupan Kepindahan).
-const alamatLengkap = (prefix, title, addressLabel = "Alamat", scopeKey) => ({
+// Desa/Kecamatan/Kab/Provinsi dijadikan dropdown (boleh diketik) oleh wilayahDropdown di bawah.
+const alamatLengkap = (prefix, title, addressLabel = "Alamat") => ({
   title,
   fields: [
     f.area(`${prefix}Address`, addressLabel, { span: 2 }),
     f.text(`${prefix}Rt`, "RT"),
     f.text(`${prefix}Rw`, "RW"),
-    ...(scopeKey
-      ? wilayahByScope(prefix, scopeKey)
-      : [
-          f.text(`${prefix}Village`, "Desa/Kelurahan"),
-          f.text(`${prefix}District`, "Kecamatan"),
-          f.text(`${prefix}Regency`, "Kabupaten/Kota"),
-          f.text(`${prefix}Province`, "Provinsi"),
-        ]),
+    f.text(`${prefix}Province`, "Provinsi"),
+    f.text(`${prefix}Regency`, "Kabupaten/Kota"),
+    f.text(`${prefix}District`, "Kecamatan"),
+    f.text(`${prefix}Village`, "Desa/Kelurahan"),
     f.text(`${prefix}PostalCode`, "Kode Pos", { optional: true }),
     f.text(`${prefix}Phone`, "Nomor Telepon", { optional: true }),
   ],
 });
 
-const KK_STATUS = ["1. Numpang KK", "2. Membuat KK Baru", "3. Nomor KK Tetap"];
-const REASONS = [
-  "1. Pekerjaan",
-  "2. Pendidikan",
-  "3. Keamanan",
-  "4. Kesehatan",
-  "5. Perumahan",
-  "6. Keluarga",
-  "7. Lainnya (sebutkan)",
-];
-const RELOCATION_TYPES = [
-  "1. Kep. Keluarga",
-  "2. Kep. Keluarga dan seluruh Angg. Keluarga",
-  "3. Kep. Keluarga dan sbg Angg. Keluarga",
-  "4. Anggota Keluarga",
-];
+// Data Pemohon: status kawin, agama, dan pekerjaan memakai daftar bernomor yang sama dengan Data Warga.
+const pemohonPindah = () => {
+  const coded = { maritalStatus: OPT.maritalKode, religion: OPT.religionKode, occupation: OPT.occupationKode };
+  const section = pemohon();
+  return { ...section, fields: section.fields.map((fld) => (coded[fld.key] ? { ...fld, options: coded[fld.key] } : fld)) };
+};
 
 export const sections = forPublic([
   {
@@ -54,7 +39,7 @@ export const sections = forPublic([
     fields: [f.hamlet("hamlet", "Dusun/Dukuh/Kampung Tujuan")], // key sama dengan dropdown dusun di blok petugas (admin)
   },
 
-  pemohon(),
+  pemohonPindah(),
 
   {
     title: "Data KK Daerah Asal",
@@ -64,39 +49,26 @@ export const sections = forPublic([
     ],
   },
 
-  {
-    title: "Cakupan Kepindahan",
-    hint: "Dipakai untuk subjudul formulir. Alamat Asal dipilih dari dropdown atau diketik manual.",
-    fields: [
-      f.select("relocationTypeLabel", "Cakupan Kepindahan", OPT.relocationScope, { default: OPT.relocationScope[0], span: 2 }),
-    ],
-  },
-
   // Alamat asal: dropdown (boleh diketik), kosong / dipilih sendiri
   wilayahDropdown(
-    alamatLengkap("origin", "Alamat Asal", "Alamat", "relocationTypeLabel"),
+    alamatLengkap("origin", "Alamat Asal", "Alamat"),
     "origin",
-    "relocationTypeLabel",
+    undefined,
     {},
   ),
 
   {
     title: "Data Kepindahan",
+    hint: "Dipakai untuk mengisi otomatis daftar keluarga yang datang.",
     fields: [
-      f.select("relocationReason", "Alasan Pindah", REASONS),
-      f.select("originKkStatus", "Status KK bagi yang tidak Pindah", KK_STATUS),
-      f.text("relocationReasonOther", "Sebutkan alasan lainnya", {
-        span: 2,
-        showIf: (form) => String(form.relocationReason || "").startsWith("7"),
-      }),
-      f.select("relocationType", "Jenis Kepindahan", RELOCATION_TYPES, { span: 2 }),
+      f.select("relocationType", "Jenis Kepindahan", OPT.relocationType, { span: 2, optional: true }),
     ],
   },
 
   {
     title: "Data KK Daerah Tujuan",
     fields: [
-      f.select("destinationKkStatus", "1. Status KK Bagi Yang Pindah", KK_STATUS),
+      f.select("destinationKkStatus", "1. Status KK Bagi Yang Pindah", OPT.kkStatusNo),
       f.kk("destinationKkNumber", "2. Nomor Kartu Keluarga (Tujuan)"),
       f.text("destinationHeadOfFamily", "4. Nama Kepala Keluarga (Tujuan)"),
       f.date("arrivalDate", "5. Tanggal Kedatangan"),
@@ -105,9 +77,9 @@ export const sections = forPublic([
 
   // Alamat tujuan (di kalurahan ini): dropdown (boleh diketik), default Bimomartani/Ngemplak/Sleman/DIY
   wilayahDropdown(
-    alamatLengkap("destination", "Alamat Tujuan (di kalurahan ini)", "Alamat yang Dituju", "relocationTypeLabel"),
+    alamatLengkap("destination", "Alamat Tujuan (di kalurahan ini)", "Alamat yang Dituju"),
     "destination",
-    "relocationTypeLabel",
+    undefined,
     BIMOMARTANI,
   ),
 
@@ -117,7 +89,7 @@ export const sections = forPublic([
       f.rows("familyMembers", "Anggota keluarga yang datang", [
         { key: "nik", label: "NIK" },
         { key: "name", label: "Nama" },
-        { key: "shdk", label: "Status Hubungan dalam Keluarga", type: "select", options: OPT.shdk },
+        { key: "shdk", label: "Status Hubungan dalam Keluarga", type: "select", options: OPT.shdkKode },
         { key: "validUntil", label: "Masa Berlaku KTP", type: "date", optional: true, lifetime: true },
       ], { max: 6, autoByType: "relocationType" }),
     ],
