@@ -1,10 +1,10 @@
 <script>
-// Formulir Biodata Penduduk WNI (Per Keluarga)
+// [PUBLIC] Formulir Biodata Penduduk WNI (Per Keluarga)
 // Template PDF: letters/family-biodata-form.blade.php
 // Bagian "Diisi Oleh Petugas": Provinsi, Kab, Kecamatan, Desa dipatenkan di template PDF backend
-// (34 DIY / 04 Sleman / 11 Ngemplak / 020 Bimomartani) dan bagian lainnya juga sudah tetap di blade, jadi bukan field.
-// Satu-satunya yang tetap berupa isian: Nama Dusun/Dukuh/Kampung.
-import { f, OPT, codeOptions, pemohonRingkas, opt, forPublic } from "@/data/letterFields";
+// (34 DIY / 04 Sleman / 11 Ngemplak / 2002 Bimomartani). Yang berupa isian: Kode Dusun (2 kotak, opsional),
+// Nama Dusun/Dukuh/Kampung, dan Nomor KK.
+import { f, OPT, codeOptions, pemohonRingkas, opt, forPublic, kodeWilayahFields } from "@/data/letterFields";
 import { signerSection } from "@/views/services/layout/signerFields.js";
 
 // Kolom bernomor di formulir cetak (7, 11, 13, 14, 15, 16, 19, 22, 23, 24, 25, 26):
@@ -45,12 +45,13 @@ const noDisorder = (row) => row.disorder !== ADA;
 
 // Langkah 1: isian sesuai formulir
 export const sections = forPublic([
-  // DIISI OLEH PETUGAS: hanya Nama Dusun/Dukuh/Kampung (pilih dari data dusun atau ketik manual); kode wilayah dipatenkan di template PDF.
+  // DIISI OLEH PETUGAS: Kode Dusun (2 kotak, opsional), Nama Dusun/Dukuh/Kampung (pilih dari data dusun atau ketik manual),
+  // dan Nomor KK (terisi otomatis dari NIK pemohon). Kode wilayah lainnya dipatenkan di template PDF.
   // Sengaja BUKAN kodeWilayah(): blok itu `officerOnly` sehingga dibuang forPublic() dan dusun tidak akan tampil di form publik.
   {
-    title: "Dusun/Dukuh/Kampung",
-    hint: "Pilih dari data dusun/dukuh yang tersedia atau ketik nama secara manual.",
-    fields: [f.hamlet("hamlet", "Dusun/Dukuh/Kampung", { from: "dusun" })],
+    title: "Dusun & Nomor KK",
+    hint: "Kode Dusun (2 digit) boleh dikosongkan. Pilih dusun dari data yang tersedia atau ketik manual. Nomor KK terisi otomatis dari NIK pemohon.",
+    fields: kodeWilayahFields({ kk: true }).map((x) => (x.key === "hamletCode" ? { ...x, digits: 2 } : x)),
   },
 
   // DATA KEPALA KELUARGA
@@ -58,7 +59,8 @@ export const sections = forPublic([
     f.text("postalCode", "Kode Pos"),
     f.text("rt", "RT"),
     f.text("rw", "RW"),
-    f.text("memberCount", "Jumlah Anggota Keluarga (orang)", { from: "householdCount" }),
+    // Dropdown 1-8: memilih angka otomatis menambah/mengurangi baris di "Daftar anggota keluarga" (lihat countKey di bawah).
+    f.select("memberCount", "Jumlah Anggota Keluarga (orang)", Array.from({ length: 8 }, (_, i) => String(i + 1)), { from: "householdCount" }),
     f.text("phone", "Telepon"),
   ]),
 
@@ -100,12 +102,17 @@ export const sections = forPublic([
         { key: "education", label: "Pendidikan Terakhir", type: "select", options: KODE.education },
         { key: "occupation", label: "Pekerjaan", type: "select", options: KODE.occupation, filter: true },
         { key: "motherNik", label: "NIK Ibu", optional: true },
-        { key: "motherName", label: "Nama Lengkap Ibu" },
+        { key: "motherName", label: "Nama Lengkap Ibu", optional: true },
         { key: "fatherNik", label: "NIK Ayah", optional: true },
-        { key: "fatherName", label: "Nama Lengkap Ayah" },
+        { key: "fatherName", label: "Nama Lengkap Ayah", optional: true },
       ], {
         max: 8,
+        // Jumlah baris tabel mengikuti isian "Jumlah Anggota Keluarga" (key di atas): angka naik -> baris kosong ditambah,
+        // angka turun -> hanya baris kosong dari bawah yang dibuang (baris yang sudah terisi tidak pernah dihapus).
+        // Dibaca oleh syncRowsCount() di views/services/layout/formLogic.js.
+        countKey: "memberCount",
         // Terisi otomatis dari semua anggota KK yang terdaftar di Data Warga (kolom → properti hasil pencarian NIK).
+        // Bila pemohon adalah kepala keluarga, dia otomatis jadi baris pertama (lihat householdWithApplicant di formLogic.js).
         fromHousehold: {
           name: "fullName", nik: "nik", previousAddress: "previousAddress", passportNumber: "passportNumber", passportExpiry: "passportExpiryDate",
           gender: "gender", birthPlace: "birthPlace", birthDate: "birthDate",

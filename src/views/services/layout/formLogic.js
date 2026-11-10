@@ -1,4 +1,4 @@
-/* Logika form yang dipakai LetterWizard (1 surat) dan BundleWizard (banyak surat).
+/* [PUBLIC] Logika form yang dipakai LetterWizard (1 surat) dan BundleWizard (banyak surat).
    Tidak ada tampilan di sini — hanya fungsi murni supaya mudah dites. */
 
 export const MAX_FILE_MB = 5;
@@ -45,6 +45,14 @@ export function display(field, v) {
 
 export const filledRows = (field, form) => uniqueRowsByNik(form[field.key] ?? []).filter((r) => Object.values(r).some(isFilled));
 
+/* Isi field rows yang DIKIRIM ke backend. Field ber-`countKey` (Biodata Keluarga) memakai baris kosong sebagai tempat isian
+   di layar, jadi baris kosong dibuang di sini supaya tidak terkirim / tidak ikut masuk ke Data Warga saat otorisasi.
+   Field rows lain tetap persis seperti sebelumnya (hanya dedupe NIK). */
+export const payloadRows = (field, form) => {
+  const rows = uniqueRowsByNik(form[field.key] ?? []);
+  return field.countKey ? rows.filter((r) => Object.values(r).some(isFilled)) : rows;
+};
+
 /* ---------- Keluarga yang pindah mengikuti "Jenis Kepindahan" (sama dengan admin) ----------
    Field rows dengan `autoByType: "<key jenis kepindahan>"` (surat pindah / datang) TIDAK diisi lewat "Tambah baris",
    tetapi otomatis dari anggota KK pemohon (data warga yang sudah diverifikasi lewat NIK di awal), menurut pilihan Jenis Kepindahan:
@@ -58,6 +66,7 @@ export const filledRows = (field, form) => uniqueRowsByNik(form[field.key] ?? []
 const isHead = (p) => /kepala\s+keluarga/i.test(String(
   p?.familyRelationship ?? p?.family_relationship ?? p?.familyRelation ?? p?.shdk ?? "",
 ));
+export const isHeadOfFamily = (p) => !!p && isHead(p); // dipakai wizard untuk menampilkan keterangan "pemohon = kepala keluarga"
 export const relocationMode = (value) => ({ 1: "head", 2: "all", 3: "partial", 4: "others" })[parseInt(String(value ?? "").trim(), 10)] ?? null;
 const canonicalNik = (value) => {
   const digits = String(value ?? "").replace(/\D/g, "");
@@ -80,6 +89,24 @@ const uniquePeopleByNik = (people = []) => {
 export const householdOf = (autoFilled) => uniquePeopleByNik(
   Array.isArray(autoFilled?.__household) ? autoFilled.__household : [],
 );
+
+/* Daftar anggota KK + pemohon sendiri bila pemohon adalah KEPALA KELUARGA.
+   Data `household` dari verifikasi NIK sering tidak memuat orang yang diverifikasi (hanya anggota lain), sehingga kepala keluarga
+   yang menjadi pemohon tidak ikut tampil di tabel anggota. Di sini pemohon ditambahkan bila belum ada (dicocokkan lewat NIK).
+   `fallbackNik` = NIK terverifikasi (resident.nik di store) karena objek resident belum tentu membawa NIK sendiri. */
+export function householdWithApplicant(resident, fallbackNik = "", force = false) {
+  const list = Array.isArray(resident?.household) ? resident.household : [];
+  // force = field rows bertanda `applicantIsHead` (Biodata Keluarga): pemohon SELALU kepala keluarga, apa pun isi relasinya di Data Warga.
+  if (!resident || (!force && !isHead(resident))) return list;
+  const nik = personNik(resident) || canonicalNik(fallbackNik);
+  if (!nik) return list;
+  const { household: _household, ...self } = resident;
+  const me = { ...self, nik, familyRelationship: "Kepala Keluarga" }; // SHDK baris pertama selalu "1. Kepala Keluarga"
+  if (force) return [me, ...list.filter((p) => personNik(p) !== nik)]; // pemohon selalu baris pertama
+  if (list.some((p) => personNik(p) === nik)) return list;
+  return [me, ...list];
+}
+
 export const pickFamily = (mode, household = []) => {
   const uniqueHousehold = uniquePeopleByNik(household);
   const heads = uniqueHousehold.filter(isHead);
@@ -137,12 +164,134 @@ export const uniqueRowsByNik = (rows = []) => {
   const seen = new Set();
   return rows.filter((row) => {
     const nik = rowNik(row);
-    if (!nik || nik.length < 16) return true;
+    if (!nik) return true;
     if (seen.has(nik)) return false;
     seen.add(nik);
     return true;
   });
 };
+
+/* ---------- Jumlah baris mengikuti isian jumlah (field rows dengan `countKey`) ----------
+   Mis. Biodata Keluarga: `countKey: "memberCount"` → tabel anggota punya sebanyak "Jumlah Anggota Keluarga" baris
+   (maksimal `max`). Angka naik → baris kosong ditambah. Angka turun → hanya baris KOSONG dari bawah yang dibuang;
+   baris yang sudah terisi tidak pernah dihapus (angkanya dinaikkan mengikuti baris terisi). Isian jumlah yang masih
+   kosong / bukan angka tidak mengubah apa pun. Idempotent: aman dipanggil berulang. Mengembalikan key rows yang berubah. */
+export function syncRowsCount(form, sections) {
+  const changed = [];
+  const used = (row) => Object.values(row ?? {}).some(isFilled);
+  for (const section of sections) {
+    for (const field of section.fields) {
+      if (field.type !== "rows" || !field.countKey) continue;
+      const raw = parseInt(String(form[field.countKey] ?? "").replace(/\D/g, ""), 10);
+      if (Number.isNaN(raw)) continue;
+      const rows = Array.isArray(form[field.key]) ? form[field.key] : [];
+      const max = field.max ?? 20;
+      const minRows = field.min ?? (field.optional ? 0 : 1);
+      const usedCount = rows.filter(used).length;
+      const wanted = Math.min(Math.max(raw, usedCount, minRows), max);
+      let next = rows;
+      if (rows.length < wanted) {
+        next = [...rows, ...Array.from({ length: wanted - rows.length }, () => emptyRow(field.columns))];
+      } else if (rows.length > wanted) {
+        next = [...rows];
+        while (next.length > wanted && !used(next[next.length - 1])) next.pop();
+      }
+      if (next !== rows && next.length !== rows.length) {
+        form[field.key] = next;
+        changed.push(field.key);
+      }
+      if (usedCount > raw) {
+        const fixed = String(Math.min(usedCount, max));
+        if (String(form[field.countKey]).trim() !== fixed) form[field.countKey] = fixed;
+      }
+    }
+  }
+  return changed;
+}
+
+/* ---------- Baris pertama = pemohon sebagai KEPALA KELUARGA (pendaftaran warga baru) ----------
+   Pemohon pendaftaran warga baru belum ada di Data Warga, jadi tidak ada `resident.household`. Datanya diambil dari isian
+   form pemohon sendiri. Field rows dengan `applicantRow: { from: { kolomBaris: "keyFieldPemohon" }, fixed?: { shdk: "Kepala Keluarga" } }`
+   otomatis punya BARIS PERTAMA berisi data pemohon (SHDK = Kepala Keluarga). Aturan:
+   - hanya mengisi sel yang masih kosong atau yang masih sama dengan isian otomatis sebelumnya (koreksi manual tidak ditimpa);
+   - pemohon mengubah isiannya -> sel otomatis ikut berubah; baris tetap dikirim seperti baris biasa (payload & otorisasi -> Data Warga tidak berubah);
+   - dilewati bila baris sudah terisi dari KK warga terverifikasi (autoFilled[field.key]). Aman dipanggil berulang. */
+const sameCell = (a, b) => {
+  const s = (v) => (v instanceof Date ? String(v.getTime()) : String(v ?? "").trim());
+  return s(a) === s(b);
+};
+/* Konfigurasi baris pertama = pemohon. Dipakai `field.applicantRow` bila ada; bila tidak ada, untuk tabel ber-`countKey`
+   (Jumlah Anggota Keluarga) disimpulkan otomatis: kolom yang kuncinya sama dengan isian pemohon (name, nik, ...) diisi dari isian itu,
+   kolom bernama/berlabel NIK/KTP/Nopen dan Nama ikut isian `nik` / `name`, dan kolom SHDK/hubungan diisi "Kepala Keluarga". */
+export function applicantRowConfig(field, sections = []) {
+  if (field?.type !== "rows") return null;
+  if (field.applicantRow) {
+    // `from` boleh berisi DAFTAR kandidat key (mis. name: ["name", "headName"]); dipakai key pertama yang ada di form.
+    const keys = new Set(sections.flatMap((s) => s.fields).map((x) => x.key));
+    const from = {};
+    for (const [col, src] of Object.entries(field.applicantRow.from ?? {})) {
+      const pick = Array.isArray(src) ? src.find((k) => keys.has(k)) : src;
+      if (pick) from[col] = pick;
+    }
+    return { ...field.applicantRow, from };
+  }
+  if (!field.countKey) return null;
+  const formKeys = new Set(sections.flatMap((s) => s.fields)
+    .filter((x) => x.type !== "rows" && x.type !== "checks" && x.key !== field.countKey).map((x) => x.key));
+  const text = (c) => `${c.key} ${c.label ?? ""}`;
+  const from = {};
+  for (const c of field.columns) {
+    if (/ibu|ayah|mother|father|pasangan|spouse/i.test(text(c))) continue; // data orang tua/pasangan bukan milik pemohon
+    const source = formKeys.has(c.key) ? c.key
+      : /nik|ktp|nopen/i.test(text(c)) && formKeys.has("nik") ? "nik"
+      : /nama/i.test(text(c)) && formKeys.has("name") ? "name" : null;
+    if (source) from[c.key] = source;
+  }
+  if (!Object.values(from).some((k) => k === "nik" || k === "name")) return null;
+  const shdk = field.columns.find((c) => /shdk|hubungan/i.test(text(c)));
+  return { from, fixed: shdk ? { [shdk.key]: "Kepala Keluarga" } : {} };
+}
+export function applicantRowOf(field, form, cfg = field.applicantRow) {
+  const row = emptyRow(field.columns);
+  if (!cfg) return row;
+  const put = (colKey, raw) => {
+    const c = field.columns.find((x) => x.key === colKey);
+    if (!c || !isFilled(raw)) return;
+    row[colKey] = c.type === "date" ? toDate(raw) ?? "" : c.type === "select" ? matchCode(c, raw) : raw instanceof Date ? fmtDate(raw) : String(raw).trim();
+  };
+  for (const [colKey, formKey] of Object.entries(cfg.from ?? {})) put(colKey, form[formKey]);
+  for (const [colKey, raw] of Object.entries(cfg.fixed ?? { shdk: "Kepala Keluarga" })) put(colKey, raw);
+  for (const c of field.columns) if (c.disabledWhen && c.disabledWhen(row)) row[c.key] = c.default ?? "";
+  return row;
+}
+export function syncApplicantRow(form, sections, autoFilled = {}) {
+  const changed = [];
+  for (const section of sections) {
+    for (const field of section.fields) {
+      const cfg = applicantRowConfig(field, sections);
+      if (field.type !== "rows" || !cfg || autoFilled[field.key]) continue;
+      const next = applicantRowOf(field, form, cfg);
+      const prev = autoFilled[`__applicant_${field.key}`] ?? {};
+      const rows = Array.isArray(form[field.key]) ? [...form[field.key]] : [];
+      const first = rows[0] ? { ...rows[0] } : emptyRow(field.columns);
+      let dirty = !rows[0];
+      for (const c of field.columns) {
+        const cur = first[c.key];
+        const untouched = !isFilled(cur) || sameCell(cur, prev[c.key]);
+        if (!untouched) continue;
+        const want = isFilled(next[c.key]) ? next[c.key] : (c.default ?? "");
+        if (!sameCell(cur, want)) { first[c.key] = want; dirty = true; }
+      }
+      autoFilled[`__applicant_${field.key}`] = next;
+      if (dirty) {
+        rows[0] = first;
+        form[field.key] = rows;
+        changed.push(field.key);
+      }
+    }
+  }
+  return changed;
+}
 
 /* Susun ulang baris keluarga sesuai Jenis Kepindahan. Dipanggil saat data KK tersedia dan saat Jenis Kepindahan diganti.
    Mengembalikan daftar key field yang berubah. `prevHousehold` = KK sebelumnya (supaya barisnya ikut dibersihkan). */
@@ -204,12 +353,15 @@ export function syncFamilyRows(form, sections, autoFilled = {}, prevHousehold = 
 }
 
 /* Pasang data KK dari warga terverifikasi ke form: isi baris `fromHousehold` (Biodata Keluarga) dan susun baris `autoByType`
-   (surat pindah/datang). Aman dipanggil berulang; isian manual tidak ditimpa. Mengembalikan daftar key yang terisi. */
-export function applyHousehold(form, sections, resident, autoFilled = {}) {
+   (surat pindah/datang). Aman dipanggil berulang; isian manual tidak ditimpa. Mengembalikan daftar key yang terisi.
+   `applicantNik` = NIK terverifikasi (resident.nik di store). Bila pemohon adalah kepala keluarga, dia otomatis
+   ikut sebagai anggota pertama (householdWithApplicant). Di akhir, jumlah baris disamakan dengan isian jumlah (countKey). */
+export function applyHousehold(form, sections, resident, autoFilled = {}, applicantNik = "") {
   const hasFamilyRows = sections.some((s) => s.fields.some((x) => x.type === "rows" && (x.autoByType || x.fromHousehold)));
   if (!hasFamilyRows) return [];
   const prevHousehold = householdOf(autoFilled);
-  autoFilled.__household = Array.isArray(resident?.household) ? resident.household : [];
+  const headForced = sections.some((s) => s.fields.some((x) => x.type === "rows" && x.fromHousehold && x.applicantIsHead));
+  autoFilled.__household = householdWithApplicant(resident, applicantNik, headForced);
   const filled = [];
   for (const section of sections) {
     for (const field of section.fields) {
@@ -230,6 +382,7 @@ export function applyHousehold(form, sections, resident, autoFilled = {}) {
     }
   }
   for (const key of syncFamilyRows(form, sections, autoFilled, prevHousehold)) if (!filled.includes(key)) filled.push(key);
+  for (const key of syncRowsCount(form, sections)) if (!filled.includes(key)) filled.push(key);
   return filled;
 }
 
@@ -251,36 +404,12 @@ const isGenderField = (field) => {
   const label = String(field.label ?? "").toLowerCase();
   return field.from === "gender" || key.includes("gender") || key.includes("jeniskelamin") || label.includes("jenis kelamin");
 };
-/* Pemetaan nilai pendidikan dari Dukcapil/DB ke pilihan form.
-   DB menyimpan: "Tamat SD/Sederajat", "SLTA/Sederajat", dll.
-   Form memakai: "SD", "SMP", "SMA/SMK", "D1/D2/D3", "D4/S1", dst. */
-const EDUCATION_EQUIVALENTS = {
-  "tamatsddsederajat": "SD", "tamatsd": "SD", "belumsdsederajat": "SD",
-  "belumtamatsd": "SD", "belumtamatsddsederajat": "SD", "sd": "SD",
-  "sltpsederajat": "SMP", "sltp": "SMP", "smp": "SMP",
-  "sltasederajat": "SMA/SMK", "slta": "SMA/SMK", "smasmk": "SMA/SMK", "sma": "SMA/SMK", "smk": "SMA/SMK",
-  "akademidiplomaiiiisarjanamuda": "D1/D2/D3", "akademidiplomaii": "D1/D2/D3",
-  "akademidiploma": "D1/D2/D3", "d3": "D1/D2/D3", "d1": "D1/D2/D3", "d2": "D1/D2/D3", "d1d2d3": "D1/D2/D3",
-  "diplomaivstratai": "D4/S1", "d4s1": "D4/S1", "s1": "D4/S1", "d4": "D4/S1",
-  "s2": "S2", "s3": "S3",
-  "tidakbelumsekolah": "Tidak/Belum Sekolah", "tidaksekolah": "Tidak/Belum Sekolah",
-  "tidakbelum": "Tidak/Belum Sekolah",
-};
-const isEducationField = (field) => {
-  const key = String(field.key ?? "").toLowerCase();
-  return key.includes("education") || key.includes("pendidikan");
-};
 const catinStatusValue = (field, raw) => {
   const key = String(field.key ?? "").toLowerCase();
-  const hasCatinOption = Array.isArray(field?.options) && field.options.some((o) => {
-    const v = String(optionValue(o)).toLowerCase();
-    return ["jejaka", "perawan", "duda", "janda", "beristri"].includes(v);
-  });
-  if (key !== "groomstatus" && key !== "bridestatus" && !hasCatinOption) return undefined;
-  const isMaleCatin = key === "groomstatus" || (hasCatinOption && field.options.some((o) => /jejaka/i.test(optionValue(o))));
+  if (key !== "groomstatus" && key !== "bridestatus") return undefined;
   const value = bareOption(raw);
   const isDivorced = /duda|janda|cerai|balu|widow/.test(value);
-  if (isMaleCatin) {
+  if (key === "groomstatus") {
     if (isDivorced) return "Duda";
     if (/kawin|menikah|beristri|married/.test(value)) return "Beristri";
     if (/belum|lajang|jejaka|perawan|single|unmarried/.test(value)) return "Jejaka";
@@ -294,15 +423,6 @@ const selectValue = (field, raw) => {
   const catinStatus = catinStatusValue(field, raw);
   if (catinStatus !== undefined) return catinStatus;
   if (field.type !== "select" || !Array.isArray(field.options)) return isGenderField(field) ? numberedGender(raw) : raw;
-  /* Pendidikan: petakan nilai DB (mis. "Tamat SD/Sederajat") ke label form (mis. "SD"). */
-  if (isEducationField(field)) {
-    const normalized = canon(String(raw ?? ""));
-    const mapped = EDUCATION_EQUIVALENTS[normalized];
-    if (mapped) {
-      const hit = field.options.find((o) => optionValue(o) === mapped);
-      if (hit !== undefined) return optionValue(hit);
-    }
-  }
   // Opsi bernomor { value, label, source }: cocokkan juga dengan label & nilai asli di Data Warga (source).
   const hit = field.options.find((option) => bareOption(optionValue(option)) === bareOption(raw)
     || (option && typeof option === "object" && (bareOption(option.label) === bareOption(raw) || bareOption(option.source) === bareOption(raw))));
@@ -682,22 +802,6 @@ export function buildAliasIndex(pairs = []) {
 export function applyAliases(form, sections, index) {
   const filled = [];
   const aliasValue = (field, peer, value) => {
-    const hasCatinOption = Array.isArray(field.options) && field.options.some((o) => {
-      const optVal = String(optionValue(o)).toLowerCase();
-      return ["jejaka", "perawan", "duda", "janda", "beristri"].includes(optVal);
-    });
-    if (hasCatinOption) {
-      const status = bareOption(value);
-      if (/jejaka|perawan|belum|lajang|single|unmarried/.test(status)) {
-        return field.options.some((o) => /jejaka/i.test(optionValue(o))) ? "Jejaka" : "Perawan";
-      }
-      if (/duda|janda|cerai|widow|balu/.test(status)) {
-        return field.options.some((o) => /duda/i.test(optionValue(o))) ? "Duda" : "Janda";
-      }
-      if (/beristri|kawin|menikah|married/.test(status)) {
-        return field.options.some((o) => /beristri/i.test(optionValue(o))) ? "Beristri" : (field.options.some((o) => /duda/i.test(optionValue(o))) ? "Beristri" : "Kawin");
-      }
-    }
     if (field.key === "maritalStatus" && /status$/i.test(String(peer))) {
       const status = bareOption(value);
       if (/jejaka|perawan|belum|lajang|single|unmarried/.test(status)) return "Belum Kawin";
@@ -718,40 +822,6 @@ export function applyAliases(form, sections, index) {
     }
   }
   return filled;
-}
-
-/* Sinkronisasi data wali nikah (paket permohonan nikah perempuan):
-   - Jika pilih "Ayah Kandung": data wali nikah (guardian*) diisi otomatis dari data ayah catin wanita (brideFather*).
-   - Jika pilih "Wali Nasab": data wali nikah (guardian*) diisi dari isian manual wali nasab (wali*). */
-export function syncWaliNikah(form, bundleSlug = "permohonan-nikah-perempuan") {
-  if (bundleSlug && bundleSlug !== "permohonan-nikah-perempuan") return;
-  const isNasab = String(form.waliType ?? "").trim() === "Wali Nasab";
-  if (isNasab) {
-    if (form.waliName !== undefined) form.guardianName = form.waliName;
-    if (form.waliBin !== undefined) form.guardianBin = form.waliBin;
-    if (form.waliNik !== undefined) form.guardianNik = form.waliNik;
-    if (form.waliBirthPlace !== undefined) form.guardianBirthPlace = form.waliBirthPlace;
-    if (form.waliBirthDate !== undefined) form.guardianBirthDate = form.waliBirthDate;
-    if (form.waliNationality !== undefined) form.guardianNationality = form.waliNationality;
-    if (form.waliReligion !== undefined) form.guardianReligion = form.waliReligion;
-    if (form.waliOccupation !== undefined) form.guardianOccupation = form.waliOccupation;
-    if (form.waliAddress !== undefined) form.guardianAddress = form.waliAddress;
-    if (form.waliRelation !== undefined) form.guardianRelation = form.waliRelation;
-    if (form.waliReason !== undefined) form.guardianReason = form.waliReason;
-  } else {
-    // Ayah Kandung
-    if (form.brideFatherName !== undefined) form.guardianName = form.brideFatherName;
-    if (form.brideFatherBin !== undefined) form.guardianBin = form.brideFatherBin;
-    if (form.brideFatherNik !== undefined) form.guardianNik = form.brideFatherNik;
-    if (form.brideFatherBirthPlace !== undefined) form.guardianBirthPlace = form.brideFatherBirthPlace;
-    if (form.brideFatherBirthDate !== undefined) form.guardianBirthDate = form.brideFatherBirthDate;
-    if (form.brideFatherNationality !== undefined) form.guardianNationality = form.brideFatherNationality || "WNI";
-    if (form.brideFatherReligion !== undefined) form.guardianReligion = form.brideFatherReligion;
-    if (form.brideFatherOccupation !== undefined) form.guardianOccupation = form.brideFatherOccupation;
-    if (form.brideFatherAddress !== undefined) form.guardianAddress = form.brideFatherAddress;
-    form.guardianRelation = "Ayah kandung";
-    form.guardianReason = "";
-  }
 }
 
 /* Setelah "Lanjut" gagal validasi: scroll ke isian wajib pertama (urutan tampil di layar) yang belum terisi lalu fokuskan.
