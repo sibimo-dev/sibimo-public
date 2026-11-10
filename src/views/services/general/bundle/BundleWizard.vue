@@ -23,7 +23,7 @@ import FileThumb from "@/views/services/layout/FileThumb.vue";
 import FilePreviewDialog from "@/views/services/layout/FilePreviewDialog.vue";
 import { copyText } from "@/views/services/layout/copyText";
 import WizardStepper from "@/views/services/layout/WizardStepper.vue";
-import { applyAliases, applyHousehold, buildAliasIndex, cellText, display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, normalizeDocs, uniqueRowsByNik, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "@/views/services/layout/formLogic";
+import { applyAliases, applyHousehold, buildAliasIndex, cellText, display, fillForm, makeResidentLookup, seedVerifiedApplicant, filledRows, normalizeDocs, uniqueRowsByNik, validateDocs, validateFields, isFilled, MAX_FILE_MB, syncWaliNikah } from "@/views/services/layout/formLogic";
 import { HUES, SECTION_HUES, hue } from "@/views/services/layout/pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
 import { documentTypeOf, getReusableDocuments, submitOnlineLetter } from "@/services/onlineLetters";
@@ -340,10 +340,43 @@ function goSub(idx) {
   scrollTop();
 }
 
+// Sinkronisasi otomatis data wali nikah (paket nikah perempuan)
+// - Ayah Kandung: data wali diisi dari ayah catin wanita (brideFather*)
+// - Wali Nasab: data wali diisi dari isian manual wali nasab (wali*)
+const waliSourceKeys = [
+  () => form.waliType,
+  () => form.waliName,
+  () => form.waliBin,
+  () => form.waliNik,
+  () => form.waliBirthPlace,
+  () => form.waliBirthDate,
+  () => form.waliNationality,
+  () => form.waliReligion,
+  () => form.waliOccupation,
+  () => form.waliAddress,
+  () => form.waliRelation,
+  () => form.waliReason,
+  () => form.brideFatherName,
+  () => form.brideFatherBin,
+  () => form.brideFatherNik,
+  () => form.brideFatherBirthPlace,
+  () => form.brideFatherBirthDate,
+  () => form.brideFatherNationality,
+  () => form.brideFatherReligion,
+  () => form.brideFatherOccupation,
+  () => form.brideFatherAddress,
+];
+watch(waliSourceKeys, () => {
+  syncWaliNikah(form, props.bundle?.slug);
+}, { immediate: true });
+
 // isi otomatis field yang masih kosong dari surat lain setiap kali sebuah surat ditampilkan
 watch([current, fieldIdx], () => {
   const l = isFields.value ? fLetter.value : null;
-  if (l) for (const key of applyAliases(form, sectionsOf(l), aliasIndex)) autoFilled[key] = true;
+  if (l) {
+    syncWaliNikah(form, props.bundle?.slug);
+    for (const key of applyAliases(form, sectionsOf(l), aliasIndex)) autoFilled[key] = true;
+  }
 });
 
 const nextLabel = computed(() => {
