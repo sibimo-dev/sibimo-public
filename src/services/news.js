@@ -55,17 +55,112 @@ export function getCategoryClasses(category) {
   return categoryStyles[category] || "bg-primary-50 text-primary-700";
 }
 
-function mapNewsItem(item) {
-  const plainText = (item.content || "")
-    .replace(/<[^>]+>/g, "") // buang tag HTML
-    .replace(/&nbsp;/g, " ") // ganti &nbsp; jadi spasi biasa
+/**
+ * Parse HTML konten dari rich text editor (Quill) menjadi array blok konten.
+ * Setiap elemen array bisa berupa:
+ *   - string  → paragraf teks biasa
+ *   - { type: 'image', src: string, caption: string } → gambar
+ */
+function parseHtmlContent(html) {
+  if (!html) return [];
+
+  // Gunakan DOMParser jika tersedia (browser), fallback ke regex untuk SSR/Node
+  if (typeof DOMParser !== "undefined") {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const blocks = [];
+
+    function decodeText(text) {
+      return text
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;/g, "'")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    /**
+     * Traverse tiap node dan pertahankan urutan teks & gambar sesuai posisi aslinya.
+     * Quill biasanya menghasilkan: <p>teks</p> <p><img></p> <p>teks lanjut</p>
+     * sehingga iterasi top-level nodes sudah cukup menjaga urutan.
+     */
+    function traverse(node) {
+      // Skip text nodes & komentar di level atas
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+      if (node.tagName === "IMG") {
+        const src = node.getAttribute("src") || "";
+        if (src) blocks.push({ type: "image", src, caption: node.getAttribute("alt") || "" });
+        return;
+      }
+
+      // Elemen yang mengandung <img> → traverse anak-anaknya secara berurutan
+      if (node.querySelector("img")) {
+        Array.from(node.childNodes).forEach((child) => {
+          if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "IMG") {
+            const src = child.getAttribute("src") || "";
+            if (src) blocks.push({ type: "image", src, caption: child.getAttribute("alt") || "" });
+          } else if (child.nodeType === Node.ELEMENT_NODE) {
+            // Elemen non-img (span, strong, dll) → ambil teksnya
+            const text = decodeText(child.textContent || "");
+            if (text) blocks.push(text);
+          } else if (child.nodeType === Node.TEXT_NODE) {
+            const text = decodeText(child.textContent || "");
+            if (text) blocks.push(text);
+          }
+        });
+        return;
+      }
+
+      // Elemen murni teks (paragraf, heading, dsb)
+      const text = decodeText(node.textContent || "");
+      if (text) blocks.push(text);
+    }
+
+    Array.from(doc.body.childNodes).forEach(traverse);
+    return blocks.length ? blocks : [""];
+  }
+
+  // Fallback: regex-based parsing (non-browser env)
+  const blocks = [];
+  // Extract <img> tags
+  const imgRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
+  let match;
+  while ((match = imgRegex.exec(html)) !== null) {
+    blocks.push({ type: "image", src: match[1], caption: "" });
+  }
+  // Extract plain text
+  const plainText = html
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#039;/g, "'")
-    .replace(/\s+/g, " ") // rapihin spasi ganda jadi 1 spasi
-    .trim();(item.content || "").replace(/<[^>]+>/g, "");
+    .replace(/\s+/g, " ")
+    .trim();
+  if (plainText) blocks.unshift(plainText);
+  return blocks.length ? blocks : [""];
+}
+
+function mapNewsItem(item) {
+  const rawHtml = item.content || "";
+
+  // Teks murni untuk excerpt (tanpa HTML)
+  const plainText = rawHtml
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+
   return {
     news_id: item.news_id,
     slug: item.slug,
@@ -79,9 +174,8 @@ function mapNewsItem(item) {
     author: item.author?.full_name || "Admin Desa",
     title: item.title,
     excerpt: plainText.slice(0, 160) + (plainText.length > 160 ? "..." : ""),
-    content: [plainText],
+    content: parseHtmlContent(rawHtml),
     image: resolveNewsImage(item.thumbnail),
-    // image: item.thumbnail,
     popular: false,
     isPinned: false,
   };
