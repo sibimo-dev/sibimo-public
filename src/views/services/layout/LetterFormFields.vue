@@ -67,6 +67,17 @@ const removeRow = (field, row) => {
   const index = rows.indexOf(row);
   if (index >= 0) rows.splice(index, 1);
 };
+const rowKeyMap = new WeakMap();
+let rowKeySeq = 0;
+const rowKey = (row, i) => {
+  if (!row || typeof row !== "object") return i;
+  let k = rowKeyMap.get(row);
+  if (!k) {
+    k = `_row_${++rowKeySeq}`;
+    rowKeyMap.set(row, k);
+  }
+  return k;
+};
 watch(
   () => allFields().filter((x) => x.dayKey).map((x) => +toDate(props.form[x.key]) || 0),
   () => {
@@ -311,7 +322,7 @@ onMounted(normalizeRows);
             <div v-else-if="field.type === 'rows'" class="flex flex-col gap-3">
               <p v-if="modeHint(field)" class="text-xs" :class="noAutoMatch(field) ? 'text-amber-700' : 'text-[var(--color-text-muted)]'">{{ modeHint(field) }}</p>
               <p v-if="overflowCount(field)" class="text-xs text-amber-700">Formulir hanya memuat {{ field.max }} baris; {{ overflowCount(field) }} anggota keluarga lainnya tidak tercantum.</p>
-              <div v-for="(row, i) in rowsForDisplay(field)" :key="row.nik || i" class="rounded-xl border border-white bg-white/80 p-3 shadow-sm">
+              <div v-for="(row, i) in rowsForDisplay(field)" :key="rowKey(row, i)" class="rounded-xl border border-white bg-white/80 p-3 shadow-sm">
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-medium text-[var(--color-text-muted)]">#{{ i + 1 }}</span>
                   <span v-if="isLocked(field, row)" class="text-[11px] text-emerald-700">otomatis</span>
