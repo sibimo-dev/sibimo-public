@@ -86,6 +86,9 @@ function mapDevelopmentItem(item) {
     volume,
     latitude: Number(item.latitude) || null,
     longitude: Number(item.longitude) || null,
+    // Titik akhir (opsional, untuk proyek memanjang seperti jalan/saluran)
+    endLatitude: Number(item.end_latitude) || null,
+    endLongitude: Number(item.end_longitude) || null,
     documentationImage: item.cover_image || "",
     photos,
     budget: item.budget ?? 0,
