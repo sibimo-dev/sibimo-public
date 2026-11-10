@@ -16,6 +16,7 @@ const onlyWhen = (section, predicate) => ({
 });
 const isDuda = (form) => /^(duda|cerai\s*(hidup|mati))$/i.test(String(form.groomStatus ?? "").trim());
 const isJanda = (form) => /^(janda|cerai\s*(hidup|mati))$/i.test(String(form.brideStatus ?? "").trim());
+const isWaliNasab = (form) => String(form.waliType ?? "").trim() === "Wali Nasab";
 
 // Langkah 1: isian sesuai surat yang diajukan
 export const sections = forPublic([
@@ -28,6 +29,39 @@ export const sections = forPublic([
   { title: "Pendidikan & Status Catin Wanita", fields: [f.select("brideEducation", "Pendidikan Terakhir", OPT.education), f.select("brideStatus", "Status", ["Perawan", "Janda"], { from: "maritalStatus" })] },
   ortuNikah("brideFather", "Data Ayah Catin Wanita", "Bin (nama ayah dari ayah)"),
   ortuNikah("brideMother", "Data Ibu Catin Wanita", "Binti (nama ayah dari ibu)"),
+  {
+    title: "Data Wali Nikah",
+    fields: [
+      f.select("waliType", "Wali Nikah", ["Ayah Kandung", "Wali Nasab"], { default: "Ayah Kandung" }),
+      ...[
+        f.text("waliName", "Nama"),
+        f.text("waliBin", "Bin (nama ayah wali)"),
+        f.text("waliNik", "NIK"),
+        f.text("waliBirthPlace", "Tempat Lahir"),
+        f.date("waliBirthDate", "Tanggal Lahir"),
+        f.text("waliNationality", "Kewarganegaraan"),
+        f.select("waliReligion", "Agama", ["Islam"]),
+        f.text("waliOccupation", "Pekerjaan"),
+        f.text("waliAddress", "Alamat"),
+        f.select("waliRelation", "Hubungan Wali dengan Catin Wanita", [
+          "Kakek (ayah dari ayah)",
+          "Saudara laki-laki kandung",
+          "Saudara laki-laki seayah",
+          "Keponakan laki-laki",
+          "Paman (saudara ayah)",
+          "Lainnya",
+        ]),
+        f.select("waliReason", "Sebab wali bukan ayah kandung", [
+          "Ayah kandung meninggal dunia",
+          "Ayah kandung tidak diketahui keberadaannya",
+          "Ayah kandung tidak memenuhi syarat sebagai wali",
+          "Ayah kandung berhalangan / uzur",
+          "Anak di luar nikah / ayah tidak sah sebagai wali",
+          "Lainnya",
+        ]),
+      ].map((field) => ({ ...field, showIf: isWaliNasab })),
+    ],
+  },
   onlyWhen(optional(person("groomPrev", "Data Istri Terdahulu Catin Pria (bila duda)", N7, [f.text("groomPrevBin", "Bin/Binti (nama ayah)"), f.text("groomPrevParentName", "Nama orang tua istri terdahulu"), f.date("groomPrevDeathDate", "Tanggal Meninggal"), f.text("groomPrevDeathPlace", "Tempat Meninggal")])), isDuda),
   onlyWhen(optional(person("bridePrev", "Data Suami Terdahulu Catin Wanita (bila janda)", ["name", "nik"], [f.text("bridePrevBin", "Bin (nama ayah)"), f.date("bridePrevDeathDate", "Tanggal Meninggal"), f.text("bridePrevDeathPlace", "Tempat Meninggal")])), isJanda),
 ]);
