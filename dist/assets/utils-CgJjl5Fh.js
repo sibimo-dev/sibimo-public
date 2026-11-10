@@ -1,1 +1,0 @@
-import{dt as e,j as t,ot as n}from"./index-C4q-cDW8.js";function r(){e({variableName:t(`scrollbar.width`).name})}function i(){n({variableName:t(`scrollbar.width`).name})}export{i as n,r as t};
