@@ -137,7 +137,7 @@ export const uniqueRowsByNik = (rows = []) => {
   const seen = new Set();
   return rows.filter((row) => {
     const nik = rowNik(row);
-    if (!nik) return true;
+    if (!nik || nik.length < 16) return true;
     if (seen.has(nik)) return false;
     seen.add(nik);
     return true;
@@ -272,10 +272,15 @@ const isEducationField = (field) => {
 };
 const catinStatusValue = (field, raw) => {
   const key = String(field.key ?? "").toLowerCase();
-  if (key !== "groomstatus" && key !== "bridestatus") return undefined;
+  const hasCatinOption = Array.isArray(field?.options) && field.options.some((o) => {
+    const v = String(optionValue(o)).toLowerCase();
+    return ["jejaka", "perawan", "duda", "janda", "beristri"].includes(v);
+  });
+  if (key !== "groomstatus" && key !== "bridestatus" && !hasCatinOption) return undefined;
+  const isMaleCatin = key === "groomstatus" || (hasCatinOption && field.options.some((o) => /jejaka/i.test(optionValue(o))));
   const value = bareOption(raw);
   const isDivorced = /duda|janda|cerai|balu|widow/.test(value);
-  if (key === "groomstatus") {
+  if (isMaleCatin) {
     if (isDivorced) return "Duda";
     if (/kawin|menikah|beristri|married/.test(value)) return "Beristri";
     if (/belum|lajang|jejaka|perawan|single|unmarried/.test(value)) return "Jejaka";
@@ -677,6 +682,22 @@ export function buildAliasIndex(pairs = []) {
 export function applyAliases(form, sections, index) {
   const filled = [];
   const aliasValue = (field, peer, value) => {
+    const hasCatinOption = Array.isArray(field.options) && field.options.some((o) => {
+      const optVal = String(optionValue(o)).toLowerCase();
+      return ["jejaka", "perawan", "duda", "janda", "beristri"].includes(optVal);
+    });
+    if (hasCatinOption) {
+      const status = bareOption(value);
+      if (/jejaka|perawan|belum|lajang|single|unmarried/.test(status)) {
+        return field.options.some((o) => /jejaka/i.test(optionValue(o))) ? "Jejaka" : "Perawan";
+      }
+      if (/duda|janda|cerai|widow|balu/.test(status)) {
+        return field.options.some((o) => /duda/i.test(optionValue(o))) ? "Duda" : "Janda";
+      }
+      if (/beristri|kawin|menikah|married/.test(status)) {
+        return field.options.some((o) => /beristri/i.test(optionValue(o))) ? "Beristri" : (field.options.some((o) => /duda/i.test(optionValue(o))) ? "Beristri" : "Kawin");
+      }
+    }
     if (field.key === "maritalStatus" && /status$/i.test(String(peer))) {
       const status = bareOption(value);
       if (/jejaka|perawan|belum|lajang|single|unmarried/.test(status)) return "Belum Kawin";
