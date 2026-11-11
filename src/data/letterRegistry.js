@@ -2,6 +2,7 @@
 // Judul & jenis surat mengikuti sheet 'Form Identifikasi Layanan' dan folder resources/views/letters.
 // category = tab di katalog (permohonan, pernyataan, ...); group = nama folder berkas di views/services/letters/<group>/<slug>.vue
 // Surat dengan group "permit" boleh muncul di dua alur: flow "permit" (Layanan Umum) dan flow "general" (Layanan Warga).
+// Surat balasan (group "replies") sengaja tidak ada di public: hanya dipakai di admin.
 export const GENERAL_CATEGORIES = [
   {
     "value": "permohonan",
@@ -18,10 +19,6 @@ export const GENERAL_CATEGORIES = [
   {
     "value": "perintah",
     "label": "Perintah"
-  },
-  {
-    "value": "balasan",
-    "label": "Balasan"
   },
   {
     "value": "pengantar",
@@ -487,27 +484,6 @@ export const LETTER_REGISTRY = [
   },
   {
     "flow": "general",
-    "category": "balasan",
-    "group": "replies",
-    "slug": "permit-followup-letter",
-    "title": "Surat Tindak Lanjut Permohonan Izin"
-  },
-  {
-    "flow": "general",
-    "category": "balasan",
-    "group": "replies",
-    "slug": "lease-offer-letter",
-    "title": "Surat Penawaran Sewa Kontrak Gedung BRI Unit Ngemplak II"
-  },
-  {
-    "flow": "general",
-    "category": "balasan",
-    "group": "replies",
-    "slug": "research-response-letter",
-    "title": "Surat Balasan Penelitian"
-  },
-  {
-    "flow": "general",
     "category": "pengantar",
     "group": "cover-letters",
     "slug": "marriage-certificate-duplicate-letter",
@@ -610,12 +586,5 @@ export const LETTER_REGISTRY = [
     "group": "certificates",
     "slug": "travel-permit-letter-gov",
     "title": "Surat Keterangan Jalan"
-  },
-  {
-    "flow": "permit",
-    "category": null,
-    "group": "replies",
-    "slug": "permit-followup-letter",
-    "title": "Surat Tindak Lanjut Permohonan Izin"
   }
 ];
