@@ -160,7 +160,7 @@ async function openPdf(item, { download }) {
     } else {
       releasePreview();
       previewUrl.value = url;
-      previewTitle.value = item.letter_type?.name ?? "Surat";
+      previewTitle.value = item.letter_type?.letter_name || item.letter_type?.name || "Surat";
       previewVisible.value = true;
     }
   } catch (error) {
@@ -220,7 +220,7 @@ onBeforeUnmount(releasePreview);
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="min-w-0">
               <h2 class="font-heading font-bold text-base sm:text-lg text-heading m-0">
-                {{ item.letter_type?.name || "Surat" }}
+                {{ item.letter_type?.letter_name || item.letter_type?.name || "Surat" }}
               </h2>
               <p class="text-xs text-muted mt-1 mb-0">
                 ID Pengajuan: <span class="font-mono font-semibold text-heading">{{ item.request_code }}</span>
