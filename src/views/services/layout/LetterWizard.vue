@@ -1,5 +1,5 @@
 <script setup>
-/* Wizard pengajuan 1 surat (dipakai file surat yang berdiri sendiri). 3 langkah:
+/* [PUBLIC] Wizard pengajuan 1 surat (dipakai file surat yang berdiri sendiri). 3 langkah:
    1) Isian surat   2) Dokumen pendukung   3) Cek ulang + pernyataan dokumen asli + kirim
    Setelah kirim muncul pop-up berhasil (kode surat) atau gagal.
    Surat nikah/kelahiran/kematian sekarang diajukan lewat paket (BundleWizard). */
@@ -16,7 +16,7 @@ import FileThumb from "./FileThumb.vue";
 import FilePreviewDialog from "./FilePreviewDialog.vue";
 import { copyText } from "./copyText";
 import WizardStepper from "./WizardStepper.vue";
-import { applyHousehold, cellText, display, fillForm, focusFirstInvalid, makeResidentLookup, seedVerifiedApplicant, filledRows, normalizeDocs, uniqueRowsByNik, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "./formLogic";
+import { applyHousehold, cellText, display, fillForm, focusFirstInvalid, makeResidentLookup, seedVerifiedApplicant, filledRows, normalizeDocs, payloadRows, syncApplicantRow, applicantRowConfig, syncRowsCount, validateDocs, validateFields, isFilled, MAX_FILE_MB } from "./formLogic";
 import { hue as getHue, HUES, SECTION_HUES } from "./pastel";
 import { getOnlineLetterConfig } from "@/data/letterBackendMap";
 import { WILAYAH_WATCH_KEYS, resetWilayahChildren } from "@/data/letterFields";
@@ -85,9 +85,30 @@ watch(
   { flush: "post" },
 );
 
+// Jumlah baris tabel mengikuti isian jumlah (field rows dengan `countKey`, mis. "Jumlah Anggota Keluarga" pada Biodata Keluarga).
+// Angka diubah pemohon -> baris kosong ditambah / baris kosong dari bawah dibuang (baris terisi tidak pernah dihapus).
+// Saat data KK dimuat, penyesuaian yang sama dilakukan di applyHousehold (formLogic.js).
+const countFields = computed(() => allSections.value.flatMap((s) => s.fields).filter((x) => x.type === "rows" && x.countKey));
+watch(
+  () => countFields.value.map((x) => form[x.countKey]),
+  () => syncRowsCount(form, allSections.value),
+  { flush: "post" },
+);
+
 // Penanda "terisi otomatis" + daftar anggota KK (autoFilled.__household) untuk baris keluarga otomatis.
 const autoFilled = reactive({});
 const onEdit = (key) => delete autoFilled[key];
+// Pendaftaran warga baru (field rows dengan `applicantRow`): data pemohon otomatis jadi BARIS PERTAMA Data Keluarga
+// dengan SHDK Kepala Keluarga, ikut berubah saat isian pemohon diubah. Baris tetap dikirim seperti biasa (alur otorisasi -> Data Warga tidak berubah).
+const applicantRowFields = computed(() => allSections.value.flatMap((s) => s.fields).filter((x) => applicantRowConfig(x, allSections.value)));
+watch(
+  () => applicantRowFields.value.flatMap((x) => Object.values(applicantRowConfig(x, allSections.value).from ?? {}).map((k) => form[k])),
+  () => {
+    syncApplicantRow(form, allSections.value, autoFilled);
+    syncRowsCount(form, allSections.value);
+  },
+  { flush: "post", immediate: true },
+);
 const clearUnavailableSpouseFields = () => {
   const current = resident.resident;
   const status = String(current?.maritalStatus ?? "").trim().toLowerCase();
@@ -116,7 +137,8 @@ const syncResidentData = () => {
   fillForm(form, allSections.value, makeResidentLookup(resident));
   seedVerifiedApplicant(form, resident, allSections.value);
   // Baris keluarga (surat pindah/datang, biodata keluarga) dari KK warga terverifikasi — bukan pencarian NIK baru.
-  applyHousehold(form, allSections.value, resident.resident, autoFilled);
+  // NIK terverifikasi (resident.nik) ikut dikirim: bila pemohon kepala keluarga, dia otomatis jadi baris anggota pertama.
+  applyHousehold(form, allSections.value, resident.resident, autoFilled, resident.nik);
 };
 syncResidentData();
 watch(
@@ -274,7 +296,7 @@ async function submit() {
     const isPermit = isPermitScope.value;
     const normalizedForm = { ...form };
     for (const field of allSections.value.flatMap((section) => section.fields)) {
-      if (field.type === "rows") normalizedForm[field.key] = uniqueRowsByNik(normalizedForm[field.key] ?? []);
+      if (field.type === "rows") normalizedForm[field.key] = payloadRows(field, form);
     }
     const res = await submitOnlineLetter({
       slug: onlineSlug.value,

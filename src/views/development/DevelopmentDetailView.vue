@@ -92,9 +92,51 @@ const PHOTO_SEVERITY = { 0: "secondary", 50: "info", 100: "success" };
 const mapEl = ref(null);
 let leafletMap = null;
 
+// Proyek memanjang = punya titik awal (A) dan titik akhir (B)
+const hasEnd = computed(() => !!(item.value?.endLatitude && item.value?.endLongitude));
+
 function destroyMap() {
   leafletMap?.remove();
   leafletMap = null;
+}
+
+// Marker berlabel huruf (A / B) supaya jelas mana titik awal dan akhir
+function letterIcon(letter, color) {
+  return L.divIcon({
+    className: "",
+    html: `<div style="width:30px;height:30px;border-radius:50%;background:${color};color:#fff;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.4)">${letter}</div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -15],
+  });
+}
+
+function buildPopup(title, subtitle) {
+  const popup = document.createElement("div");
+  const popupTitle = document.createElement("b");
+  popupTitle.textContent = title;
+  popup.append(popupTitle, document.createElement("br"), document.createTextNode(subtitle));
+  return popup;
+}
+
+// Garis mengikuti jalan lewat OSRM. Kalau gagal, garis lurus A-B tetap tampil.
+async function snapLineToRoad(map, line, a, b) {
+  try {
+    const url =
+      `https://router.project-osrm.org/route/v1/driving/${a[1]},${a[0]};${b[1]},${b[0]}` +
+      "?overview=full&geometries=geojson";
+    const res = await fetch(url);
+    const json = await res.json();
+    const coords = json.routes?.[0]?.geometry?.coordinates;
+    if (!coords?.length || map !== leafletMap) return;
+
+    const latlngs = coords.map(([lng, lat]) => [lat, lng]);
+    line.setLatLngs(latlngs);
+    line.setStyle({ dashArray: null });
+    map.fitBounds(L.latLngBounds(latlngs), { padding: [30, 30] });
+  } catch {
+    /* biarkan garis lurus */
+  }
 }
 
 function initMap() {
@@ -102,8 +144,8 @@ function initMap() {
   const current = item.value;
   if (!mapEl.value || !current?.latitude || !current?.longitude) return;
 
-  const position = [current.latitude, current.longitude];
-  leafletMap = L.map(mapEl.value, { scrollWheelZoom: false, zoomControl: true }).setView(position, 16);
+  const start = [current.latitude, current.longitude];
+  leafletMap = L.map(mapEl.value, { scrollWheelZoom: false, zoomControl: true }).setView(start, 16);
 
   leafletMap.getPane("tilePane").style.zIndex = 1;
   leafletMap.getPane("overlayPane").style.zIndex = 4;
@@ -119,19 +161,47 @@ function initMap() {
   leafletMap.on("click", () => leafletMap?.scrollWheelZoom.enable());
   mapEl.value.addEventListener("mouseleave", () => leafletMap?.scrollWheelZoom.disable());
 
-  const popup = document.createElement("div");
-  const popupTitle = document.createElement("b");
-  popupTitle.textContent = current.title;
-  popup.append(popupTitle, document.createElement("br"), document.createTextNode(current.location));
+  if (!hasEnd.value) {
+    // Proyek satu titik (misalnya gedung)
+    L.marker(start).addTo(leafletMap).bindPopup(buildPopup(current.title, current.location));
+    return;
+  }
 
-  L.marker(position).addTo(leafletMap).bindPopup(popup);
+  // Proyek memanjang: titik A, titik B, dan garis penghubung
+  const end = [current.endLatitude, current.endLongitude];
+
+  const line = L.polyline([start, end], {
+    color: "#7c3aed",
+    weight: 5,
+    opacity: 0.85,
+    dashArray: "8 8",
+  }).addTo(leafletMap);
+
+  L.marker(start, { icon: letterIcon("A", "#0ea5e9") })
+    .addTo(leafletMap)
+    .bindPopup(buildPopup("Titik awal", current.title));
+  L.marker(end, { icon: letterIcon("B", "#e11d48") })
+    .addTo(leafletMap)
+    .bindPopup(buildPopup("Titik akhir", current.title));
+
+  leafletMap.fitBounds(L.latLngBounds([start, end]), { padding: [30, 30] });
+  snapLineToRoad(leafletMap, line, start, end);
 }
 
 onBeforeUnmount(destroyMap);
 
-const mapsUrl = computed(() =>
-  item.value?.latitude ? `https://www.google.com/maps?q=${item.value.latitude},${item.value.longitude}` : ""
-);
+const mapsUrl = computed(() => {
+  const current = item.value;
+  if (!current?.latitude) return "";
+  if (hasEnd.value) {
+    return (
+      "https://www.google.com/maps/dir/?api=1" +
+      `&origin=${current.latitude},${current.longitude}` +
+      `&destination=${current.endLatitude},${current.endLongitude}`
+    );
+  }
+  return `https://www.google.com/maps?q=${current.latitude},${current.longitude}`;
+});
 
 watch(
   () => props.slug,
@@ -314,12 +384,15 @@ const infoRows = computed(() => {
             </template>
             <template #content>
               <div ref="mapEl" class="relative isolate z-0 h-60 w-full overflow-hidden rounded-xl" />
+              <p v-if="hasEnd" class="mt-2 text-xs text-muted">
+                <b class="text-sky-600">A</b> titik awal &nbsp;&middot;&nbsp; <b class="text-rose-600">B</b> titik akhir
+              </p>
               <Button
                 as="a"
                 :href="mapsUrl"
                 target="_blank"
                 rel="noopener"
-                label="Buka di Google Maps"
+                :label="hasEnd ? 'Buka Rute di Google Maps' : 'Buka di Google Maps'"
                 icon="pi pi-external-link"
                 outlined
                 class="mt-4 w-full"

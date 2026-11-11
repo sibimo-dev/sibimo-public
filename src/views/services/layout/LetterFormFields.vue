@@ -8,7 +8,7 @@ import AutoComplete from "primevue/autocomplete";
 import Checkbox from "primevue/checkbox";
 import Button from "primevue/button";
 import { onMounted, ref, watch } from "vue";
-import { visible, isFilled, emptyRow, toDate, syncFamilyRows, uniqueRowsByNik, relocationMode, familyModeFor, householdOf, pickFamily } from "./formLogic";
+import { visible, isFilled, emptyRow, toDate, syncFamilyRows, syncRowsCount, syncApplicantRow, applicantRowConfig, uniqueRowsByNik, relocationMode, familyModeFor, householdOf, pickFamily } from "./formLogic";
 import { scopeWilayah } from "@/data/letterFields";
 import { HUES, SECTION_HUES } from "./pastel";
 import SignaturePad from "./SignaturePad.vue";
@@ -51,6 +51,38 @@ onMounted(async () => {
 /* Field tanggal dengan `dayKey`: isi field hari (Senin–Minggu) otomatis tiap tanggal berubah. */
 const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const allFields = () => props.sections.flatMap((s) => s.fields);
+/* Sinkronisasi baris di SINI (bukan hanya di wizard) supaya jalan di semua wizard, termasuk pendaftaran warga baru:
+   - angka jumlah (countKey) diubah -> baris ditambah / baris kosong dari bawah dibuang (baris terisi tidak pernah dihapus)
+   - field rows dengan `applicantRow` -> baris pertama = pemohon (Kepala Keluarga), ikut berubah saat isian pemohon berubah.
+   Aman dipanggil berulang bersama watcher di wizard (idempotent). */
+const runRowSync = () => {
+  syncApplicantRow(props.form, props.sections, props.autoFilled);
+  syncRowsCount(props.form, props.sections);
+};
+watch(
+  () => allFields().flatMap((x) => (x.type === "rows" && x.countKey ? [props.form[x.countKey]] : [])
+    .concat(applicantRowConfig(x, props.sections) ? Object.values(applicantRowConfig(x, props.sections).from ?? {}).map((k) => props.form[k]) : [])),
+  runRowSync,
+  { flush: "post" },
+);
+onMounted(runRowSync);
+/* Baris pertama tabel = pemohon (Kepala Keluarga). Keterangan ditampilkan di blok yang memuat isian pemohon itu. */
+const isApplicantRow = (field, i) => i === 0 && !!applicantRowConfig(field, props.sections);
+const applicantNoteFor = (section) => props.sections.flatMap((s) => s.fields).some((x) => {
+  const cfg = applicantRowConfig(x, props.sections);
+  if (!cfg) return false;
+  const first = Object.values(cfg.from ?? {})[0];
+  return !!first && section.fields.some((y) => y.key === first && y.type !== "rows");
+});
+/* Field yang dipakai sebagai `countKey` oleh tabel baris (mis. Jumlah Anggota Keluarga) tampil sebagai DROPDOWN angka;
+   memilih angka otomatis menambah/mengurangi baris (lihat syncRowsCount di formLogic). */
+const countFieldOf = (field) => allFields().find((x) => x.type === "rows" && x.countKey === field.key);
+const countOptionsOf = (field) => {
+  const rows = countFieldOf(field);
+  const max = rows?.max ?? 20;
+  const min = Math.max(rows?.min ?? (rows?.optional ? 0 : 1), 1);
+  return Array.from({ length: Math.max(max - min + 1, 1) }, (_, i) => String(min + i));
+};
 const normalizeRows = () => {
   const seenKeys = new Set();
   for (const field of allFields()) {
@@ -62,21 +94,20 @@ const normalizeRows = () => {
   }
 };
 const rowsForDisplay = (field) => uniqueRowsByNik(Array.isArray(props.form[field.key]) ? props.form[field.key] : []);
+// Key baris harus STABIL. Jangan pakai row.nik: tiap ketikan NIK mengubah key,
+// Vue membuat ulang baris, dan input kehilangan fokus.
+const rowIds = new WeakMap();
+let rowSeq = 0;
+const rowKey = (row) => {
+  if (!rowIds.has(row)) rowIds.set(row, ++rowSeq);
+  return rowIds.get(row);
+};
 const removeRow = (field, row) => {
   const rows = Array.isArray(props.form[field.key]) ? props.form[field.key] : [];
   const index = rows.indexOf(row);
   if (index >= 0) rows.splice(index, 1);
-};
-const rowKeyMap = new WeakMap();
-let rowKeySeq = 0;
-const rowKey = (row, i) => {
-  if (!row || typeof row !== "object") return i;
-  let k = rowKeyMap.get(row);
-  if (!k) {
-    k = `_row_${++rowKeySeq}`;
-    rowKeyMap.set(row, k);
-  }
-  return k;
+  // Field dengan `countKey` (mis. Jumlah Anggota Keluarga): jumlah ikut turun supaya tidak ada baris yang muncul lagi.
+  if (field.countKey) props.form[field.countKey] = String(Math.max(rows.length, minRows(field)));
 };
 watch(
   () => allFields().filter((x) => x.dayKey).map((x) => +toDate(props.form[x.key]) || 0),
@@ -152,26 +183,13 @@ watch(
 
 /* Isian pekerjaan (tipe `occupation`): cari di daftar bernomor (sama dengan Data Warga) atau ketik bebas.
    Dropdown menampilkan "5. Pegawai Negeri Sipil (PNS)", tetapi yang disimpan hanya namanya tanpa nomor. */
-const cleanJobString = (val) => {
-  if (val == null) return "";
-  if (typeof val === "object") {
-    const raw = String(val.value ?? val.label ?? "").trim();
-    if (raw && !raw.includes("[object Object]")) {
-      return raw.replace(/^\s*\d+\s*[.)\-:]\s*/, "");
-    }
-    return "";
-  }
-  const str = String(val).trim();
-  if (str.toLowerCase().includes("[object object]")) return "";
-  return str.replace(/^\s*\d+\s*[.)\-:]\s*/, "");
-};
-const bareJob = cleanJobString;
+const bareJob = (v) => String(v ?? "").replace(/^\s*\d+\s*[.)\-:]\s*/, "").trim();
 const jobSuggestions = ref([]);
 const searchJobs = (event, options) => {
   const query = String(event?.query ?? "").trim().toLowerCase();
   jobSuggestions.value = (options ?? []).filter((option) => !query || String(option).toLowerCase().includes(query));
 };
-const setJob = (target, key, value) => { target[key] = cleanJobString(value); };
+const setJob = (target, key, value) => { target[key] = value ?? ""; };
 
 /* Kolom baris yang tidak berlaku (mis. Akta Perkawinan saat belum kawin) dinonaktifkan dan dikosongkan. */
 const colDisabled = (c, row) => !!c.disabledWhen && !!c.disabledWhen(row);
@@ -273,6 +291,10 @@ onMounted(normalizeRows);
         <p class="text-sm font-semibold text-[var(--color-text-h)]">{{ section.title }}</p>
       </div>
       <p v-if="section.hint" class="text-xs mt-1 text-[var(--color-text-muted)]">{{ section.hint }}</p>
+      <div v-if="applicantNoteFor(section)" class="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+        <i class="pi pi-info-circle mt-0.5" />
+        <span>Pemohon mengisi sebagai <b>Kepala Keluarga</b>. Data pemohon ini otomatis menjadi anggota keluarga pertama (#1) di Data Keluarga dengan status Kepala Keluarga.</span>
+      </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
         <template v-for="field in section.fields" :key="field.key">
@@ -293,7 +315,8 @@ onMounted(normalizeRows);
               </span>
             </label>
 
-            <Select v-if="field.type === 'select'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :options="field.options" :optionLabel="hasObjectOptions(field.options) ? 'label' : undefined" :optionValue="hasObjectOptions(field.options) ? 'value' : undefined" :editable="field.editable" :filter="!!field.filter" :disabled="field.readonly || field.disabled" placeholder="Pilih" :invalid="fieldInvalid(field, form[field.key])" class="w-full" @update:modelValue="edit(field.key)" />
+            <Select v-if="countFieldOf(field)" :id="`${idPrefix}-${field.key}`" :modelValue="isFilled(form[field.key]) ? String(form[field.key]) : null" :options="countOptionsOf(field)" placeholder="Pilih jumlah" :invalid="fieldInvalid(field, form[field.key])" class="w-full" @update:modelValue="form[field.key] = $event ?? ''; edit(field.key)" />
+            <Select v-else-if="field.type === 'select'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" :options="field.options" :optionLabel="hasObjectOptions(field.options) ? 'label' : undefined" :optionValue="hasObjectOptions(field.options) ? 'value' : undefined" :editable="field.editable" :filter="!!field.filter" :disabled="field.readonly || field.disabled" placeholder="Pilih" :invalid="fieldInvalid(field, form[field.key])" class="w-full" @update:modelValue="edit(field.key)" />
             <DatePicker v-else-if="field.type === 'date'" :id="`${idPrefix}-${field.key}`" v-model="form[field.key]" showIcon iconDisplay="input" dateFormat="dd/mm/yy" placeholder="dd/mm/yyyy" :disabled="field.readonly || field.disabled" :invalid="!!errors[field.key]" @update:modelValue="edit(field.key)" />
             <AutoComplete v-else-if="field.type === 'occupation'" :inputId="`${idPrefix}-${field.key}`" :modelValue="form[field.key]" :suggestions="jobSuggestions" dropdown :forceSelection="false" :disabled="field.readonly || field.disabled" :invalid="!!errors[field.key]" placeholder="Cari atau ketik pekerjaan" class="w-full" inputClass="w-full" @complete="searchJobs($event, field.options)" @item-select="setJob(form, field.key, bareJob($event.value)); edit(field.key)" @update:modelValue="setJob(form, field.key, $event); edit(field.key)" />
             <AutoComplete v-else-if="field.type === 'combo'" :inputId="`${idPrefix}-${field.key}`" :modelValue="form[field.key]" :suggestions="comboSuggestions" dropdown :forceSelection="false" placeholder="Pilih atau ketik manual" :disabled="field.readonly || field.disabled" :invalid="!!errors[field.key]" class="w-full" inputClass="w-full" @complete="searchCombo($event, field)" @update:modelValue="form[field.key] = $event ?? ''; edit(field.key)" />
@@ -322,10 +345,11 @@ onMounted(normalizeRows);
             <div v-else-if="field.type === 'rows'" class="flex flex-col gap-3">
               <p v-if="modeHint(field)" class="text-xs" :class="noAutoMatch(field) ? 'text-amber-700' : 'text-[var(--color-text-muted)]'">{{ modeHint(field) }}</p>
               <p v-if="overflowCount(field)" class="text-xs text-amber-700">Formulir hanya memuat {{ field.max }} baris; {{ overflowCount(field) }} anggota keluarga lainnya tidak tercantum.</p>
-              <div v-for="(row, i) in rowsForDisplay(field)" :key="rowKey(row, i)" class="rounded-xl border border-white bg-white/80 p-3 shadow-sm">
+              <div v-for="(row, i) in rowsForDisplay(field)" :key="rowKey(row)" class="rounded-xl border border-white bg-white/80 p-3 shadow-sm">
                 <div class="flex items-center justify-between">
                   <span class="text-xs font-medium text-[var(--color-text-muted)]">#{{ i + 1 }}</span>
                   <span v-if="isLocked(field, row)" class="text-[11px] text-emerald-700">otomatis</span>
+                  <span v-else-if="isApplicantRow(field, i)" class="text-[11px] font-medium text-emerald-700">Pemohon · Kepala Keluarga</span>
                   <Button v-else-if="rowsForDisplay(field).length > minRows(field)" icon="pi pi-trash" text rounded size="small" severity="danger" aria-label="Hapus baris" @click="removeRow(field, row)" />
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
@@ -349,7 +373,8 @@ onMounted(normalizeRows);
                   </div>
                 </div>
               </div>
-              <div>
+              <!-- Field ber-countKey: jumlah baris diatur lewat isian jumlah, jadi tidak ada tombol Tambah baris. -->
+              <div v-if="!field.countKey">
                 <Button v-if="canAddRow(field) && form[field.key].length < (field.max ?? 20)" label="Tambah baris" icon="pi pi-plus" size="small" severity="secondary" outlined @click="form[field.key].push(emptyRow(field.columns))" />
               </div>
             </div>
