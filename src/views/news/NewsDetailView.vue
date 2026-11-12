@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { RouterLink } from "vue-router";
 import Tag from "primevue/tag";
 import Button from "primevue/button";
@@ -12,15 +12,35 @@ const props = defineProps({
 const article = ref(null);
 const relatedNews = ref([]);
 const loading = ref(true);
+let detailPollTimer = null;
 
 async function load() {
   loading.value = true;
-  article.value = await getNewsBySlug(props.slug);
+  article.value = await getNewsBySlug(props.slug, true);
   relatedNews.value = await getRelatedNews(article.value, 3);
   loading.value = false;
 }
 
-onMounted(load);
+async function refreshDetail() {
+  try {
+    const updated = await getNewsBySlug(props.slug, true);
+    if (updated) {
+      article.value = updated;
+    }
+  } catch {
+    // silent
+  }
+}
+
+onMounted(() => {
+  void load();
+  detailPollTimer = setInterval(refreshDetail, 5000);
+});
+
+onBeforeUnmount(() => {
+  if (detailPollTimer) clearInterval(detailPollTimer);
+});
+
 watch(() => props.slug, load);
 
 const shareLinks = computed(() => {
@@ -36,6 +56,53 @@ const shareLinks = computed(() => {
 function handleImageError(event) {
   event.target.style.display = "none";
 }
+
+/**
+ * Pastikan semua link (baik tag <a> dari editor maupun URL mentah)
+ * bisa diklik dan terbuka di tab baru dengan aman.
+ */
+function enhanceContentLinks(html) {
+  if (!html || typeof DOMParser === "undefined") return html || "";
+  try {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+
+    // 1. Tag <a> yang sudah ada: pastikan target="_blank" & styling aktif
+    doc.querySelectorAll("a").forEach((a) => {
+      a.setAttribute("target", "_blank");
+      a.setAttribute("rel", "noopener noreferrer");
+      a.classList.add("cursor-pointer", "underline", "text-primary-700", "hover:text-primary-800", "break-all");
+    });
+
+    // 2. URL mentah (http/https) dalam teks biasa yang belum di-link
+    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    while (walker.nextNode()) {
+      if (walker.currentNode.parentElement?.tagName !== "A") {
+        textNodes.push(walker.currentNode);
+      }
+    }
+
+    const urlRegex = /(https?:\/\/[^\s<]+)/g;
+    for (const node of textNodes) {
+      if (urlRegex.test(node.nodeValue)) {
+        const span = doc.createElement("span");
+        span.innerHTML = node.nodeValue.replace(
+          urlRegex,
+          '<a href="$1" target="_blank" rel="noopener noreferrer" class="cursor-pointer underline text-primary-700 hover:text-primary-800 break-all">$1</a>'
+        );
+        node.replaceWith(span);
+      }
+    }
+
+    return doc.body.innerHTML;
+  } catch {
+    return html;
+  }
+}
+
+const renderedContent = computed(() => {
+  return enhanceContentLinks(article.value?.rawContent || "");
+});
 
 /* ============ Warna per kategori (konsisten dgn halaman Berita & Gallery) ============
    Dihitung otomatis dari nama kategori (hash) supaya tidak perlu daftar hardcode. */
@@ -206,31 +273,11 @@ function getCategoryStyle(category) {
               <i v-else class="pi pi-image text-4xl text-white/50" />
             </div>
 
-            <div class="mt-6 flex flex-col gap-4">
-              <template v-for="(paragraph, index) in article.content" :key="index">
-                <p
-                  v-if="typeof paragraph === 'string'"
-                  class="text-[14.5px] leading-relaxed text-default sm:text-[15px]"
-                >
-                  {{ paragraph }}
-                </p>
-                <figure v-else-if="paragraph.type === 'image'" class="my-2">
-                  <img
-                    :src="paragraph.src"
-                    :alt="paragraph.caption || article.title"
-                    loading="lazy"
-                    class="w-full rounded-xl object-cover shadow-sm shadow-primary-900/5"
-                    @error="handleImageError"
-                  />
-                  <figcaption
-                    v-if="paragraph.caption"
-                    class="mt-2 text-center text-[12px] text-muted"
-                  >
-                    {{ paragraph.caption }}
-                  </figcaption>
-                </figure>
-              </template>
-            </div>
+            <!-- Konten berita dirender langsung sebagai HTML agar link, bold, dsb tampil benar -->
+            <div
+              class="news-content mt-6 flex flex-col gap-4 text-[14.5px] leading-relaxed text-default sm:text-[15px]"
+              v-html="renderedContent"
+            />
 
             <!-- ============ SHARE ============ -->
             <div class="mt-8 flex flex-wrap items-center gap-3 border-t border-border-default pt-6">
@@ -329,3 +376,59 @@ function getCategoryStyle(category) {
     </template>
   </div>
 </template>
+
+
+<style scoped>
+/* Styling konten berita yang dirender via v-html (dari Quill editor) */
+.news-content :deep(p) {
+  margin-bottom: 0.75rem;
+  line-height: 1.75;
+}
+.news-content :deep(a) {
+  color: var(--p-primary-700, #1d4ed8);
+  text-decoration: underline;
+  word-break: break-all;
+}
+.news-content :deep(a:hover) {
+  color: var(--p-primary-800, #1e40af);
+}
+.news-content :deep(strong),
+.news-content :deep(b) {
+  font-weight: 700;
+}
+.news-content :deep(em),
+.news-content :deep(i) {
+  font-style: italic;
+}
+.news-content :deep(ul),
+.news-content :deep(ol) {
+  padding-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+.news-content :deep(ul) {
+  list-style-type: disc;
+}
+.news-content :deep(ol) {
+  list-style-type: decimal;
+}
+.news-content :deep(li) {
+  margin-bottom: 0.25rem;
+}
+.news-content :deep(img) {
+  max-width: 100%;
+  border-radius: 0.75rem;
+  margin: 0.5rem 0;
+}
+.news-content :deep(blockquote) {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1rem;
+  color: #6b7280;
+  margin: 0.75rem 0;
+}
+.news-content :deep(h1),
+.news-content :deep(h2),
+.news-content :deep(h3) {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+</style>

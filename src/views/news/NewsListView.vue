@@ -28,6 +28,18 @@ onMounted(async () => {
   }
 });
 
+// Polling tiap 5 detik agar daftar berita otomatis update tanpa refresh
+const NEWS_POLL_INTERVAL = 5000;
+let newsPollTimer = null;
+onMounted(() => {
+  newsPollTimer = setInterval(async () => {
+    try {
+      const news = await fetchAllNews();
+      allNews.value = news;
+    } catch { /* silent */ }
+  }, NEWS_POLL_INTERVAL);
+});
+
 const pinnedNews = computed(() => allNews.value.find((item) => item.isPinned) || null);
 const latestNews = computed(() =>
   [...allNews.value].sort((a, b) => new Date(b.dateISO) - new Date(a.dateISO)).slice(0, 3)
@@ -94,7 +106,10 @@ watch(chipScroller, (el) => {
   nextTick(updateScrollState);
 });
 watch(categoryOptions, () => nextTick(updateScrollState));
-onBeforeUnmount(() => chipObserver?.disconnect());
+onBeforeUnmount(() => {
+  chipObserver?.disconnect();
+  if (newsPollTimer) clearInterval(newsPollTimer);
+});
 
 const sortOptions = [
   { label: "Terbaru", value: "newest", icon: "pi pi-sort-amount-down" },

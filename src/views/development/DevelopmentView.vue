@@ -28,6 +28,8 @@ async function loadCategories() {
   }
 }
 
+let devPollTimer = null;
+
 onMounted(async () => {
   try {
     const [list] = await Promise.all([fetchAllDevelopments(), loadCategories()]);
@@ -38,6 +40,13 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
+
+  devPollTimer = setInterval(async () => {
+    try {
+      const [list] = await Promise.all([fetchAllDevelopments(), loadCategories()]);
+      developments.value = list;
+    } catch { /* silent */ }
+  }, 5000);
 });
 
 const searchQuery = ref("");
@@ -269,6 +278,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   tabsResizeObserver?.disconnect()
+  if (devPollTimer) clearInterval(devPollTimer)
 })
 </script>
 

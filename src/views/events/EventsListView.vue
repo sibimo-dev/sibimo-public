@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch, onMounted } from "vue";
+import { computed, ref, watch, onMounted, onBeforeUnmount } from "vue";
 import { RouterLink } from "vue-router";
 import Button from "primevue/button";
 import Select from "primevue/select";
@@ -7,6 +7,7 @@ import { fetchAgendaMonths } from "@/services/events.js";
 
 const agendaMonths = ref([]);
 const loading = ref(true);
+let eventsPollTimer = null;
 
 onMounted(async () => {
   try {
@@ -16,6 +17,16 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
+
+  eventsPollTimer = setInterval(async () => {
+    try {
+      agendaMonths.value = await fetchAgendaMonths();
+    } catch { /* silent */ }
+  }, 5000);
+});
+
+onBeforeUnmount(() => {
+  if (eventsPollTimer) clearInterval(eventsPollTimer);
 });
 
 /* ---------- Nomor bulan untuk lingkaran ---------- */
