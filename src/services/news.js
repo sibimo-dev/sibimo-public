@@ -175,6 +175,7 @@ function mapNewsItem(item) {
     title: item.title,
     excerpt: plainText.slice(0, 160) + (plainText.length > 160 ? "..." : ""),
     content: parseHtmlContent(rawHtml),
+    rawContent: rawHtml,
     image: resolveNewsImage(item.thumbnail),
     popular: false,
     isPinned: false,
@@ -194,8 +195,8 @@ export function getAllNewsSync() {
   return cache || [];
 }
 
-export async function getNewsBySlug(slug) {
-  if (!cache) await fetchAllNews();
+export async function getNewsBySlug(slug, force = false) {
+  if (!cache || force) await fetchAllNews();
   return cache.find((item) => item.slug === slug) || null;
 }
 

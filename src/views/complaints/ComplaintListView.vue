@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -15,6 +15,7 @@ import { fetchComplaints } from '@/services/complaints.js'
 const router = useRouter()
 const complaints = ref([])
 const loading = ref(true)
+let complaintPollTimer = null
 
 onMounted(async () => {
   try {
@@ -24,6 +25,16 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  complaintPollTimer = setInterval(async () => {
+    try {
+      complaints.value = await fetchComplaints()
+    } catch { /* silent */ }
+  }, 5000)
+})
+
+onBeforeUnmount(() => {
+  if (complaintPollTimer) clearInterval(complaintPollTimer)
 })
 
 /* ---------------- Kategori & Status ----------------

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from "vue";
 import { fetchAllNews } from "@/services/news.js";
+import api from "@/services/api.js";
 
 const props = defineProps({
   items: {
@@ -14,27 +15,110 @@ const props = defineProps({
   },
 });
 
-const JAM_LAYANAN =
+const DEFAULT_JAM_LAYANAN =
   "Jam Layanan Kalurahan: Senin–Kamis 08.00–15.00 WIB, Jumat 08.00–11.00 WIB";
 
-const announcementTitles = ref([]);
+const DAY_LABELS = {
+  1: "Senin",
+  2: "Selasa",
+  3: "Rabu",
+  4: "Kamis",
+  5: "Jumat",
+  6: "Sabtu",
+  7: "Minggu",
+};
 
-onMounted(async () => {
+function formatServiceHoursText(data) {
+  if (!Array.isArray(data) || data.length === 0) return null;
+
+  const openDays = data
+    .filter((d) => !d.is_closed && d.open_time && d.close_time)
+    .sort((a, b) => a.day_of_week - b.day_of_week);
+
+  if (openDays.length === 0) {
+    return "Layanan Kalurahan: Tutup";
+  }
+
+  const groups = [];
+  let currentGroup = null;
+
+  for (const day of openDays) {
+    const open = (day.open_time || "").slice(0, 5).replace(":", ".");
+    const close = (day.close_time || "").slice(0, 5).replace(":", ".");
+    const timeKey = `${open}–${close}`;
+
+    if (
+      currentGroup &&
+      currentGroup.timeKey === timeKey &&
+      day.day_of_week === currentGroup.endDay + 1
+    ) {
+      currentGroup.endDay = day.day_of_week;
+    } else {
+      currentGroup = {
+        startDay: day.day_of_week,
+        endDay: day.day_of_week,
+        timeKey,
+        timeStr: `${open}–${close} WIB`,
+      };
+      groups.push(currentGroup);
+    }
+  }
+
+  const parts = groups.map((g) => {
+    const dayStr =
+      g.startDay === g.endDay
+        ? DAY_LABELS[g.startDay]
+        : `${DAY_LABELS[g.startDay]}–${DAY_LABELS[g.endDay]}`;
+    return `${dayStr} ${g.timeStr}`;
+  });
+
+  return `Jam Layanan Kalurahan: ${parts.join(", ")}`;
+}
+
+const serviceHoursText = ref(DEFAULT_JAM_LAYANAN);
+const announcementTitles = ref([]);
+let tickerPollTimer = null;
+
+async function loadTickerData() {
   if (props.items) return;
 
   try {
-    const allNews = await fetchAllNews();
-    announcementTitles.value = allNews
-      .filter((item) => item.category === "Pengumuman")
-      .map((item) => item.title);
+    const [allNews, hoursRes] = await Promise.allSettled([
+      fetchAllNews(),
+      api.get("/service-hours"),
+    ]);
+
+    if (allNews.status === "fulfilled") {
+      announcementTitles.value = (allNews.value || [])
+        .filter((item) => item.category === "Pengumuman")
+        .map((item) => item.title);
+    }
+
+    if (hoursRes.status === "fulfilled") {
+      const hoursData = hoursRes.value?.data?.data ?? hoursRes.value?.data;
+      const formatted = formatServiceHoursText(hoursData);
+      if (formatted) {
+        serviceHoursText.value = formatted;
+      }
+    }
   } catch (err) {
-    console.error("Gagal memuat pengumuman untuk ticker:", err);
+    console.error("Gagal memuat data ticker:", err);
   }
+}
+
+onMounted(() => {
+  void loadTickerData();
+  // Polling tiap 5 detik agar jam layanan & pengumuman update otomatis tanpa refresh
+  tickerPollTimer = setInterval(loadTickerData, 5000);
+});
+
+onBeforeUnmount(() => {
+  if (tickerPollTimer) clearInterval(tickerPollTimer);
 });
 
 const tickerItems = computed(() => {
   if (props.items) return props.items;
-  return [JAM_LAYANAN, ...announcementTitles.value];
+  return [serviceHoursText.value, ...announcementTitles.value];
 });
 
 /* ============ Ukur lebar container & teks, biar animasi

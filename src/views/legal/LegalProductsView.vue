@@ -21,6 +21,8 @@ const search = ref('')
 const first = ref(0)
 const hasError = ref(false)
 
+let legalPollTimer = null
+
 onMounted(async () => {
   try {
     items.value = await getLegalProducts()
@@ -30,6 +32,12 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  legalPollTimer = setInterval(async () => {
+    try {
+      items.value = await getLegalProducts()
+    } catch { /* silent */ }
+  }, 5000)
 })
 
 // Tahun: sekarang ± 30 tahun, digabung dengan tahun yang ada di data
@@ -202,7 +210,10 @@ watch(chipScroller, (el) => {
   nextTick(updateScrollState);
 });
 watch(typeOptions, () => nextTick(updateScrollState), { deep: true });
-onBeforeUnmount(() => chipObserver?.disconnect());
+onBeforeUnmount(() => {
+  chipObserver?.disconnect();
+  if (legalPollTimer) clearInterval(legalPollTimer);
+});
 
 /* ---------- Helper dropdown filter (Tahun, Status, Bulan) ---------- */
 // Pilihan tahun: tahun sekarang +/- 30 tahun, digabung dengan tahun yang ada di data.

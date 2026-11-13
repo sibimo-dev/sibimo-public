@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
@@ -17,6 +17,7 @@ const loading = ref(true)
 const failed = ref(false)
 const apiCategories = ref([])
 const events = ref([])
+let galleryPollTimer = null
 
 function stripHtml(html) {
   if (!html) return ''
@@ -52,6 +53,21 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  galleryPollTimer = setInterval(async () => {
+    try {
+      const [cats, list] = await Promise.all([
+        unwrap(api.get('/gallery-categories')),
+        unwrap(api.get('/galleries')),
+      ])
+      apiCategories.value = cats
+      events.value = list.map(toEvent)
+    } catch { /* silent */ }
+  }, 5000)
+})
+
+onBeforeUnmount(() => {
+  if (galleryPollTimer) clearInterval(galleryPollTimer)
 })
 
 const categories = computed(() => [
