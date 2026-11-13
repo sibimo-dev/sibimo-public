@@ -18,6 +18,7 @@ const failed = ref(false)
 const selectedSlug = ref(null)
 const enterClass = 'transition-all duration-500 ease-out starting:translate-y-4 starting:scale-[0.98] starting:opacity-0 motion-reduce:transition-none'
 
+let potentialPollTimer = null
 onMounted(async () => {
   try {
     const [list] = await Promise.all([fetchPotentials(), loadPotentialCategories()])
@@ -28,6 +29,17 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  potentialPollTimer = setInterval(async () => {
+    try {
+      const [list] = await Promise.all([fetchPotentials(), loadPotentialCategories()])
+      potentials.value = list
+    } catch { /* silent */ }
+  }, 5000)
+})
+
+onBeforeUnmount(() => {
+  if (potentialPollTimer) clearInterval(potentialPollTimer)
 })
 
 const visibleCategories = computed(() =>

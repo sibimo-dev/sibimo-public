@@ -412,6 +412,26 @@ onMounted(() => {
   void loadHome();
 });
 
+// Polling tiap 5 detik agar seluruh konten beranda (berita, agenda, potensi, galeri, dsb) update otomatis tanpa refresh
+const HOME_POLL_INTERVAL = 5000; // 5 detik
+let homePollTimer = null;
+
+async function pollHomeData() {
+  try {
+    const fresh = await fetchHomeData();
+    if (fresh?.data && Object.keys(fresh.data).length) {
+      applyHomeData(fresh.data);
+      writeHomeCache(fresh.data);
+    }
+  } catch {
+    // silent — jangan ganggu UX kalau gagal polling
+  }
+}
+
+onMounted(() => {
+  homePollTimer = setInterval(pollHomeData, HOME_POLL_INTERVAL);
+});
+
 onMounted(() => {
   reducedMotion.value = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   startNewsTimer();
@@ -423,6 +443,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (orgAutoplayTimer) clearInterval(orgAutoplayTimer);
   clearInterval(newsTimer);
+  if (homePollTimer) clearInterval(homePollTimer);
 });
 </script>
 
