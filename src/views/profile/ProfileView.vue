@@ -22,6 +22,11 @@ import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import api from '@/services/api'
 import {
+  getCitizenStatistics,
+  readCitizenStatisticsCache,
+  writeCitizenStatisticsCache,
+} from '@/services/citizen'
+import {
   getHistories,
   getVisionMissions,
   getOrganizationalStructures,
@@ -553,6 +558,7 @@ const stats = reactive([
 
 let statsVisible = false
 let statsAnimated = false
+const citizenSummary = ref(null)
 
 function applyRegionStats(regionList) {
   const totals = (Array.isArray(regionList) ? regionList : []).reduce(
@@ -565,14 +571,19 @@ function applyRegionStats(regionList) {
     { population: 0, kk: 0, rt: 0, rw: 0 },
   )
 
+  // Total penduduk dan KK harus memakai sumber yang sama dengan halaman
+  // Statistik. Rincian per padukuhan tetap berasal dari /regions, sedangkan
+  // /regions hanya memuat warga yang sudah berhasil dipetakan ke wilayah.
+  const population = Number(citizenSummary.value?.total_population ?? totals.population)
+  const kk = Number(citizenSummary.value?.kk_count ?? totals.kk)
   const suffix = ` / ${totals.rw}`
-  const changed = stats[0].target !== totals.population
-    || stats[1].target !== totals.kk
+  const changed = stats[0].target !== population
+    || stats[1].target !== kk
     || stats[3].target !== totals.rt
     || stats[3].suffix !== suffix
 
-  stats[0].target = totals.population
-  stats[1].target = totals.kk
+  stats[0].target = population
+  stats[1].target = kk
   stats[3].target = totals.rt
   stats[3].suffix = suffix
 
@@ -705,6 +716,8 @@ async function loadProfile() {
   const failedParts = []
 
   const cached = readProfileCache()
+  const cachedCitizenStatistics = readCitizenStatisticsCache()
+  citizenSummary.value = cachedCitizenStatistics?.summary ?? null
   if (cached) {
     historyData.value = cached.history ?? null
     visionMission.value = cached.visionMission ?? null
@@ -741,6 +754,16 @@ async function loadProfile() {
       regions.value = data ?? []
       applyRegionStats(regions.value)
     }, 'regions'),
+    getCitizenStatistics()
+      .then((data) => {
+        citizenSummary.value = data?.summary ?? null
+        writeCitizenStatisticsCache(data)
+        applyRegionStats(regions.value)
+      })
+      .catch((error) => {
+        console.warn('[profile] Gagal memuat statistik kependudukan:', error)
+        failedParts.push('statistik kependudukan')
+      }),
   ])
 
   profileError.value = failedParts.length
