@@ -21,6 +21,7 @@ import Column from 'primevue/column'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import api from '@/services/api'
+import DOMPurify from 'dompurify'
 import {
   getCitizenStatistics,
   readCitizenStatisticsCache,
@@ -155,6 +156,48 @@ const historyPhotos = computed(() => (
 const missionsData = computed(() => (
   Array.isArray(visionMission.value?.missions) ? visionMission.value.missions.filter(Boolean) : []
 ))
+
+// Tampilan HTML hasil rich editor (Quill 2), hanya dengan Tailwind. Mendukung sampai 3 tingkat indentasi.
+const RICH_CLASSES = [
+  '[&_*]:break-words [&_p]:min-h-[1.5em] [&_p]:my-0',
+  '[&_a]:text-blue-600 [&_a]:underline [&_img]:h-auto [&_img]:max-w-full',
+  '[&_.ql-align-left]:text-left [&_.ql-align-center]:text-center [&_.ql-align-right]:text-right [&_.ql-align-justify]:text-justify',
+  '[&_.ql-font-serif]:font-serif [&_.ql-font-monospace]:font-mono',
+  '[&_.ql-size-small]:text-xs [&_.ql-size-large]:text-2xl [&_.ql-size-huge]:text-[2.5rem]',
+  '[&_ol]:m-0 [&_ol]:p-0 [&_ol]:text-left [&_ol]:[counter-reset:list-0_list-1_list-2]',
+  '[&_li]:relative [&_li[data-list]]:list-none [&_li>.ql-ui]:hidden [&_li[data-list]]:pl-[1.75em]',
+  '[&_li[data-list]]:before:-ml-[1.75em] [&_li[data-list]]:before:mr-[0.25em] [&_li[data-list]]:before:inline-block [&_li[data-list]]:before:w-[1.5em] [&_li[data-list]]:before:text-right',
+  "[&_li[data-list=ordered]]:[counter-increment:list-0] [&_li[data-list=ordered]]:before:content-[counter(list-0,decimal)'._'] [&_li[data-list=bullet]]:before:content-['•']",
+  "[&_li[data-list=ordered].ql-indent-1]:[counter-increment:list-1] [&_li[data-list=ordered].ql-indent-1]:before:content-[counter(list-1,lower-alpha)'._'] [&_li[data-list=bullet].ql-indent-1]:before:content-['◦'] [&_li[data-list].ql-indent-1]:pl-[calc(3em+1.75em)]",
+  "[&_li[data-list=ordered].ql-indent-2]:[counter-increment:list-2] [&_li[data-list=ordered].ql-indent-2]:before:content-[counter(list-2,lower-roman)'._'] [&_li[data-list=bullet].ql-indent-2]:before:content-['▪'] [&_li[data-list].ql-indent-2]:pl-[calc(6em+1.75em)]",
+  '[&_:is(p,h1,h2,h3).ql-indent-1]:pl-[3em] [&_:is(p,h1,h2,h3).ql-indent-2]:pl-[6em] [&_:is(p,h1,h2,h3).ql-indent-3]:pl-[9em]',
+].join(' ')
+
+// Bersihkan HTML dari editor dengan DOMPurify, ubah &nbsp; jadi spasi biasa supaya teks bisa turun baris,
+// lalu beri gaya pada list "semantik" (<ul>/<ol> biasa) yang dihasilkan editor.
+function styleSemanticLists(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  doc.body.querySelectorAll('ul, ol').forEach((list) => {
+    // Markup bergaya editor (li[data-list]) sudah ditangani class Tailwind di wadah.
+    if (Array.from(list.children).some((li) => li.hasAttribute('data-list'))) return
+    let depth = 0
+    for (let p = list.parentElement?.closest('ul, ol'); p; p = p.parentElement?.closest('ul, ol')) depth += 1
+    const level = Math.min(depth, 2)
+    const styles = list.tagName === 'OL'
+      ? ['!list-decimal', '!list-[lower-alpha]', '!list-[lower-roman]']
+      : ['!list-disc', '!list-[circle]', '!list-[square]']
+    list.classList.add(styles[level], '!pl-6', '!my-1')
+  })
+  return doc.body.innerHTML
+}
+
+function renderRich(html) {
+  const source = String(html ?? '').replace(/&nbsp;|\u00a0/g, ' ')
+  return styleSemanticLists(DOMPurify.sanitize(source))
+}
+
+const visionHtml = computed(() => renderRich(visionMission.value?.vision))
+
 // Level Ketua RW / Ketua RT sudah ditampilkan di carousel "Ketua RW/RT Aktif",
 // jadi disembunyikan dari daftar level supaya tidak dobel.
 function isNeighborhoodLevel(level) {
@@ -1021,9 +1064,13 @@ onBeforeUnmount(() => {
               &ldquo;
             </span>
             <h2 class="mt-1 text-2xl font-semibold text-slate-900">Visi</h2>
-            <p class="mx-auto mt-3 text-slate-600">
-              {{ visionMission?.vision || 'Data visi belum tersedia.' }}
-            </p>
+            <div
+              v-if="visionHtml"
+              class="mx-auto mt-3 min-w-0 max-w-full whitespace-pre-wrap break-words text-slate-600"
+              :class="RICH_CLASSES"
+              v-html="visionHtml"
+            />
+            <p v-else class="mx-auto mt-3 text-slate-400">Data visi belum tersedia.</p>
           </template>
         </Card>
 
