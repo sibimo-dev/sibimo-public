@@ -27,12 +27,16 @@ function mediaUrl(value) {
   return `${backendOrigin}/storage/${source.replace(/^\/+/, '')}`
 }
 
+// Teks polos untuk kartu/ringkasan (tag dibuang, spasi tak-terputus jadi spasi biasa).
 function stripHtml(html) {
   if (!html) return ''
   const withBreaks = String(html)
     .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
     .replace(/<br\s*\/?>/gi, '\n')
-  return new DOMParser().parseFromString(withBreaks, 'text/html').body.textContent.trim()
+  return new DOMParser()
+    .parseFromString(withBreaks, 'text/html')
+    .body.textContent.replace(/\u00a0/g, ' ')
+    .trim()
 }
 
 // Ikon tidak disimpan di DB; kategori baru memakai ikon default
@@ -85,6 +89,7 @@ export function normalizePotential(item) {
 
   const category = mapCategory(item.category)
   const image = item.image ? mediaUrl(item.image) : null
+  const rawLong = item.description || item.longDesc || item.short_desc || ''
 
   return {
     potential_id: item.potential_id,
@@ -93,12 +98,18 @@ export function normalizePotential(item) {
     name: item.title || item.name || 'Tanpa Judul',
     image,
     shortDesc: stripHtml(item.short_desc || item.shortDesc || item.description || ''),
-    longDesc: stripHtml(item.description || item.longDesc || item.short_desc || ''),
+    // longDesc: teks polos (kompatibel dengan pemakaian lama)
+    longDesc: stripHtml(rawLong),
+    // longHtml: HTML asli dari rich editor admin, dipakai halaman detail
+    longHtml: String(rawLong),
     location: item.location || 'Kalurahan Bimomartani',
     contact: item.contact || 'Kalurahan Bimomartani',
     extra: extra && typeof extra === 'object' ? extra : {},
   }
 }
+
+// Hanya potensi berstatus Published yang tampil di situs publik (data lama tanpa status dianggap terbit).
+const isPublished = (item) => !item?.status || String(item.status).toLowerCase() === 'published'
 
 let cachedPotentials = null
 
@@ -110,7 +121,7 @@ export async function fetchPotentials() {
     ? res.data
     : []
 
-  cachedPotentials = rawList.map(normalizePotential)
+  cachedPotentials = rawList.filter(isPublished).map(normalizePotential)
   return cachedPotentials
 }
 
@@ -126,7 +137,7 @@ export async function fetchPotentialBySlug(slug) {
   try {
     const res = await api.get(`/village-potentials/${encodeURIComponent(slug)}`)
     const raw = res.data?.data ?? res.data
-    if (raw) return normalizePotential(raw)
+    if (raw && isPublished(raw)) return normalizePotential(raw)
   } catch (error) {
     console.warn(`[Potential] Gagal memuat detail slug "${slug}" dari API:`, error)
   }

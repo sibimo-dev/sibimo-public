@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { RouterLink } from "vue-router";
 import Tag from "primevue/tag";
 import Button from "primevue/button";
+import DOMPurify from "dompurify";
 import { getNewsBySlug, getRelatedNews } from "@/services/news.js";
 
 const props = defineProps({
@@ -58,13 +59,22 @@ function handleImageError(event) {
 }
 
 /**
+ * Bersihkan HTML berita sebelum dirender. Konten berasal dari editor/admin,
+ * jadi v-html tidak boleh menerima HTML mentah tanpa sanitasi.
+ */
+const sanitizeContent = (html) => DOMPurify.sanitize(String(html || ""), {
+  ADD_ATTR: ["target", "rel"],
+});
+
+/**
  * Pastikan semua link (baik tag <a> dari editor maupun URL mentah)
  * bisa diklik dan terbuka di tab baru dengan aman.
  */
 function enhanceContentLinks(html) {
-  if (!html || typeof DOMParser === "undefined") return html || "";
+  const safeHtml = sanitizeContent(html);
+  if (!safeHtml || typeof DOMParser === "undefined") return safeHtml;
   try {
-    const doc = new DOMParser().parseFromString(html, "text/html");
+    const doc = new DOMParser().parseFromString(safeHtml, "text/html");
 
     // 1. Tag <a> yang sudah ada: pastikan target="_blank" & styling aktif
     doc.querySelectorAll("a").forEach((a) => {
@@ -84,19 +94,35 @@ function enhanceContentLinks(html) {
 
     const urlRegex = /(https?:\/\/[^\s<]+)/g;
     for (const node of textNodes) {
-      if (urlRegex.test(node.nodeValue)) {
-        const span = doc.createElement("span");
-        span.innerHTML = node.nodeValue.replace(
-          urlRegex,
-          '<a href="$1" target="_blank" rel="noopener noreferrer" class="cursor-pointer underline text-primary-700 hover:text-primary-800 break-all">$1</a>'
-        );
-        node.replaceWith(span);
+      const value = node.nodeValue || "";
+      urlRegex.lastIndex = 0;
+      if (!urlRegex.test(value)) continue;
+
+      urlRegex.lastIndex = 0;
+      const fragment = doc.createDocumentFragment();
+      let lastIndex = 0;
+      let match;
+
+      while ((match = urlRegex.exec(value)) !== null) {
+        fragment.appendChild(doc.createTextNode(value.slice(lastIndex, match.index)));
+
+        const link = doc.createElement("a");
+        link.setAttribute("href", match[0]);
+        link.setAttribute("target", "_blank");
+        link.setAttribute("rel", "noopener noreferrer");
+        link.className = "cursor-pointer underline text-primary-700 hover:text-primary-800 break-all";
+        link.textContent = match[0];
+        fragment.appendChild(link);
+        lastIndex = match.index + match[0].length;
       }
+
+      fragment.appendChild(doc.createTextNode(value.slice(lastIndex)));
+      node.replaceWith(fragment);
     }
 
-    return doc.body.innerHTML;
+    return sanitizeContent(doc.body.innerHTML);
   } catch {
-    return html;
+    return safeHtml;
   }
 }
 
