@@ -6,6 +6,20 @@ const MONTH_NAMES = [
   "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ];
 
+const IMAGE_RE = /\.(png|jpe?g|gif|webp|avif)(\?.*)?$/i;
+
+// Jika backend mengembalikan path relatif (/storage/...), tambahkan origin API
+function resolveFileUrl(url) {
+  if (!url) return null;
+  if (/^(https?:)?\/\//i.test(url) || url.startsWith("data:")) return url;
+  try {
+    const origin = new URL(api.defaults.baseURL, window.location.origin).origin;
+    return origin + (url.startsWith("/") ? url : `/${url}`);
+  } catch {
+    return url;
+  }
+}
+
 function parseDateSafe(dateString) {
   if (!dateString) return new Date();
   const datePart = dateString.split("T")[0]; // buang bagian jam kalau ada (mis. "2026-09-06T00:00:00.000000Z")
@@ -28,6 +42,9 @@ function mapAgendaItem(agenda, index) {
     event: agenda.title,
     place: agenda.location || "-",
     attendee: agenda.attendee || "Seluruh Warga",
+    attachmentUrl: resolveFileUrl(agenda.attachment_url),
+    attachmentName: agenda.attachment_name ?? agenda.attachment_url?.split("/").pop() ?? null,
+    attachmentIsImage: IMAGE_RE.test(agenda.attachment_url ?? ""),
     _eventDate: agenda.event_date,
   };
 }
