@@ -19,9 +19,11 @@ const apiCategories = ref([])
 const events = ref([])
 let galleryPollTimer = null
 
+// Deskripsi lama bisa berupa HTML; ubah jadi teks biasa dengan baris baru tetap terjaga.
 function stripHtml(html) {
   if (!html) return ''
-  return new DOMParser().parseFromString(html, 'text/html').body.textContent.trim()
+  const withBreaks = String(html).replace(/<\/(p|div|h[1-6]|li|blockquote)>|<br\s*\/?>/gi, '\n')
+  return (new DOMParser().parseFromString(withBreaks, 'text/html').body.textContent ?? '').trim()
 }
 
 function toEvent(g) {
@@ -313,7 +315,7 @@ function styleFor(slug) {
         </div>
       </aside>
 
-      <div>
+      <div class="min-w-0">
         <div v-if="loading" class="py-14 text-center text-sm text-muted">
           <i class="pi pi-spin pi-spinner mb-3 block text-3xl text-muted/40" />
           Memuat galeri...
@@ -342,12 +344,12 @@ function styleFor(slug) {
           enter-active-class="transition-all! duration-[550ms]! ease-[cubic-bezier(0.34,1.56,0.64,1)]! motion-reduce:transition-none!"
           leave-active-class="absolute transition-all! duration-[250ms]! motion-reduce:transition-none!"
           leave-to-class="opacity-0 scale-95"
-          class="grid grid-cols-1 gap-6 sm:grid-cols-2"
+          class="grid grid-cols-1 items-start gap-6 sm:grid-cols-2"
         >
           <article
             v-for="(event, i) in visibleEvents"
             :key="event.id"
-            class="group relative overflow-hidden rounded-2xl border border-border-default bg-surface transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+            class="group relative min-w-0 overflow-hidden rounded-2xl border border-border-default bg-surface transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
             :class="[styleFor(event.category).ring, cardDelays[i % pageSize]]"
           >
             <span class="absolute inset-x-0 top-0 z-10 h-1" :class="styleFor(event.category).topBar" />
@@ -382,12 +384,12 @@ function styleFor(slug) {
             <div class="p-5 pt-7">
               <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide" :class="styleFor(event.category).location">
                 <i class="pi pi-map-marker text-[11px]" />
-                <span>{{ event.location }}</span>
+                <span class="min-w-0 break-words">{{ event.location }}</span>
               </div>
-              <h3 class="mt-2 text-lg font-bold leading-snug text-heading">
+              <h3 class="mt-2 break-words text-lg font-bold leading-snug text-heading">
                 {{ event.title }}
               </h3>
-              <p class="mt-2 text-sm leading-relaxed text-muted line-clamp-3">
+              <p class="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-muted">
                 {{ event.description }}
               </p>
               <Tag
