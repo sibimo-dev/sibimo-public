@@ -144,6 +144,7 @@ function normalizeAgendas(items) {
   today.setHours(0, 0, 0, 0)
 
   return asArray(items)
+    .filter((item) => !item?.status || String(item.status).toLowerCase() === 'published')
     .map((item) => ({ item, date: parseDate(item.event_date) }))
     .filter(({ date }) => date && date >= today)
     .sort((a, b) => a.date - b.date)
@@ -170,6 +171,7 @@ function normalizePotentialCategory(value) {
 
 function normalizePotentials(items) {
   return asArray(items)
+    .filter((item) => !item?.status || String(item.status).toLowerCase() === 'published')
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     .slice(0, 4)
     .map((item) => {

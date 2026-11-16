@@ -72,7 +72,10 @@ let cache = null;
 
 export async function fetchAgendaMonths() {
   const res = await api.get("/agendas");
-  cache = groupByMonth(res.data.data);
+  const agendas = (res.data.data || []).filter(
+    (agenda) => !agenda?.status || String(agenda.status).toLowerCase() === "published",
+  );
+  cache = groupByMonth(agendas);
   return cache;
 }
 

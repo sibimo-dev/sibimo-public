@@ -301,7 +301,7 @@ function getCategoryStyle(category) {
 
             <!-- Konten berita dirender langsung sebagai HTML agar link, bold, dsb tampil benar -->
             <div
-              class="news-content mt-6 flex flex-col gap-4 text-[14.5px] leading-relaxed text-default sm:text-[15px]"
+              class="news-content mt-6 w-full min-w-0 max-w-full overflow-hidden text-[14.5px] leading-relaxed text-default sm:text-[15px]"
               v-html="renderedContent"
             />
 
@@ -406,9 +406,19 @@ function getCategoryStyle(category) {
 
 <style scoped>
 /* Styling konten berita yang dirender via v-html (dari Quill editor) */
+.news-content {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.news-content :deep(*) {
+  box-sizing: border-box;
+  max-width: 100%;
+}
 .news-content :deep(p) {
   margin-bottom: 0.75rem;
   line-height: 1.75;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
 }
 .news-content :deep(a) {
   color: var(--p-primary-700, #1d4ed8);
@@ -439,11 +449,47 @@ function getCategoryStyle(category) {
 }
 .news-content :deep(li) {
   margin-bottom: 0.25rem;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
 }
 .news-content :deep(img) {
+  display: block;
+  width: auto;
+  height: auto;
   max-width: 100%;
   border-radius: 0.75rem;
   margin: 0.5rem 0;
+}
+.news-content :deep(pre),
+.news-content :deep(code) {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.news-content :deep(pre) {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  background: #f8fafc;
+  padding: 0.75rem 1rem;
+}
+.news-content :deep(table) {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+}
+.news-content :deep(th),
+.news-content :deep(td) {
+  border: 1px solid #e2e8f0;
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  vertical-align: top;
+  white-space: normal;
+}
+.news-content :deep(th) {
+  background: #f8fafc;
+  font-weight: 700;
 }
 .news-content :deep(blockquote) {
   border-left: 4px solid #e5e7eb;
@@ -456,5 +502,16 @@ function getCategoryStyle(category) {
 .news-content :deep(h3) {
   font-weight: 700;
   margin-bottom: 0.5rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.news-content :deep(.ql-align-center) {
+  text-align: center;
+}
+.news-content :deep(.ql-align-right) {
+  text-align: right;
+}
+.news-content :deep(.ql-align-justify) {
+  text-align: justify;
 }
 </style>
