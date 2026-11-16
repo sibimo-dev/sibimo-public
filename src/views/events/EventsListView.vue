@@ -143,7 +143,7 @@ const emptyMessage = computed(
           <!-- rel: bulatan nomor bulan + garis linimasa -->
           <div class="flex flex-col items-center shrink-0">
             <div
-              class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-sky-500 to-violet-600 text-white font-extrabold text-[13px] sm:text-[15px] flex items-center justify-center shrink-0 shadow-sm shadow-sky-600/25"
+              class="w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-sky-500 to-violet-600 text-white font-extrabold text-[13px] sm:text-[15px] flex items-center justify-center shrink-0 shadow-sm shadow-sky-600/25"
             >
               {{ monthNumber(item) }}
             </div>
@@ -154,7 +154,7 @@ const emptyMessage = computed(
           </div>
 
           <!-- label bulan/tahun -->
-          <div class="shrink-0 w-[64px] sm:w-[78px] pt-1">
+          <div class="hidden shrink-0 sm:block sm:w-[78px] pt-1">
             <div class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted">
               {{ item.monthLabel }}
             </div>
@@ -164,17 +164,14 @@ const emptyMessage = computed(
           <!-- kartu agenda -->
           <div class="flex-1 min-w-0 pb-6 sm:pb-8">
             <div
-              class="relative overflow-hidden rounded-2xl border border-border-default bg-surface flex flex-col sm:flex-row hover:shadow-md hover:border-sky-300 transition-all duration-300"
+              class="relative overflow-hidden rounded-2xl border border-border-default bg-surface hover:shadow-md hover:border-sky-300 transition-all duration-300"
             >
-              <span class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-400 to-violet-500" />
-
-              <div
-                class="w-full sm:w-[190px] aspect-[16/9] sm:aspect-auto shrink-0 bg-gradient-to-br from-sky-50 via-violet-50 to-sky-100 flex items-center justify-center"
-              >
-                <i class="pi pi-image text-2xl text-sky-300" />
-              </div>
+              <span class="absolute inset-x-0 top-0 z-10 h-1 bg-gradient-to-r from-sky-400 to-violet-500" />
 
               <div class="p-4 sm:p-5 min-w-0">
+                <p class="mb-2 text-[12px] font-bold uppercase tracking-wider text-muted sm:hidden">
+                  {{ item.monthLabel }} {{ item.year }}
+                </p>
                 <span
                   class="inline-flex items-center gap-1.5 text-[10.5px] sm:text-[11px] font-bold uppercase tracking-wider text-sky-700"
                 >
