@@ -17,9 +17,25 @@ let detailPollTimer = null;
 
 async function load() {
   loading.value = true;
-  article.value = await getNewsBySlug(props.slug, true);
-  relatedNews.value = await getRelatedNews(article.value, 3);
-  loading.value = false;
+  article.value = null;
+  relatedNews.value = [];
+
+  try {
+    article.value = await getNewsBySlug(props.slug, true);
+  } catch {
+    article.value = null;
+  } finally {
+    // Jangan menunggu daftar berita terkait untuk menampilkan isi utama.
+    loading.value = false;
+  }
+
+  if (article.value) {
+    try {
+      relatedNews.value = await getRelatedNews(article.value, 3);
+    } catch {
+      relatedNews.value = [];
+    }
+  }
 }
 
 async function refreshDetail() {
@@ -196,6 +212,24 @@ function getCategoryStyle(category) {
 
 <template>
   <div class="relative overflow-hidden py-6 lg:py-8">
+    <!-- Jangan tampilkan pesan tidak ditemukan selama request detail masih berjalan. -->
+    <div
+      v-if="loading"
+      class="mx-auto max-w-6xl animate-pulse space-y-5"
+      aria-label="Memuat berita"
+    >
+      <div class="h-4 w-56 rounded bg-slate-200" />
+      <div class="grid gap-8 lg:grid-cols-3">
+        <div class="space-y-4 lg:col-span-2">
+          <div class="h-6 w-28 rounded-full bg-slate-200" />
+          <div class="h-10 w-3/4 rounded bg-slate-200" />
+          <div class="h-4 w-52 rounded bg-slate-200" />
+          <div class="aspect-video rounded-2xl bg-slate-200" />
+        </div>
+        <div class="h-56 rounded-2xl bg-slate-200" />
+      </div>
+    </div>
+
     <!-- ============ NOT FOUND ============ -->
     <Transition
       appear
@@ -204,7 +238,7 @@ function getCategoryStyle(category) {
       enter-to-class="opacity-100 scale-100"
     >
       <div
-        v-if="!article"
+        v-if="!loading && !article"
         class="mx-auto max-w-xl rounded-2xl border border-dashed border-border-default bg-gradient-to-br from-primary-50 via-surface to-rose-50 p-12 text-center"
       >
         <i class="pi pi-exclamation-circle text-3xl text-primary-300" />

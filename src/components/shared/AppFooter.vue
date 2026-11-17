@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import villageLogo from "@/assets/logo-kalurahan-placeholder.svg";
 import publicService from "@/services/publicService";
 
@@ -20,6 +20,9 @@ const defaults = {
 
 const footer = ref({ ...defaults });
 const apiOrigin = String(import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/api\/?$/, "");
+const FOOTER_REFRESH_INTERVAL = 15000;
+let footerRefreshTimer = null;
+let footerRequestInFlight = false;
 
 const iconByPlatform = {
   facebook: "pi-facebook",
@@ -46,7 +49,10 @@ function mediaUrl(value, fallback) {
   return `${apiOrigin}${String(value).startsWith("/") ? "" : "/"}${value}`;
 }
 
-onMounted(async () => {
+async function loadFooter() {
+  if (footerRequestInFlight) return;
+  footerRequestInFlight = true;
+
   try {
     const response = await publicService.getFooterSettings();
     const data = response.data?.data;
@@ -58,7 +64,26 @@ onMounted(async () => {
     };
   } catch (error) {
     console.warn("Pengaturan footer belum dapat dimuat, menggunakan fallback.", error);
+  } finally {
+    footerRequestInFlight = false;
   }
+}
+
+function refreshWhenVisible() {
+  if (!document.hidden) loadFooter();
+}
+
+onMounted(async () => {
+  await loadFooter();
+  footerRefreshTimer = window.setInterval(loadFooter, FOOTER_REFRESH_INTERVAL);
+  window.addEventListener("focus", loadFooter);
+  document.addEventListener("visibilitychange", refreshWhenVisible);
+});
+
+onBeforeUnmount(() => {
+  if (footerRefreshTimer) window.clearInterval(footerRefreshTimer);
+  window.removeEventListener("focus", loadFooter);
+  document.removeEventListener("visibilitychange", refreshWhenVisible);
 });
 
 const footerLinks = [
@@ -86,6 +111,12 @@ const mapEmbedSrc =
             <img
               :src="mediaUrl(footer.logo, villageLogo)"
               :alt="`Logo ${footer.village_name}`"
+              class="w-9 h-9 object-contain shrink-0"
+            />
+            <img
+              v-if="footer.stamp"
+              :src="mediaUrl(footer.stamp, '')"
+              alt="Stempel kalurahan"
               class="w-9 h-9 object-contain shrink-0"
             />
             <b class="font-heading font-bold tracking-tight text-lg uppercase text-white">{{ footer.village_name }}</b>

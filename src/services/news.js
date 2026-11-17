@@ -186,7 +186,7 @@ let cache = null;
 
 export async function fetchAllNews() {
   const res = await api.get("/news");
-  const list = res.data.data.filter((n) => n.status === "Published");
+  const list = (res.data?.data || []).filter((n) => String(n.status || "").toLowerCase() === "published");
   cache = list.map(mapNewsItem);
   return cache;
 }
@@ -196,8 +196,15 @@ export function getAllNewsSync() {
 }
 
 export async function getNewsBySlug(slug, force = false) {
-  if (!cache || force) await fetchAllNews();
-  return cache.find((item) => item.slug === slug) || null;
+  try {
+    const response = await api.get(`/news/slug/${encodeURIComponent(slug)}`);
+    return mapNewsItem(response.data?.data || {});
+  } catch (error) {
+    // Kompatibel dengan backend lama yang belum memiliki endpoint slug.
+    if (error.response?.status !== 404) throw error;
+    if (!cache || force) await fetchAllNews();
+    return cache.find((item) => item.slug === slug) || null;
+  }
 }
 
 export async function getPopularNews(limit = 3) {
