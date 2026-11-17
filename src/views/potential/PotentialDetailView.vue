@@ -81,6 +81,17 @@ const related = ref([])
 // HTML dari rich editor admin: dibersihkan, &nbsp; tunggal jadi spasi biasa.
 const contentHtml = computed(() => renderRich(item.value?.longHtml))
 
+// Tombol "Hubungi Kontak": ambil hanya angka dari kontak, lalu ubah awalan 0 menjadi 62
+// (format internasional) supaya link WhatsApp wa.me berfungsi.
+const contactDigits = computed(() => String(item.value?.contact ?? '').replace(/\D/g, ''))
+
+const whatsappUrl = computed(() => {
+  let number = contactDigits.value
+  if (!number) return ''
+  if (number.startsWith('0')) number = '62' + number.slice(1)
+  return `https://wa.me/${number}`
+})
+
 async function loadData(slug) {
   loading.value = true
   try {
@@ -188,12 +199,17 @@ watch(() => props.slug, (newSlug) => loadData(newSlug))
             <p class="mt-0.5 break-words text-sm font-semibold text-heading">{{ item.contact }}</p>
           </div>
 
-          <button
+          <!-- Dibuka di WhatsApp; disembunyikan kalau data kontak kosong / tidak ada angkanya -->
+          <a
+            v-if="whatsappUrl"
+            :href="whatsappUrl"
+            target="_blank"
+            rel="noopener noreferrer"
             class="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-primary-500 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-primary-600"
           >
-            <i class="pi pi-phone text-xs" />
-            Hubungi Kontak
-          </button>
+            <i class="pi pi-whatsapp text-xs" />
+            Hubungi via WhatsApp
+          </a>
         </aside>
       </div>
 
@@ -209,17 +225,17 @@ watch(() => props.slug, (newSlug) => loadData(newSlug))
             class="related-card group overflow-hidden rounded-2xl border border-border-default bg-surface transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-primary-500/10"
             :style="{ transitionDelay: `${i * 60}ms` }"
           >
-          <div
-            class="flex h-32 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-surface-hover to-border-default transition-transform duration-500 group-hover:scale-105"
-          >
-            <img
-              v-if="r.image"
-              :src="r.image"
-              :alt="r.name"
-              class="h-full w-full object-cover"
-            />
-            <i v-else class="pi pi-image text-2xl text-muted/50" />
-          </div>
+            <div
+              class="flex h-32 w-full items-center justify-center overflow-hidden bg-gradient-to-br from-surface-hover to-border-default transition-transform duration-500 group-hover:scale-105"
+            >
+              <img
+                v-if="r.image"
+                :src="r.image"
+                :alt="r.name"
+                class="h-full w-full object-cover"
+              />
+              <i v-else class="pi pi-image text-2xl text-muted/50" />
+            </div>
             <div class="p-4">
               <p class="text-sm font-bold text-heading">{{ r.name }}</p>
               <p class="mt-1 text-xs text-muted line-clamp-2">{{ r.shortDesc }}</p>
