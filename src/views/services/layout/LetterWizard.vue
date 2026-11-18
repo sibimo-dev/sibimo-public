@@ -141,25 +141,19 @@ const syncResidentData = () => {
   applyHousehold(form, allSections.value, resident.resident, autoFilled, resident.nik);
 };
 syncResidentData();
-watch(
-  [() => resident.nik, () => resident.resident],
-  async () => {
-    syncResidentData();
-    await refreshIncompleteResident();
-    syncResidentData();
-  },
-  { deep: true },
-);
 
 // Session lama bisa menyimpan resident sebelum field tambahan (KK, ayah/ibu,
 // agama, pekerjaan, dan tanggal lahir) dikirim endpoint public. Segarkan sekali
 // saat wizard dibuka agar form tidak bergantung pada cache lama.
+let refreshedNik = null;
 const refreshIncompleteResident = async () => {
+  if (!resident.nik || !resident.isVerified || refreshedNik === resident.nik) return;
   const current = resident.resident;
   const requiredKeys = ["birthPlace", "birthDate", "religion", "occupation", "familyCardNumber", "motherName", "fatherName"];
   const incomplete = !current || requiredKeys.some((key) => !isFilled(current[key]));
-  if (!resident.nik || !resident.isVerified || !incomplete) return;
+  if (!incomplete) return;
 
+  refreshedNik = resident.nik;
   try {
     const response = await publicService.checkCitizenNik(resident.nik);
     const data = response.data?.data;
@@ -168,6 +162,26 @@ const refreshIncompleteResident = async () => {
     // Data cache tetap dipakai bila endpoint sedang tidak tersedia.
   }
 };
+
+watch(
+  [() => resident.nik, () => resident.resident],
+  () => {
+    syncResidentData();
+  },
+  { deep: true },
+);
+
+watch(
+  () => resident.nik,
+  async (newNik, oldNik) => {
+    if (newNik && newNik !== oldNik) {
+      refreshedNik = null;
+      await refreshIncompleteResident();
+      syncResidentData();
+    }
+  },
+);
+
 onMounted(async () => {
   await refreshIncompleteResident();
   syncResidentData();
@@ -178,8 +192,44 @@ const docList = computed(() => normalizeDocs(props.documents, "", form));
 const files = reactive({}); // { [indexDokumen]: File }
 const reusedDocuments = reactive({}); // { [document.id]: citizen document summary }
 const savedDocuments = ref([]);
-const savedDocumentFor = (doc) => savedDocuments.value.find((item) => item.document_type === documentTypeOf(doc.label)) ?? null;
+const savedDocumentFor = (doc) => {
+  const targetType = documentTypeOf(doc.label);
+
+  // 1. Cocokkan tipe dokumen secara persis (misal kk:applicant, ktp:applicant, pas_foto, surat_rt_rw)
+  const exact = savedDocuments.value.find((item) => item.document_type === targetType);
+  if (exact) return exact;
+
+  // 2. Cocokkan bila targetType adalah lainnya:* (misal dokumen pendukung / SKPWNI / spesimen)
+  if (targetType.startsWith("lainnya:")) {
+    const targetSuffix = targetType.replace("lainnya:", "").trim().toLowerCase();
+    const matchLainnya = savedDocuments.value.find((item) => {
+      if (!item.document_type.startsWith("lainnya:")) return false;
+      const itemSuffix = item.document_type.replace("lainnya:", "").trim().toLowerCase();
+      return itemSuffix.includes(targetSuffix) || targetSuffix.includes(itemSuffix);
+    });
+    if (matchLainnya) return matchLainnya;
+  }
+
+  // 3. Cocokkan base type (misal ktp / kk)
+  const base = targetType.split(":")[0];
+  if (["ktp", "kk", "akta_kelahiran", "paspor"].includes(base)) {
+    const byBase = savedDocuments.value.find((item) => item.document_type.startsWith(base + ":") || item.document_type === base);
+    if (byBase) return byBase;
+  }
+
+  return null;
+};
 const reusedDocumentFor = (doc) => reusedDocuments[doc.id] ?? null;
+
+const applySavedDocumentsToDocs = () => {
+  for (const doc of docList.value) {
+    const saved = savedDocumentFor(doc);
+    if (saved && !files[doc.id] && !reusedDocuments[doc.id]) {
+      reusedDocuments[doc.id] = saved;
+    }
+  }
+};
+
 async function loadSavedDocuments() {
   if (isPermitScope.value || !resident.nik || !resident.isVerified || !onlineSlug.value) {
     savedDocuments.value = [];
@@ -188,21 +238,14 @@ async function loadSavedDocuments() {
   try {
     const type = await getOnlineLetterTypeBySlug(onlineSlug.value);
     savedDocuments.value = type?.code ? await getReusableDocuments({ nik: resident.nik, letterTypeCode: type.code }) : [];
-
-    // Dokumen yang cocok langsung dipakai pada pengajuan berikutnya. Browser
-    // memang tidak mengizinkan pengisian input file secara programatis, jadi
-    // dokumen tersimpan ditandai sebagai lampiran terpilih untuk dikirim ulang.
-    for (const doc of docList.value) {
-      const saved = savedDocumentFor(doc);
-      if (saved && !files[doc.id] && !reusedDocuments[doc.id]) {
-        reusedDocuments[doc.id] = saved;
-      }
-    }
+    applySavedDocumentsToDocs();
   } catch {
     savedDocuments.value = [];
   }
 }
 watch([() => resident.nik, onlineSlug], loadSavedDocuments, { immediate: true });
+watch(docList, applySavedDocumentsToDocs, { deep: true });
+watch(savedDocuments, applySavedDocumentsToDocs, { deep: true });
 const reuseSavedDocument = (id, saved) => {
   delete files[id];
   reusedDocuments[id] = saved;
