@@ -9,13 +9,14 @@ const normalize = (value) => String(value ?? "").toLowerCase().replace(/[^a-z0-9
 export function documentTypeOf(value) {
   const name = String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ");
   let base = "lainnya";
-  if (name.includes("kartu keluarga") || /\bkk\b/.test(name)) base = "kk";
+  if (name.includes("kehilangan") || name.includes("kepolisian") || name.includes("laporan polisi")) base = "lainnya";
+  else if (name.includes("kartu keluarga") || /\bkk\b/.test(name)) base = "kk";
   else if (name.includes("paspor") || name.includes("passport")) base = "paspor";
   else if (name.includes("akta kelahiran") || name.includes("akta lahir") || name.includes("surat keterangan lahir")) base = "akta_kelahiran";
   else if (name.includes("akta perkawinan") || name.includes("buku nikah") || name.includes("akta nikah")) base = "akta_perkawinan";
   else if (name.includes("akta perceraian") || name.includes("surat cerai") || name.includes("cerai")) base = "akta_perceraian";
   else if (name.includes("surat kematian") || name.includes("akta kematian") || name.includes("meninggal") || name.includes("almarhum")) base = "surat_kematian";
-  else if (name.includes("pas foto") || name.includes("pass photo") || /\bfoto\b/.test(name)) base = "pas_foto";
+  else if (name.includes("pas foto") || name.includes("pass photo") || /\bpas\s*foto\b/.test(name) || (name.includes("foto") && !name.includes("fotokopi") && !name.includes("fotocopy"))) base = "pas_foto";
   else if (name.includes("pbb")) base = "pbb";
   else if (name.includes("shm") || name.includes("letter c")) base = "letter_c";
   else if (name.includes("rt rw") || name.includes("rt atau rw")) base = "surat_rt_rw";
@@ -106,26 +107,36 @@ function cleanFormValue(value, key = "") {
   return value;
 }
 
-function resolveDocumentId(label, documents) {
+export function resolveDocumentId(label, documents, usedIds = new Set()) {
+  const targetType = documentTypeOf(label);
   const normalizedLabel = normalize(label);
-  const exact = documents.find((document) => normalize(document.document_name) === normalizedLabel);
+
+  // 1. Cocokkan nama dokumen secara persis
+  const exact = documents.find((doc) => !usedIds.has(doc.letter_type_document_id) && normalize(doc.document_name) === normalizedLabel);
   if (exact) return exact.letter_type_document_id;
 
+  // 2. Cocokkan tipe dokumen yang sama (mis. pas_foto -> Pass Photo, kk:applicant -> Fotocopy KK, ktp:applicant -> Fotocopy KTP)
+  const byType = documents.find((doc) => !usedIds.has(doc.letter_type_document_id) && documentTypeOf(doc.document_name) === targetType);
+  if (byType) return byType.letter_type_document_id;
+
+  // 3. Cocokkan alias kata kunci (hindari 'foto' mencocokkan 'fotocopy' / 'fotokopi')
   const aliases = [
-    { needles: ["kk"], candidates: ["kk"] },
-    { needles: ["kartutanda", "ktp"], candidates: ["ktp", "kartutanda"] },
-    // Backend menggunakan "Pass Photo (3x4)", sedangkan label form publik
-    // menggunakan "Pas foto 3x4". Keduanya harus menunjuk dokumen yang sama.
-    { needles: ["pasfoto", "passfoto", "passphoto", "foto"], candidates: ["pasfoto", "passfoto", "passphoto", "foto", "photo"] },
+    { needles: ["kk", "kartukeluarga"], candidates: ["kartukeluarga", "kk"] },
+    { needles: ["ktp", "kartutanda"], candidates: ["kartutandapenduduk", "ktp"] },
+    { needles: ["pasfoto", "passfoto", "passphoto", "foto3x4", "foto4x6"], candidates: ["passphoto", "pasfoto", "photo"] },
   ];
   const alias = aliases.find(({ needles }) => needles.some((needle) => normalizedLabel.includes(needle)));
   if (alias) {
-    const match = documents.find((document) => alias.candidates.some((candidate) => normalize(document.document_name).includes(candidate)));
+    const match = documents.find((document) => !usedIds.has(document.letter_type_document_id) && alias.candidates.some((candidate) => normalize(document.document_name).includes(candidate)));
     if (match) return match.letter_type_document_id;
   }
 
-  const fallback = documents.find((document) => !document.is_required && /lain|pendukung|tambahan/i.test(document.document_name));
-  return fallback?.letter_type_document_id ?? documents[0]?.letter_type_document_id ?? null;
+  // 4. Fallback ke dokumen pendukung lainnya
+  const fallback = documents.find((document) => !usedIds.has(document.letter_type_document_id) && !document.is_required && /lain|pendukung|tambahan/i.test(document.document_name));
+  if (fallback) return fallback.letter_type_document_id;
+
+  const unused = documents.find((doc) => !usedIds.has(doc.letter_type_document_id));
+  return unused?.letter_type_document_id ?? documents[0]?.letter_type_document_id ?? null;
 }
 
 export async function submitOnlineLetter({ slug, form, files, documents, reusedDocuments = {}, resident, serviceFlow, isNewResident }) {
@@ -195,16 +206,22 @@ export async function submitOnlineLetter({ slug, form, files, documents, reusedD
   if (serviceFlow) payload.append("service_flow", String(serviceFlow));
   if (isNewResident) payload.append("is_new_resident", "1");
 
+  const usedDocumentIds = new Set();
+
   for (const document of documents ?? []) {
     let file = files?.[document.id];
-    const documentId = resolveDocumentId(document.label, type.documents ?? []);
+    const documentId = resolveDocumentId(document.label, type.documents ?? [], usedDocumentIds);
     if (!documentId) throw new Error(`Dokumen ${document.label} belum memiliki konfigurasi backend.`);
     if (file) {
       file = await compressImage(file);
       payload.append("attachments[]", file, file.name);
       payload.append("attachment_document_ids[]", String(documentId));
+      payload.append("attachment_document_labels[]", document.label);
+      usedDocumentIds.add(documentId);
     } else if (reusedDocuments[document.id]) {
       payload.append(`reused_document_ids[${documentId}]`, String(reusedDocuments[document.id].citizen_document_id ?? reusedDocuments[document.id]));
+      payload.append(`reused_document_labels[${documentId}]`, document.label);
+      usedDocumentIds.add(documentId);
     }
   }
 

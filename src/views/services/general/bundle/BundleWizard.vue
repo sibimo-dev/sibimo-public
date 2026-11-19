@@ -90,12 +90,15 @@ watch([() => resident.resident?.fullName, () => form.name, () => form.fullName],
 
 // Segarkan cache verifikasi lama agar field tambahan dari endpoint public
 // (termasuk nomor KK dan nama ayah/ibu) ikut tersedia di paket surat.
+let refreshedNik = null;
 const refreshIncompleteResident = async () => {
+  if (!resident.nik || !resident.isVerified || refreshedNik === resident.nik) return;
   const current = resident.resident;
   const requiredKeys = ["birthPlace", "birthDate", "religion", "occupation", "familyCardNumber", "motherName", "fatherName"];
   const incomplete = !current || requiredKeys.some((key) => !isFilled(current[key]));
-  if (!resident.nik || !resident.isVerified || !incomplete) return;
+  if (!incomplete) return;
 
+  refreshedNik = resident.nik;
   try {
     const response = await publicService.checkCitizenNik(resident.nik);
     const data = response.data?.data;
@@ -109,7 +112,33 @@ onMounted(refreshIncompleteResident);
 const files = reactive({}); // { "<letterId>::<index>": File }
 const reusedDocuments = reactive({}); // { [shared document id]: citizen document summary }
 const savedDocuments = ref([]);
-const savedDocumentFor = (doc) => savedDocuments.value.find((item) => item.document_type === documentTypeOf(doc.label)) ?? null;
+const savedDocumentFor = (doc) => {
+  const targetType = documentTypeOf(doc.label);
+
+  // 1. Cocokkan tipe dokumen secara persis (misal kk:applicant, ktp:applicant, pas_foto, surat_rt_rw)
+  const exact = savedDocuments.value.find((item) => item.document_type === targetType);
+  if (exact) return exact;
+
+  // 2. Cocokkan bila targetType adalah lainnya:* (misal dokumen pendukung / SKPWNI / spesimen)
+  if (targetType.startsWith("lainnya:")) {
+    const targetSuffix = targetType.replace("lainnya:", "").trim().toLowerCase();
+    const matchLainnya = savedDocuments.value.find((item) => {
+      if (!item.document_type.startsWith("lainnya:")) return false;
+      const itemSuffix = item.document_type.replace("lainnya:", "").trim().toLowerCase();
+      return itemSuffix.includes(targetSuffix) || targetSuffix.includes(itemSuffix);
+    });
+    if (matchLainnya) return matchLainnya;
+  }
+
+  // 3. Cocokkan base type (misal ktp / kk)
+  const base = targetType.split(":")[0];
+  if (["ktp", "kk", "akta_kelahiran", "paspor"].includes(base)) {
+    const byBase = savedDocuments.value.find((item) => item.document_type.startsWith(base + ":") || item.document_type === base);
+    if (byBase) return byBase;
+  }
+
+  return null;
+};
 const reusedDocumentFor = (doc) => reusedDocuments[doc.id] ?? null;
 async function loadSavedDocuments() {
   if (!resident.nik || !resident.isVerified || !selectedLetters.value.length) {
