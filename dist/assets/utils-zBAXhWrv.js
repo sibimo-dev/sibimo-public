@@ -1,0 +1,1 @@
+import{dt as e,j as t,ot as n}from"./index-Mr8A2koL.js";function r(){e({variableName:t(`scrollbar.width`).name})}function i(){n({variableName:t(`scrollbar.width`).name})}export{i as n,r as t};
