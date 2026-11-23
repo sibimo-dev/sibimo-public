@@ -68,6 +68,7 @@ function groupByMonth(agendas) {
         dayHighlight: String(d.getDate()).padStart(2, "0"),
         title: `Agenda ${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`,
         location: "Kalurahan Bimomartani",
+        coverImage: null,
         excerpt: "",
         items: [],
       });
@@ -77,10 +78,13 @@ function groupByMonth(agendas) {
 
   return Array.from(groups.values()).map((group) => {
     const itemTitles = group.items.slice(0, 3).map((a) => a.title).join(", ");
+    const items = group.items.map(mapAgendaItem);
+    const coverImage = items.find((agenda) => agenda.attachmentUrl && agenda.attachmentIsImage)?.attachmentUrl ?? null;
     return {
       ...group,
+      coverImage,
       excerpt: itemTitles ? `${itemTitles}, dan agenda lainnya.` : "Belum ada agenda pada bulan ini.",
-      items: group.items.map(mapAgendaItem),
+      items,
     };
   });
 }

@@ -168,6 +168,10 @@ const emptyMessage = computed(
             >
               <span class="absolute inset-x-0 top-0 z-10 h-1 bg-gradient-to-r from-sky-400 to-violet-500" />
 
+              <div v-if="item.coverImage" class="aspect-[16/7] overflow-hidden bg-sky-50">
+                <img :src="item.coverImage" :alt="item.title" class="h-full w-full object-cover" loading="lazy" />
+              </div>
+
               <div class="p-4 sm:p-5 min-w-0">
                 <p class="mb-2 text-[12px] font-bold uppercase tracking-wider text-muted sm:hidden">
                   {{ item.monthLabel }} {{ item.year }}
