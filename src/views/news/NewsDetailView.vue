@@ -75,16 +75,51 @@ function handleImageError(event) {
 }
 
 /**
+ * Ubah spasi "keras" (&nbsp;, &#160;, U+00A0, dan karakter lebar nol) menjadi spasi biasa.
+ * Spasi keras berasal dari paste (WhatsApp/Word) dan membuat paragraf tidak bisa
+ * pindah baris di antara kata, sehingga teks terpotong di tengah kata.
+ */
+function normalizeSpaces(html) {
+  return String(html || "")
+    .replace(/&nbsp;|&#160;|&#xa0;/gi, " ")
+    .replace(/[\u00A0\u202F\u2007]/g, " ")
+    .replace(/[\u200B\u200C\u200D\u2060\uFEFF]/g, "");
+}
+
+/**
  * Bersihkan HTML berita sebelum dirender. Konten berasal dari editor/admin,
  * jadi v-html tidak boleh menerima HTML mentah tanpa sanitasi.
  */
-const sanitizeContent = (html) => DOMPurify.sanitize(String(html || ""), {
-  ADD_ATTR: ["target", "rel"],
-});
+const sanitizeContent = (html) =>
+  DOMPurify.sanitize(normalizeSpaces(html), {
+    ADD_ATTR: ["target", "rel"],
+  });
+
+// Properti inline style yang mengganggu tata letak dan harus dibuang dari konten editor.
+// "text-align" sengaja TIDAK ada di daftar ini, supaya perataan dari editor tetap dipakai.
+const BLOCKED_STYLE_PROPS = [
+  "white-space",
+  "word-break",
+  "overflow-wrap",
+  "word-wrap",
+  "hyphens",
+  "width",
+  "min-width",
+  "max-width",
+  "height",
+  "min-height",
+  "max-height",
+  "float",
+  "position",
+  "margin-left",
+  "margin-right",
+  "text-indent",
+];
 
 /**
  * Pastikan semua link (baik tag <a> dari editor maupun URL mentah)
- * bisa diklik dan terbuka di tab baru dengan aman.
+ * bisa diklik dan terbuka di tab baru dengan aman. Sekaligus menormalkan
+ * gambar (selalu selebar kolom) dan membuang style inline yang merusak layout.
  */
 function enhanceContentLinks(html) {
   const safeHtml = sanitizeContent(html);
@@ -92,14 +127,32 @@ function enhanceContentLinks(html) {
   try {
     const doc = new DOMParser().parseFromString(safeHtml, "text/html");
 
-    // 1. Tag <a> yang sudah ada: pastikan target="_blank" & styling aktif
+    // 0. Buang style inline yang membuat teks/gambar tidak sesuai wadah
+    doc.body.querySelectorAll("[style]").forEach((el) => {
+      BLOCKED_STYLE_PROPS.forEach((prop) => el.style.removeProperty(prop));
+      if (!el.getAttribute("style")?.trim()) el.removeAttribute("style");
+    });
+
+    // 1. Gambar: buang ukuran/posisi bawaan editor, selalu fit selebar kolom
+    doc.querySelectorAll("img").forEach((img) => {
+      img.removeAttribute("width");
+      img.removeAttribute("height");
+      img.removeAttribute("style");
+      img.removeAttribute("data-layout");
+      img.removeAttribute("data-align");
+      img.removeAttribute("data-x");
+      img.removeAttribute("data-y");
+      img.setAttribute("loading", "lazy");
+    });
+
+    // 2. Tag <a> yang sudah ada: pastikan target="_blank" & styling aktif
     doc.querySelectorAll("a").forEach((a) => {
       a.setAttribute("target", "_blank");
       a.setAttribute("rel", "noopener noreferrer");
       a.classList.add("cursor-pointer", "underline", "text-primary-700", "hover:text-primary-800", "break-all");
     });
 
-    // 2. URL mentah (http/https) dalam teks biasa yang belum di-link
+    // 3. URL mentah (http/https) dalam teks biasa yang belum di-link
     const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
     const textNodes = [];
     while (walker.nextNode()) {
@@ -145,6 +198,43 @@ function enhanceContentLinks(html) {
 const renderedContent = computed(() => {
   return enhanceContentLinks(article.value?.rawContent || "");
 });
+
+/* ============ Styling isi berita (HTML dari editor Quill) ============
+   Semua pakai Tailwind lewat arbitrary variant, tanpa blok <style>.
+
+   Perataan teks:
+   - Default paragraf/daftar/kutipan = rata kanan-kiri (text-justify).
+   - Setelan dari editor tetap menang: inline `style="text-align:..."` selalu mengalahkan
+     class Tailwind, sedangkan class lama `ql-align-*` diberi varian dengan spesifisitas lebih tinggi.
+   - Heading tidak ikut justify (tetap rata kiri). */
+const CONTENT_CLASS = [
+  // wadah
+  "w-full min-w-0 max-w-full overflow-hidden break-words text-[14.5px] leading-relaxed text-default sm:text-[15px]",
+  "[word-break:normal] [hyphens:none] [&_*]:max-w-full",
+  // paragraf: default rata kanan-kiri; teks hanya pindah baris di spasi
+  "[&_p]:mb-3 [&_p]:text-justify [&_p]:leading-[1.75] [&_p]:indent-0 [&_p]:break-words [&_p]:!whitespace-normal [&_p]:![word-break:normal]",
+  "[&_span]:!whitespace-normal",
+  // perataan lama dari Quill (class ql-align-*)
+  "[&_.ql-align-center]:text-center [&_.ql-align-right]:text-right [&_.ql-align-justify]:text-justify [&_.ql-align-left]:text-left",
+  // daftar
+  "[&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-6",
+  "[&_li]:mb-1 [&_li]:text-justify [&_li]:break-words [&_li]:!whitespace-normal",
+  // heading
+  "[&_h1]:mb-2 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:leading-snug [&_h1]:break-words",
+  "[&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:leading-snug [&_h2]:break-words",
+  "[&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:leading-snug [&_h3]:break-words",
+  // gambar: selalu selebar kolom, tinggi mengikuti rasio asli
+  "[&_img]:my-3 [&_img]:block [&_img]:!float-none [&_img]:!static [&_img]:!transform-none [&_img]:!h-auto [&_img]:!w-full [&_img]:!max-w-full [&_img]:rounded-xl",
+  // blok kode
+  "[&_pre]:my-3 [&_pre]:max-w-full [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_pre]:rounded-xl [&_pre]:bg-slate-50 [&_pre]:px-4 [&_pre]:py-3",
+  "[&_code]:max-w-full [&_code]:whitespace-pre-wrap [&_code]:break-words",
+  // tabel
+  "[&_table]:my-3 [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_table]:border-collapse",
+  "[&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:px-2.5 [&_th]:py-2 [&_th]:text-left [&_th]:align-top [&_th]:font-bold [&_th]:whitespace-normal",
+  "[&_td]:border [&_td]:border-slate-200 [&_td]:px-2.5 [&_td]:py-2 [&_td]:text-left [&_td]:align-top [&_td]:whitespace-normal",
+  // kutipan
+  "[&_blockquote]:my-3 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-200 [&_blockquote]:pl-4 [&_blockquote]:text-slate-500 [&_blockquote]:text-justify",
+].join(" ");
 
 /* ============ Warna per kategori (konsisten dgn halaman Berita & Gallery) ============
    Dihitung otomatis dari nama kategori (hash) supaya tidak perlu daftar hardcode. */
@@ -333,9 +423,10 @@ function getCategoryStyle(category) {
               <i v-else class="pi pi-image text-4xl text-white/50" />
             </div>
 
-            <!-- Konten berita dirender langsung sebagai HTML agar link, bold, dsb tampil benar -->
+            <!-- Konten berita dirender sebagai HTML; styling lewat CONTENT_CLASS (Tailwind) -->
             <div
-              class="news-content mt-6 w-full min-w-0 max-w-full overflow-hidden text-[14.5px] leading-relaxed text-default sm:text-[15px]"
+              class="mt-6"
+              :class="CONTENT_CLASS"
               v-html="renderedContent"
             />
 
@@ -436,116 +527,3 @@ function getCategoryStyle(category) {
     </template>
   </div>
 </template>
-
-
-<style scoped>
-/* Styling konten berita yang dirender via v-html (dari Quill editor) */
-.news-content {
-  overflow-wrap: anywhere;
-  word-break: normal;
-}
-.news-content :deep(*) {
-  box-sizing: border-box;
-  max-width: 100%;
-}
-.news-content :deep(p) {
-  margin-bottom: 0.75rem;
-  line-height: 1.75;
-  white-space: normal !important;
-  overflow-wrap: anywhere;
-}
-.news-content :deep(a) {
-  color: var(--p-primary-700, #1d4ed8);
-  text-decoration: underline;
-  word-break: break-all;
-}
-.news-content :deep(a:hover) {
-  color: var(--p-primary-800, #1e40af);
-}
-.news-content :deep(strong),
-.news-content :deep(b) {
-  font-weight: 700;
-}
-.news-content :deep(em),
-.news-content :deep(i) {
-  font-style: italic;
-}
-.news-content :deep(ul),
-.news-content :deep(ol) {
-  padding-left: 1.5rem;
-  margin-bottom: 0.75rem;
-}
-.news-content :deep(ul) {
-  list-style-type: disc;
-}
-.news-content :deep(ol) {
-  list-style-type: decimal;
-}
-.news-content :deep(li) {
-  margin-bottom: 0.25rem;
-  white-space: normal !important;
-  overflow-wrap: anywhere;
-}
-.news-content :deep(img) {
-  display: block;
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  border-radius: 0.75rem;
-  margin: 0.5rem 0;
-}
-.news-content :deep(pre),
-.news-content :deep(code) {
-  max-width: 100%;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.news-content :deep(pre) {
-  overflow-x: auto;
-  border-radius: 0.75rem;
-  background: #f8fafc;
-  padding: 0.75rem 1rem;
-}
-.news-content :deep(table) {
-  display: block;
-  width: 100%;
-  overflow-x: auto;
-  border-collapse: collapse;
-  margin: 0.75rem 0;
-}
-.news-content :deep(th),
-.news-content :deep(td) {
-  border: 1px solid #e2e8f0;
-  padding: 0.5rem 0.65rem;
-  text-align: left;
-  vertical-align: top;
-  white-space: normal;
-}
-.news-content :deep(th) {
-  background: #f8fafc;
-  font-weight: 700;
-}
-.news-content :deep(blockquote) {
-  border-left: 4px solid #e5e7eb;
-  padding-left: 1rem;
-  color: #6b7280;
-  margin: 0.75rem 0;
-}
-.news-content :deep(h1),
-.news-content :deep(h2),
-.news-content :deep(h3) {
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
-.news-content :deep(.ql-align-center) {
-  text-align: center;
-}
-.news-content :deep(.ql-align-right) {
-  text-align: right;
-}
-.news-content :deep(.ql-align-justify) {
-  text-align: justify;
-}
-</style>
