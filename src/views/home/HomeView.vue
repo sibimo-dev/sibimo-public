@@ -251,10 +251,15 @@ const documentSteps = [
 
 /* Memotong excerpt di batas kata terdekat + "…" eksplisit, supaya
    preview berita tidak terpotong janggal di tengah kalimat seperti
-   saat mengandalkan line-clamp CSS saja. */
+   saat mengandalkan line-clamp CSS saja.
+   Spasi non-breaking (&nbsp; / U+00A0) diganti spasi biasa lebih dulu,
+   sebagai pengaman untuk data lama yang masih tersimpan di cache. */
 function truncateExcerpt(text, maxLength = 100) {
   if (!text) return "";
-  const clean = text.trim().replace(/\s+/g, " ");
+  const clean = text
+    .replace(/&nbsp;|\u00a0/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
   if (clean.length <= maxLength) return clean;
   const cut = clean.slice(0, maxLength);
   const lastSpace = cut.lastIndexOf(" ");
@@ -313,7 +318,7 @@ async function loadHome() {
 
 /* ============ SLIDER BERITA UTAMA ============
    Panel besar berganti otomatis; daftar "Berita Terkini" di sampingnya
-   berfungsi sebagai tab (klik = ganti panel besar). */
+   berfungsi sebagai tab (hover/fokus = ganti panel besar, klik = buka detail berita). */
 const NEWS_DELAY = 5500;
 const activeNews = ref(0);
 const newsPaused = ref(false);
@@ -337,6 +342,7 @@ function startNewsTimer() {
 }
 
 function selectNews(i) {
+  if (activeNews.value === i) return;
   activeNews.value = i;
   startNewsTimer();
 }
@@ -574,11 +580,13 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <div
-            v-for="(item, i) in agendaList"
-            :key="item.key"
-            class="flex items-start gap-3 rounded-xl border border-white/15 bg-white/5 p-3 hover:bg-white/10 transition-colors"
-          >
+          <!-- Tiap agenda bisa diklik -> halaman Agenda -->
+          <RouterLink
+              v-for="(item, i) in agendaList"
+              :key="item.key"
+              :to="{ name: 'events', query: { agenda: item.key } }"
+              class="flex items-start gap-3 rounded-xl border border-white/15 bg-white/5 p-3 hover:bg-white/10 transition-colors"
+            >
             <div
               class="shrink-0 w-11 rounded-lg text-white text-center py-1.5 leading-tight bg-gradient-to-br"
               :class="colorAt(i).gradient"
@@ -595,7 +603,7 @@ onBeforeUnmount(() => {
                 {{ item.time }}
               </p>
             </div>
-          </div>
+          </RouterLink>
 
           <!-- Pengisi sisa ruang (hanya bila agenda < 3), supaya kartu tidak tampak kosong -->
           <div
@@ -768,7 +776,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <!-- Daftar Berita Terkini (berfungsi seperti tab) -->
+        <!-- Daftar Berita Terkini: hover/fokus mengganti panel besar, klik membuka detail berita -->
         <div class="relative flex max-h-[380px] flex-col overflow-hidden rounded-3xl border border-border-default bg-surface p-4 lg:h-[460px] lg:max-h-none">
           <div class="mb-2 flex items-center gap-2 px-1">
             <span class="relative flex h-2.5 w-2.5">
@@ -780,12 +788,13 @@ onBeforeUnmount(() => {
 
           <ul class="m-0 flex flex-1 list-none flex-col gap-1.5 overflow-y-auto p-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <li v-for="(item, i) in newsList" :key="item.slug">
-              <button
-                type="button"
+              <RouterLink
+                :to="{ name: 'news-detail', params: { slug: item.slug } }"
                 class="relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border p-2.5 text-left transition-colors"
                 :class="i === activeNews ? 'border-primary-200 bg-primary-50' : 'border-transparent hover:bg-primary-50/60'"
                 :aria-current="i === activeNews ? 'true' : undefined"
-                @click="selectNews(i)"
+                @mouseenter="selectNews(i)"
+                @focus="selectNews(i)"
               >
                 <div
                   class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl"
@@ -820,7 +829,7 @@ onBeforeUnmount(() => {
                     :style="{ animationDuration: NEWS_DELAY + 'ms', animationPlayState: newsPaused ? 'paused' : 'running' }"
                   />
                 </span>
-              </button>
+              </RouterLink>
             </li>
           </ul>
         </div>
@@ -845,10 +854,12 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="rounded-2xl border border-border-default bg-surface divide-y divide-border-default overflow-hidden">
-        <div
+        <!-- Tiap baris aduan bisa diklik -> halaman Pengaduan -->
+        <RouterLink
           v-for="item in complaintsList"
           :key="item.complaint_id ?? item.title"
-          class="flex items-center gap-3.5 p-4 sm:p-5 border-l-4"
+          :to="{ name: 'complaints' }"
+          class="flex items-center gap-3.5 p-4 sm:p-5 border-l-4 transition-colors hover:bg-primary-50/50"
           :class="colorForSeverity(item.severity).border.split(' ')[0]"
         >
           <div
@@ -863,7 +874,7 @@ onBeforeUnmount(() => {
           </div>
           <div class="hidden sm:block text-[12px] text-muted shrink-0">{{ item.date }}</div>
           <Tag :value="item.status" :severity="item.severity" class="!text-[10.5px] !font-bold shrink-0" />
-        </div>
+        </RouterLink>
 
         <div v-if="!complaintsList.length" class="p-6 text-center text-[13px] text-muted">
           Belum ada aduan yang dapat ditampilkan.
