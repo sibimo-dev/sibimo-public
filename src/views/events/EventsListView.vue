@@ -164,15 +164,15 @@ const emptyMessage = computed(
           <!-- kartu agenda -->
           <div class="flex-1 min-w-0 pb-6 sm:pb-8">
             <div
-              class="relative overflow-hidden rounded-2xl border border-border-default bg-surface hover:shadow-md hover:border-sky-300 transition-all duration-300"
+              class="relative overflow-hidden rounded-2xl border border-border-default bg-surface hover:shadow-md hover:border-sky-300 transition-all duration-300 sm:flex"
             >
               <span class="absolute inset-x-0 top-0 z-10 h-1 bg-gradient-to-r from-sky-400 to-violet-500" />
 
-              <div v-if="item.coverImage" class="aspect-[16/7] overflow-hidden bg-sky-50">
-                <img :src="item.coverImage" :alt="item.title" class="h-full w-full object-cover" loading="lazy" />
+              <div v-if="item.coverImage" class="aspect-[16/7] overflow-hidden bg-sky-50 sm:relative sm:aspect-auto sm:w-44 sm:shrink-0">
+                <img :src="item.coverImage" :alt="item.title" class="h-full w-full object-cover sm:absolute sm:inset-0" loading="lazy" />
               </div>
 
-              <div class="p-4 sm:p-5 min-w-0">
+              <div class="p-4 sm:p-5 min-w-0 sm:flex-1">
                 <p class="mb-2 text-[12px] font-bold uppercase tracking-wider text-muted sm:hidden">
                   {{ item.monthLabel }} {{ item.year }}
                 </p>

@@ -1,7 +1,7 @@
 import api from './api'
 
-// v3: jumlah berita (4) & aduan (3) berubah, jadi cache lama (v2) tidak dipakai lagi.
-const HOME_CACHE_KEY = 'sibimo-public-home-v5'
+// v6: excerpt berita sekarang di-decode (tanpa &nbsp;), jadi cache lama (v5) tidak dipakai lagi.
+const HOME_CACHE_KEY = 'sibimo-public-home-v6'
 
 const DAY_NAMES = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU']
 const MONTH_NAMES = [
@@ -69,6 +69,22 @@ function pick(item, keys) {
   return null
 }
 
+/* Mengubah HTML dari rich editor jadi teks biasa.
+   DOMParser meng-decode entitas (&nbsp;, &amp;, dst) dan tidak menjalankan script.
+   Spasi non-breaking (U+00A0) diganti spasi biasa supaya teks bisa terpotong rapi di batas kata. */
+function htmlToText(html) {
+  const source = String(html || '')
+  if (!source) return ''
+  let text = source
+  if (typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString(source, 'text/html')
+    text = doc.body.textContent || ''
+  } else {
+    text = source.replace(/<[^>]+>/g, '')
+  }
+  return text.replace(/\u00a0/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
 /* Mengubah path gambar dari backend jadi alamat lengkap.
    Aturannya sama dengan mediaUrl() di sibimo-admin:
    "galleries/a.jpg" | "/storage/galleries/a.jpg" | "storage/galleries/a.jpg"
@@ -129,7 +145,7 @@ function normalizeNews(items) {
       slug: item.slug || slugify(item.title, item.news_id),
       title: item.title || 'Tanpa judul',
       category: item.category?.category_name || item.category_name || 'Umum',
-      excerpt: String(item.content || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
+      excerpt: htmlToText(item.content),
       date: item.published_at
         ? new Date(item.published_at).toLocaleDateString('id-ID', {
             day: '2-digit', month: 'short', year: 'numeric',
