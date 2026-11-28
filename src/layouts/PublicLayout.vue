@@ -11,10 +11,12 @@ import {
 } from "@/components/shared/navMenu.js";
 import AppFooter from "@/components/shared/AppFooter.vue";
 import AnnouncementTicker from "@/components/shared/AnnouncementTicker.vue";
+import { usePublicFooterSettings } from "@/stores/publicFooter";
 
 import villageLogo from "@/assets/logo-kalurahan-placeholder.svg";
 
 const route = useRoute();
+const { footer, mediaUrl } = usePublicFooterSettings();
 
 // Sinkron dengan breakpoint="1024px" milik Menubar di bawah.
 const isDesktop = ref(true);
@@ -105,11 +107,9 @@ const menubarPt = {
               :to="{ name: 'home' }"
               class="flex items-center gap-2.5 sm:gap-3 shrink-0 lg:mr-6 order-2 lg:order-none min-w-0"
             >
-              <Avatar :image="villageLogo" shape="square" size="large" class="!w-9 !h-9 sm:!w-10 sm:!h-10 shrink-0" />
+              <Avatar :image="mediaUrl(footer.logo, villageLogo)" shape="square" size="large" class="!w-9 !h-9 sm:!w-10 sm:!h-10 shrink-0" />
               <span class="flex flex-col leading-tight min-w-0">
-                <b class="font-heading font-bold tracking-tight text-sm sm:text-lg uppercase text-white truncate">
-                  Kalurahan Bimomartani
-                </b>
+                <b class="font-heading font-bold tracking-tight text-sm sm:text-lg uppercase text-white truncate">{{ footer.village_name }}</b>
                 <small class="block text-[10px] sm:text-[11.5px] text-white/80 font-medium truncate">
                   Kapanewon Ngemplak, Kabupaten Sleman
                 </small>

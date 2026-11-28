@@ -1,28 +1,9 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed } from "vue";
 import villageLogo from "@/assets/logo-kalurahan-placeholder.svg";
-import publicService from "@/services/publicService";
+import { usePublicFooterSettings } from "@/stores/publicFooter";
 
-const defaults = {
-  village_name: "Kalurahan Bimomartani",
-  description:
-    "Website resmi Pemerintah Kalurahan Bimomartani, Kapanewon Ngemplak, Kabupaten Sleman, Provinsi Daerah Istimewa Yogyakarta.",
-  address: "Dusun Krajan, Bimomartani, Ngemplak, Sleman, D.I. Yogyakarta, 55584.",
-  phone: "0812-3456-7890",
-  email: "desa.bimomartani@slemankab.go.id",
-  social_media: [
-    { platform: "Facebook", url: "#" },
-    { platform: "Instagram", url: "#" },
-    { platform: "YouTube", url: "#" },
-    { platform: "WhatsApp", url: "#" },
-  ],
-};
-
-const footer = ref({ ...defaults });
-const apiOrigin = String(import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/api\/?$/, "");
-const FOOTER_REFRESH_INTERVAL = 15000;
-let footerRefreshTimer = null;
-let footerRequestInFlight = false;
+const { footer, mediaUrl } = usePublicFooterSettings();
 
 const iconByPlatform = {
   facebook: "pi-facebook",
@@ -42,49 +23,6 @@ const socialLinks = computed(() => (Array.isArray(footer.value.social_media) ? f
     label: item.platform,
     icon: iconByPlatform[String(item.platform).toLowerCase()] ?? "pi-link",
   })));
-
-function mediaUrl(value, fallback) {
-  if (!value) return fallback;
-  if (/^https?:\/\//i.test(value)) return value;
-  return `${apiOrigin}${String(value).startsWith("/") ? "" : "/"}${value}`;
-}
-
-async function loadFooter() {
-  if (footerRequestInFlight) return;
-  footerRequestInFlight = true;
-
-  try {
-    const response = await publicService.getFooterSettings();
-    const data = response.data?.data;
-    if (!data) return;
-    footer.value = {
-      ...defaults,
-      ...data,
-      social_media: Array.isArray(data.social_media) ? data.social_media : [],
-    };
-  } catch (error) {
-    console.warn("Pengaturan footer belum dapat dimuat, menggunakan fallback.", error);
-  } finally {
-    footerRequestInFlight = false;
-  }
-}
-
-function refreshWhenVisible() {
-  if (!document.hidden) loadFooter();
-}
-
-onMounted(async () => {
-  await loadFooter();
-  footerRefreshTimer = window.setInterval(loadFooter, FOOTER_REFRESH_INTERVAL);
-  window.addEventListener("focus", loadFooter);
-  document.addEventListener("visibilitychange", refreshWhenVisible);
-});
-
-onBeforeUnmount(() => {
-  if (footerRefreshTimer) window.clearInterval(footerRefreshTimer);
-  window.removeEventListener("focus", loadFooter);
-  document.removeEventListener("visibilitychange", refreshWhenVisible);
-});
 
 const footerLinks = [
   { label: "Profil Kalurahan", to: { name: "profile" } },
