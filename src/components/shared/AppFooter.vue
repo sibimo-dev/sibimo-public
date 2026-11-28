@@ -113,12 +113,6 @@ const mapEmbedSrc =
               :alt="`Logo ${footer.village_name}`"
               class="w-9 h-9 object-contain shrink-0"
             />
-            <img
-              v-if="footer.stamp"
-              :src="mediaUrl(footer.stamp, '')"
-              alt="Stempel kalurahan"
-              class="w-9 h-9 object-contain shrink-0"
-            />
             <b class="font-heading font-bold tracking-tight text-lg uppercase text-white">{{ footer.village_name }}</b>
           </div>
 
