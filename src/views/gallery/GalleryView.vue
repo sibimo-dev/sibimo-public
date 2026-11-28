@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import Select from 'primevue/select'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
+import Image from 'primevue/image'
 import api from '@/services/api'
 
 const unwrap = (request) => request.then((response) => response.data.data)
@@ -245,6 +246,24 @@ function styleFor(slug) {
   if (!slug || slug === 'all') return defaultStyle
   return categoryStyles[slug] || fallbackStyles[hashString(slug) % fallbackStyles.length]
 }
+
+// Masonry: hitung berapa baris 1px yang dipakai tiap kartu supaya bisa naik mengisi gap.
+const ROW_GAP = 24 // = jarak vertikal antar kartu (px); ubah di sini, bukan di class gap
+
+const vMasonryItem = {
+  mounted(el) {
+    const update = () => {
+      // offsetHeight tidak terpengaruh transform (hover/translate/scale)
+      el.style.gridRowEnd = `span ${Math.ceil(el.offsetHeight + ROW_GAP)}`
+    }
+    update()
+    el._masonryRO = new ResizeObserver(update)
+    el._masonryRO.observe(el)
+  },
+  beforeUnmount(el) {
+    el._masonryRO?.disconnect()
+  },
+}
 </script>
 
 <template>
@@ -344,11 +363,12 @@ function styleFor(slug) {
           enter-active-class="transition-all! duration-[550ms]! ease-[cubic-bezier(0.34,1.56,0.64,1)]! motion-reduce:transition-none!"
           leave-active-class="absolute transition-all! duration-[250ms]! motion-reduce:transition-none!"
           leave-to-class="opacity-0 scale-95"
-          class="grid grid-cols-1 items-start gap-6 sm:grid-cols-2"
+          class="grid grid-flow-dense auto-rows-[1px] grid-cols-1 items-start gap-x-6 gap-y-0 sm:grid-cols-2"
         >
           <article
             v-for="(event, i) in visibleEvents"
             :key="event.id"
+            v-masonry-item
             class="group relative min-w-0 overflow-hidden rounded-2xl border border-border-default bg-surface transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
             :class="[styleFor(event.category).ring, cardDelays[i % pageSize]]"
           >
@@ -359,11 +379,13 @@ function styleFor(slug) {
                 class="relative flex h-44 w-full items-center justify-center overflow-hidden transition-transform duration-500 group-hover:scale-105"
                 :class="!event.image && ['bg-gradient-to-br bg-[length:200%_200%]', styleFor(event.category).imageGrad]"
               >
-                <img
+                <Image
                   v-if="event.image"
                   :src="event.image"
                   :alt="event.title"
-                  class="h-full w-full object-cover object-[center_35%]"
+                  preview
+                  class="block h-full w-full cursor-zoom-in"
+                  image-class="h-full w-full object-cover object-[center_35%]"
                 />
                 <template v-else>
                   <i class="pi pi-image text-3xl opacity-40" :class="styleFor(event.category).location" />
